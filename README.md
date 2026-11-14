@@ -50,7 +50,7 @@ These numbers come from the offline gesture set "sink-or-swipe" (1,872 Czech ges
 
 ## Install
 
-Droneboard will be on [Zapstore](https://zapstore.dev) in the beta channel. Dictation needs [Offline Speech to Text](https://zapstore.dev/apps/app.offlinespeechtotext) installed next to it.
+Install Droneboard from [Zapstore](https://zapstore.dev/apps/today.cypherpunk.droneboard) (preferred), or take the APK from [GitHub releases](https://github.com/jooray/droneboard/releases/latest), or track those releases with Obtainium. Dictation needs [Offline Speech to Text](https://zapstore.dev/apps/app.offlinespeechtotext) installed next to it.
 
 ## Building
 
