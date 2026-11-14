@@ -137,17 +137,17 @@ fun MainSettingsScreen(
     }
 }
 
-/** Droneboard brand: the icon on its indigo tile, with a lime swipe line under the name */
+/** Droneboard brand: the icon on its slate tile, with a red swipe line under the name */
 @Composable
 private fun BrandHeader() {
-    val indigo = Color(0xFF1D2242)
-    val lime = Color(0xFFB6FF3B)
+    val slate = Color(0xFF2E3A44)
+    val red = Color(0xFFB23A2E)
     Row(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(indigo)
+            .background(slate)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -168,7 +168,7 @@ private fun BrandHeader() {
                     .padding(top = 4.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(lime)
+                    .background(red)
             )
             Text(
                 "${BuildConfig.VERSION_NAME} · offline",

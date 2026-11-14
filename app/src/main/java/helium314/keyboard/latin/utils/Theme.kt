@@ -22,14 +22,14 @@ fun Theme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit
         if (dark) dynamicDarkColorScheme(LocalContext.current)
         else dynamicLightColorScheme(LocalContext.current)
     } else {
-        // no Material You before Android 12: use the Droneboard brand colors (indigo and lime)
+        // no Material You before Android 12: use the Droneboard brand colors (slate, fog and red)
         if (dark) darkColorScheme(
-            primary = Color(0xFFB6FF3B),
-            onPrimary = Color(0xFF1D2242),
+            primary = Color(0xFFC9D1D3),
+            onPrimary = Color(0xFF2E3A44),
         )
         else lightColorScheme(
-            primary = Color(0xFF1D2242),
-            secondary = Color(0xFF4A6B00),
+            primary = Color(0xFF2E3A44),
+            secondary = Color(0xFFB23A2E),
         )
     }
     MaterialTheme(
