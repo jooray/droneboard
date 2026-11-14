@@ -1,0 +1,31 @@
+repository: https://github.com/jooray/droneboard
+metadata_sources:
+    - github
+pubkey: npub1m2mvvpjugwdehtaskrcl7ksvdqnnhnjur9v6g9v266nss504q7mqvlr8p9
+name: Droneboard
+summary: An offline keyboard that feels like Gboard, with multilingual swipe, on-device neural predictions and offline dictation.
+description: |
+  Droneboard is an open-source Android keyboard with no INTERNET permission. Everything it does happens on the phone.
+
+  You can swipe in Slovak and English at the same time without switching languages. Swipe runs on the FUTO Swipe encoder with Droneboard's own decoder, which also learns the words you type. Next-word suggestions come from a small neural network that runs on the phone and predicts only in the languages you enabled.
+
+  The microphone at the right end of the suggestion strip starts dictation. The keyboard records the audio itself, also from Bluetooth headsets, LE Audio and hearing aids, and Offline Speech to Text turns it into text on the phone. Long dictation is split, so it keeps going past one minute.
+
+  It looks and behaves like Gboard: Material You colours, the typed word in the middle of the strip, no silent autocorrection, emoji search by any part of a word, and a trackpad on the space bar. Clipboard history, split and one-handed layouts and themes come from HeliBoard, which Droneboard is based on.
+
+  This is a beta. Czech, Spanish and German are on the way.
+tags:
+    - keyboard
+    - input-method
+    - swipe
+    - offline
+    - privacy
+    - dictation
+    - slovak
+license: GPL-3.0-only
+website: https://jooray.github.io/droneboard/
+icon: ./art/droneboard-icon-512.png
+images:
+    - ./graphics/screenshot-keyboard.png
+    - ./graphics/screenshot-emoji-search.png
+release_notes: ./docs/RELEASE_NOTES_0.1.7.md
