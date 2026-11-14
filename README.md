@@ -76,7 +76,7 @@ Droneboard is built with AI assistance, and AI-assisted contributions are welcom
 
 - Droneboard started as a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard), which is based on [OpenBoard](https://github.com/openboard-team/openboard) and AOSP LatinIME. Thank you to everyone who built them.
 - Swipe typing is powered by FUTO Swipe ([swipe-library](https://gitlab.futo.org/keyboard/swipe-library), GPL-3.0). The model weights are under the FUTO Model Weights License.
-- The Bluetooth and LE Audio recording comes from [Third Ear](https://github.com/jooray/third-ear) ([website](https://jooray.github.io/third-ear/), [Zapstore](https://zapstore.dev/apps/app.thirdear)) by the same author, relicensed under GPL-3.0 for Droneboard.
+- The Bluetooth and LE Audio recording comes from [Third Ear](https://github.com/jooray/third-ear) ([website](https://cypherpunk.today/third-ear/), [Zapstore](https://zapstore.dev/apps/app.thirdear)) by the same author, relicensed under GPL-3.0 for Droneboard.
 - The word lists come from [FineWeb-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) (ODC-By), and for Czech also from [Wikipedia](https://huggingface.co/datasets/wikimedia/wikipedia) (CC BY-SA), filtered through Hunspell dictionaries.
 - The emoji dictionaries come from [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries). They are built from Unicode CLDR annotations (Unicode License v3) and Signal's emoji search data (AGPL-3.0).
 

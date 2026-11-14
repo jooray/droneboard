@@ -26,7 +26,7 @@ tags:
     - slovak
     - czech
 license: GPL-3.0-only
-website: https://jooray.github.io/droneboard/
+website: https://cypherpunk.today/droneboard/
 icon: ./art/droneboard-icon-512.png
 images:
     - ./graphics/screenshot-keyboard.png
