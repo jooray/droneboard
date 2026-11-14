@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droneboard: eine mehrsprachige Android-Tastatur, die offline funktioniert</title>
+<meta name="description" content="Droneboard ist eine Open-Source-Tastatur für Android, die sich wie Gboard anfühlt und nie online geht: Wischen in mehreren Sprachen ohne Umschalten, Wortvorschläge von einem kleinen neuronalen Netz auf dem Telefon, Diktieren offline. Keine INTERNET-Berechtigung.">
+<link rel="canonical" href="https://jooray.github.io/droneboard/de/">
+<link rel="alternate" hreflang="en" href="https://jooray.github.io/droneboard/">
+<link rel="alternate" hreflang="sk" href="https://jooray.github.io/droneboard/sk/">
+<link rel="alternate" hreflang="cs" href="https://jooray.github.io/droneboard/cs/">
+<link rel="alternate" hreflang="de" href="https://jooray.github.io/droneboard/de/">
+<link rel="alternate" hreflang="es" href="https://jooray.github.io/droneboard/es/">
+<link rel="alternate" hreflang="x-default" href="https://jooray.github.io/droneboard/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Droneboard: eine mehrsprachige Android-Tastatur, die offline funktioniert">
+<meta property="og:description" content="Droneboard ist eine Open-Source-Tastatur für Android, die sich wie Gboard anfühlt und nie online geht: Wischen in mehreren Sprachen ohne Umschalten, Wortvorschläge von einem kleinen neuronalen Netz auf dem Telefon, Diktieren offline. Keine INTERNET-Berechtigung.">
+<meta property="og:url" content="https://jooray.github.io/droneboard/de/">
+<meta property="og:image" content="https://jooray.github.io/droneboard/img/og.jpg">
+<meta property="og:locale" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../img/icon-512.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="preload" href="../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<a class="skip" href="#features">Zum Inhalt springen</a>
+
+<header class="sleeve" id="top">
+  <picture><source type="image/webp" srcset="../img/fog-photo.webp"><img class="fog" src="../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="#top">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="#features">funktionen</a></li>
+        <li><a href="#privacy">datenschutz</a></li>
+        <li><a href="#install">installation</a></li>
+        <li><a href="#nostr">nostr</a></li>
+      </ul>
+      <ul class="langs" aria-label="Sprache"><li><a href="../" hreflang="en" lang="en" title="English">en</a></li><li><a href="../sk/" hreflang="sk" lang="sk" title="Slovenčina">sk</a></li><li><a href="../cs/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../de/" hreflang="de" lang="de" title="Deutsch" aria-current="page">de</a></li><li><a href="../es/" hreflang="es" lang="es" title="Español">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>eine tastatur, die mitspielt. offline.</h1>
+    <p class="sub">Wischen Sie in mehreren Sprachen gleichzeitig, ohne umzuschalten. Das nächste Wort schlägt ein kleines neuronales Netz auf Ihrem Telefon vor, und diktieren geht auch ohne Internet. Keine INTERNET-Berechtigung.</p>
+    <div class="kb" role="img" aria-label="Illustration: eine Wischgeste über die Tastatur, die ďakujem schreibt; in der Leiste stehen die Vorschläge ďakujem, thanks und diky." data-word="dakujem"><div class="kb-strip" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg><span class="w">ďakujem</span><span class="w">thanks</span><span class="w">diky</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div><div class="kb-rows" aria-hidden="true"><div class="kb-row"><span class=k data-k=q>q</span><span class=k data-k=w>w</span><span class=k data-k=e>e</span><span class=k data-k=r>r</span><span class=k data-k=t>t</span><span class=k data-k=y>y</span><span class=k data-k=u>u</span><span class=k data-k=i>i</span><span class=k data-k=o>o</span><span class=k data-k=p>p</span></div><div class="kb-row mid"><span class=k data-k=a>a</span><span class=k data-k=s>s</span><span class=k data-k=d>d</span><span class=k data-k=f>f</span><span class=k data-k=g>g</span><span class=k data-k=h>h</span><span class=k data-k=j>j</span><span class=k data-k=k>k</span><span class=k data-k=l>l</span></div><div class="kb-row"><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 4 4 12h4.5v7h7v-7H20z"/></svg></span><span class=k data-k=z>z</span><span class=k data-k=x>x</span><span class=k data-k=c>c</span><span class=k data-k=v>v</span><span class=k data-k=b>b</span><span class=k data-k=n>n</span><span class=k data-k=m>m</span><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9l-6-6z"/><path d="m12 9.5 5 5m0-5-5 5"/></svg></span></div><div class="kb-row"><span class="k fn wide">?123</span><span class="k fn">,</span><span class="k fn"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14a4.2 4.2 0 0 0 7 0"/><circle cx="9.3" cy="10" r=".6" fill="currentColor"/><circle cx="14.7" cy="10" r=".6" fill="currentColor"/></svg></span><span class="k space"></span><span class="k fn">.</span><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 6v5a3 3 0 0 1-3 3H6"/><path d="m9.5 10.5-3.5 3.5 3.5 3.5"/></svg></span></div></div><canvas aria-hidden="true"></canvas></div>
+    <div class="install">
+      <a class="primary" href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Bei Zapstore holen</a>
+      <span class="alt"><a href="https://github.com/jooray/droneboard/releases/latest">APK auf GitHub</a><a href="obtainium://add/https://github.com/jooray/droneboard">Obtainium</a></span>
+    </div>
+  </div>
+  <a class="cue" href="#features"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><span>mehr funktionen und details</span></a>
+</header>
+
+<main>
+<section class="panel" id="features" aria-labelledby="features-h">
+  <h2 id="features-h">was sie heute kann</h2>
+  <p class="lede">Die Tastatur, die Sie kennen. Was anderswo in einer fremden Cloud läuft, bleibt hier auf dem Telefon. Es ist eine Beta: für den Alltag gut genug, wenn Sie ab und zu einen Fehler melden mögen.</p>
+  <p class="side-label">seite a — heute</p>
+  <ol class="tracks"><li><span class="no">a1</span><h3>mehrsprachig wischen</h3><p>Wischen Sie Wörter aus zwei Sprachen im selben Satz, ohne eine Sprachtaste anzufassen. Heute sind das Slowakisch und Englisch, weitere folgen. FUTO Swipe liest die Geste, unser Decoder ergänzt die Akzente und lässt das vorherige Wort zwischen den Kandidaten entscheiden.</p></li><li><span class="no">a2</span><h3>das nächste Wort, auf dem Telefon berechnet</h3><p>Ein kleines neuronales Netz errät Ihr nächstes Wort aus dem, was Sie schon geschrieben haben. Es läuft auf dem Telefon; es gibt keinen Server, an den etwas gehen könnte.</p></li><li><span class="no">a3</span><h3>diktieren, ohne die Tastatur zu verlassen</h3><p>Tippen Sie auf das Mikrofon am Ende der Vorschlagsleiste und sprechen Sie. Die Tastatur nimmt selbst auf, über das Telefon, ein Bluetooth-Headset, LE-Audio-Kopfhörer oder Hörgeräte, und Offline Speech to Text macht daraus Text auf dem Gerät. Lange Diktate laufen auch nach einer Minute weiter.</p></li><li><span class="no">a4</span><h3>fühlt sich an wie Gboard</h3><p>Material-You-Farben, dieselben Zeichen beim langen Drücken, das getippte Wort in der Mitte der Leiste, eine Zahlenreihe in Passwortfeldern und keine stille Autokorrektur.</p></li><li><span class="no">a5</span><h3>Emoji über jeden Wortteil</h3><p>Geben Sie in der Emoji-Suche „akete“ ein, und die Rakete erscheint. Beim Schreiben zeigt die Leiste außerdem ein passendes Emoji.</p></li><li><span class="no">a6</span><h3>die Leertaste als Trackpad</h3><p>Halten Sie die Leertaste gedrückt und schieben Sie den Cursor. Auf Wunsch wechselt sie stattdessen die Sprache.</p></li><li><span class="no">a7</span><h3>darunter steckt HeliBoard</h3><p>Zwischenablage-Verlauf, Einhand- und geteilte Layouts, Designs, eigene Layouts und Hardware-Tastaturen stammen aus HeliBoard.</p></li></ol>
+  <div class="side-b">
+    <p class="side-label">seite b — in arbeit</p>
+    <ol class="tracks b"><li><span class="no">b1</span><h3>Tschechisch, danach Spanisch und Deutsch, jeweils mit eigenem Wischwörterbuch und Wortvorhersage</h3></li><li><span class="no">b2</span><h3>Eine kleinere Tastatur, deren Größe und Position Sie auf Tablets und aufgeklappten Telefonen einstellen</h3></li></ol>
+  </div>
+  <div class="shots"><figure><img src="../img/shot-swipe.webp" width="1080" height="884" alt="Droneboard im dunklen Design, auf der Leertaste steht English–Slovak; nach dem Wischen von „keyboard“ bietet die Leiste keynotes, keyboards und keypad an, rechts das Mikrofon."><figcaption>Nach dem Wischen: Vorschläge in der Leiste, rechts das Mikrofon.</figcaption></figure><figure><img src="../img/shot-emoji-search.webp" width="1080" height="1239" alt="Emoji-Suche nach dem slowakischen Wort „raketa“: Schläger, Astronauten und eine Rakete über der Tastatur."><figcaption>Die Emoji-Suche versteht auch Slowakisch: <span lang="sk">„raketa“</span>.</figcaption></figure></div>
+</section>
+
+<figure class="held">
+  <picture><img src="../img/held-note.webp" alt="" width="1919" height="806" decoding="async"></picture>
+  <figcaption>Warum „Drone“? Ein Wisch über die Tasten fühlt sich an, als glitte die Hand über einen Synthesizer und ließe den Ton stehen, wie im Drone Ambient.</figcaption>
+</figure>
+
+<section class="panel" id="privacy" aria-labelledby="privacy-h">
+  <div class="two">
+    <div>
+      <h2 id="privacy-h">nichts verlässt ihr telefon</h2>
+      <p class="lede">Droneboard kommt nicht ins Internet, weil Android ihm das nie erlaubt hat.</p>
+      <ul class="plainlist"><li>Keine <code>INTERNET</code>-Berechtigung, keine Analyse, keine Absturzberichte.</li><li>Sie lädt nichts herunter. Zusätzliche Wörterbücher werden aus einer Datei importiert.</li><li>Der Ton beim Diktieren geht an Offline Speech to Text auf demselben Telefon und sonst nirgendwohin.</li><li>Kontakte in den Vorschlägen sind optional und standardmäßig aus.</li></ul>
+      <p class="check"><strong>Prüfen Sie es selbst:</strong> Einstellungen → Apps → Droneboard → Berechtigungen. Netzwerkzugriff steht dort nicht.</p>
+    </div>
+    <div>
+      <h2 id="numbers-h">wie gut das wischen ist</h2>
+      <table class="stats" aria-labelledby="numbers-h">
+        <thead><tr><th scope="col">test</th><th scope="col" class="n">top-1</th><th scope="col" class="n">top-3</th></tr></thead>
+        <tbody><tr><th scope="row">Tschechischer Gestendatensatz, Googles Gestenbibliothek (wie in HeliBoard)</th><td class="n">82,4</td><td class="n">96,3</td></tr><tr class=us><th scope="row">Tschechischer Gestendatensatz, Droneboard</th><td class="n">81,8</td><td class="n">95,8</td></tr><tr class=us><th scope="row">Echtes Telefon, 106 vorgegebene slowakische und englische Wörter</th><td class="n">82,1</td><td class="n">92,5</td></tr></tbody>
+        <caption>Top-1: Das richtige Wort steht vorn. Top-3: Es ist unter den ersten drei. Gemessen mit dem offenen Datensatz „Sink-or-Swipe“ und den Aufnahmen einer Person; eine Richtung, kein Versprechen.</caption>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="install" aria-labelledby="install-h">
+  <h2 id="install-h">installation</h2>
+  <p class="lede">Am einfachsten über Zapstore: signierte Versionen und Updates aus einer App, ohne Konto.</p>
+  <div class="two">
+    <ol class="steps"><li><span>Installieren Sie Zapstore von <a href="https://zapstore.dev">zapstore.dev</a>.</span></li><li><span>Öffnen Sie <a href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Droneboard auf Zapstore</a> und installieren Sie es.</span></li><li><span>Öffnen Sie Droneboard und schalten Sie die Tastatur nach den Hinweisen ein.</span></li><li><span>Fürs Diktieren installieren Sie zusätzlich <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text</a>.</span></li></ol>
+    <div class="routes">
+      <a class="primary" href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Bei Zapstore holen</a>
+      <div class="route"><a href="https://github.com/jooray/droneboard/releases/latest">APK auf GitHub</a><span class="what">Die signierte APK aus dem neuesten GitHub-Release.</span></div><div class="route"><a href="obtainium://add/https://github.com/jooray/droneboard">Obtainium</a><span class="what">Verfolgen Sie die GitHub-Releases in <a href="https://obtainium.imranr.dev">Obtainium</a>; der Link fügt das Repository direkt hinzu.</span></div>
+    </div>
+  </div>
+  <p class="inst-note">Selbst bauen? Der <a href="https://github.com/jooray/droneboard">Quellcode</a> liegt offen. GPL-3.0.</p>
+</section>
+
+<section class="panel" id="nostr" aria-labelledby="nostr-h">
+  <h2 id="nostr-h">neues auf nostr</h2>
+  <p class="lede">Droneboard schreibt auf nostr, einem offenen Netzwerk, das keiner Firma gehört. Ihr Browser lädt die neuesten Beiträge direkt von den Relays; diese Seite hat keinen eigenen Server und setzt keine Cookies.</p>
+  <div class="nostr-feed" data-nostr-live data-nprofile="nprofile1qqsg4hxewacqa46ypdcmvpzxae4eh2dnqnk3lrn7vrfsz2h5x0c5d4qpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgu62ll5" data-limit="4" data-lang="de" data-layout="list"></div>
+  <ul class="nostr-links">
+    <li><a href="https://njump.me/nprofile1qqsg4hxewacqa46ypdcmvpzxae4eh2dnqnk3lrn7vrfsz2h5x0c5d4qpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgu62ll5">Profil auf njump.me</a></li>
+    <li>droneboard@cypherpunk.today</li>
+    <li>Zaps: droneboard@pay.cypherpunk.today</li>
+  </ul>
+</section>
+
+<section class="panel credits" id="credits" aria-labelledby="credits-h">
+  <h2 id="credits-h">dank</h2>
+  <dl><dt>tastatur</dt><dd>Ein Fork von <a href="https://github.com/HeliBorg/HeliBoard">HeliBoard</a>, das auf OpenBoard und AOSP LatinIME aufbaut. GPL-3.0; einzelne Dateien Apache-2.0 oder CC-BY-SA-4.0.</dd><dt>wischen</dt><dd>Wischeingabe mit FUTO Swipe (<a href="https://gitlab.futo.org/keyboard/swipe-library">swipe-library</a>, GPL-3.0). Die Modellgewichte stehen unter der FUTO Model Weights License.</dd><dt>headset-aufnahme</dt><dd>Die Aufnahme über Bluetooth und LE Audio stammt aus <a href="https://github.com/jooray/third-ear">Third Ear</a> vom selben Autor.</dd><dt>diktat</dt><dd><a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text</a>, wird separat installiert.</dd><dt>wortlisten</dt><dd>FineWeb-2 (ODC-By), gefiltert mit Hunspell-Wörterbüchern.</dd><dt>emoji-daten</dt><dd>Unicode-CLDR-Annotationen und Signals Daten zur Emoji-Suche, über aosp-dictionaries.</dd><dt>schrift</dt><dd>PT Sans von ParaType, SIL Open Font License.</dd></dl>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 Beta · GPL-3.0 · mit KI-Unterstützung gebaut; Beiträge willkommen</span>
+  <ul aria-label="Sprache"><li><a href="../" hreflang="en" lang="en">English</a></li><li><a href="../sk/" hreflang="sk" lang="sk">Slovenčina</a></li><li><a href="../cs/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../de/" hreflang="de" lang="de" aria-current="page">Deutsch</a></li><li><a href="../es/" hreflang="es" lang="es">Español</a></li></ul>
+</footer>
+
+<script src="../drone.js" defer></script>
+<script src="../nostr-live.js" defer></script>
+</body>
+</html>
