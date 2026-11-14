@@ -1,0 +1,164 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-11-14T12:33:55.841329Z",
+ "title": "Design System: Droneboard website",
+ "extensions": {
+  "colorMeta": {
+   "slate": {
+    "role": "neutral",
+    "displayName": "Lake Slate",
+    "canonical": "#2e3a44",
+    "tonalRamp": [
+     "#141a1f",
+     "#1b2329",
+     "#232c33",
+     "#2e3a44",
+     "#46545f",
+     "#66747e",
+     "#93a0a8",
+     "#c7d0d5"
+    ]
+   },
+   "slate-deep": {
+    "role": "neutral",
+    "displayName": "Night Water",
+    "canonical": "#20282f"
+   },
+   "fog": {
+    "role": "neutral",
+    "displayName": "Fog",
+    "canonical": "#c9d1d3"
+   },
+   "mist": {
+    "role": "neutral",
+    "displayName": "Mist",
+    "canonical": "#9aa8b1"
+   },
+   "ink": {
+    "role": "neutral",
+    "displayName": "Sleeve Ink",
+    "canonical": "#f2f2ee"
+   },
+   "red": {
+    "role": "primary",
+    "displayName": "Held-Note Red",
+    "canonical": "#b23a2e",
+    "tonalRamp": [
+     "#3b120e",
+     "#5a1c16",
+     "#7c271f",
+     "#9b3127",
+     "#b23a2e",
+     "#d0584b",
+     "#e08a80",
+     "#f0c3bd"
+    ]
+   }
+  },
+  "typographyMeta": {
+   "display": {
+    "displayName": "Display",
+    "purpose": "Hero headline only, lowercase."
+   },
+   "wordmark": {
+    "displayName": "Wordmark",
+    "purpose": "Lowercase tracked droneboard."
+   },
+   "label": {
+    "displayName": "Label",
+    "purpose": "Sleeve-side markers and table heads."
+   }
+  },
+  "shadows": [
+   {
+    "name": "keyboard",
+    "value": "0 calc(1.2*min(1vw,1svh)) calc(3*min(1vw,1svh)) rgba(8,12,16,0.45)",
+    "purpose": "The illustrated keyboard, the one sharp object."
+   },
+   {
+    "name": "device",
+    "value": "0 1.2rem 2.6rem rgba(5,8,11,0.5)",
+    "purpose": "Phone screenshots."
+   }
+  ],
+  "motion": [
+   {
+    "name": "swipe-trace",
+    "value": "1700ms, 1 - 2^(-10t)",
+    "purpose": "The hero swipe line drawing and resolving."
+   },
+   {
+    "name": "strip-reveal",
+    "value": "opacity 700ms cubic-bezier(0.16,1,0.3,1)",
+    "purpose": "Suggestions brightening when the word lands."
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "narrow",
+    "value": "760px"
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Install line",
+   "kind": "button",
+   "refersTo": "link-install-primary",
+   "description": "Primary action: text with a muted-red underline.",
+   "html": "<a class=\"ds-install\" href=\"#\">Get it on Zapstore</a>",
+   "css": ".ds-install{font-family:'PT Sans',sans-serif;font-size:1.45rem;color:#f2f2ee;text-decoration:none;padding-bottom:.25em;background:linear-gradient(#d0584b,#d0584b) 0 100%/100% 2px no-repeat}.ds-install:hover{background-size:100% 3px}.ds-install:focus-visible{outline:2px solid #d0584b;outline-offset:3px}"
+  },
+  {
+   "name": "Track row",
+   "kind": "custom",
+   "refersTo": "track-row",
+   "description": "Sleeve track listing row.",
+   "html": "<ol class=\"ds-tracks\"><li><span>a1</span><h3>multilingual swipe</h3><p>Swipe in two languages in the same sentence without touching a language key.</p></li></ol>",
+   "css": ".ds-tracks{list-style:none;margin:0;padding:0;border-top:1px solid rgba(201,209,211,.16);font-family:'PT Sans',sans-serif;color:#c9d1d3;background:#20282f}.ds-tracks li{display:grid;grid-template-columns:3rem 15rem 1fr;gap:0 1.5rem;padding:1.25rem 0;border-bottom:1px solid rgba(201,209,211,.16);align-items:baseline}.ds-tracks span{color:#9aa8b1;font-variant-numeric:tabular-nums}.ds-tracks h3{margin:0;font-weight:400;font-size:1.15rem;color:#f2f2ee;text-transform:lowercase}.ds-tracks p{margin:0}"
+  },
+  {
+   "name": "Nav",
+   "kind": "nav",
+   "description": "Lowercase top nav with language switch.",
+   "html": "<nav class=\"ds-nav\"><a href=\"#\">features</a><a href=\"#\">privacy</a><a href=\"#\">install</a><a href=\"#\" aria-current=\"page\">en</a><a href=\"#\">sk</a></nav>",
+   "css": ".ds-nav{display:flex;gap:1rem;font-family:'PT Sans',sans-serif;background:#2e3a44;padding:1rem}.ds-nav a{color:#f2f2ee;text-decoration:none}.ds-nav a:hover,.ds-nav a[aria-current]{text-decoration:underline;text-decoration-color:#d0584b;text-underline-offset:.22em}"
+  }
+ ],
+ "narrative": {
+  "northStar": "The Fog Sleeve",
+  "overview": "An ECM record cover: one fog photograph, vast quiet space, the keyboard as the only sharp object; below it the back of the sleeve with hairlines, a track listing and liner notes.",
+  "keyCharacteristics": [
+   "fog photograph as the first viewport",
+   "lowercase PT Sans",
+   "one red line",
+   "hairlines, no cards",
+   "tabular numerals"
+  ],
+  "rules": [
+   {
+    "name": "The One Red Rule",
+    "body": "Red marks the one action or the one moving line on screen.",
+    "section": "colors"
+   },
+   {
+    "name": "The Photograph Owns the Light",
+    "body": "The first viewport's colour comes from the fog plate; washes only restore tone and legibility.",
+    "section": "colors"
+   },
+   {
+    "name": "Tabular Numerals Rule",
+    "body": "Track numbers, steps, stats and dates use tabular figures.",
+    "section": "typography"
+   }
+  ],
+  "dos": [
+   "Keep the first viewport to the photograph, small lowercase type and the keyboard.",
+   "Set every number in tabular figures."
+  ],
+  "donts": [
+   "Don't add cards, icon tiles, gradient text or glass.",
+   "Don't claim unreleased languages or features."
+  ]
+ }
+}
