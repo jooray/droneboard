@@ -74,24 +74,41 @@
             android:tint="#a00000"
             android:layout_gravity="top"
             />
+
+        <helium314.keyboard.latin.KeyboardResizeOverlay
+            android:id="@+id/resize_overlay"
+            android:visibility="gone"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
     </helium314.keyboard.latin.KeyboardWrapperView>
-    <LinearLayout
+    <!-- floating mode: a slim pill under the space bar row moves the keyboard; pull it to the bottom edge to dock -->
+    <FrameLayout
         android:id="@+id/float_handle_container"
-        android:orientation="horizontal"
         android:visibility="gone"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <ImageView
-            android:id="@+id/resize_handle"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/config_floating_handle_height"
-            android:src="@drawable/ic_arrow_horizontal"/>
+        android:layout_height="@dimen/config_floating_handle_height">
         <ImageView
             android:id="@+id/drag_handle"
-            android:layout_weight="1"
+            android:contentDescription="@string/floating_drag_handle"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="center"
+            android:src="@drawable/floating_handle_pill"/>
+        <TextView
+            android:id="@+id/dock_hint"
+            android:visibility="gone"
             android:layout_width="wrap_content"
-            android:layout_height="@dimen/config_floating_handle_height"
-            android:src="@drawable/ic_drag_indicator"/>
-    </LinearLayout>
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="2dp"
+            android:textSize="13sp"
+            android:text="@string/floating_release_to_dock"/>
+        <!-- resizing moved to the "Size & position" overlay; kept for the id -->
+        <ImageView
+            android:id="@+id/resize_handle"
+            android:visibility="gone"
+            android:layout_width="0dp"
+            android:layout_height="0dp"/>
+    </FrameLayout>
 </LinearLayout>

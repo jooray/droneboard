@@ -44,6 +44,7 @@ import helium314.keyboard.latin.settings.SettingsValues
 import helium314.keyboard.latin.settings.setFloatingKeyboardEnabled
 import helium314.keyboard.latin.utils.CapsModeUtils
 import helium314.keyboard.latin.utils.FloatingKeyboardUtils
+import helium314.keyboard.latin.settings.writeCompact
 import helium314.keyboard.latin.utils.FoldableUtils.isFolded
 import helium314.keyboard.latin.utils.LanguageOnSpacebarUtils
 import helium314.keyboard.latin.utils.Log
@@ -239,7 +240,8 @@ class KeyboardSwitcher private constructor() {
         if (visibleKeyboardView.isShown || (Settings.getValues().mIsFloatingKeyboard && inputView.root.isShown)) {
             var touchLeft = 0
             var touchTop = if (isShowingPopupKeysPanel) 0 else visibleTopY
-            var touchRight = visibleKeyboardView.width
+            // the whole width: a compact or one-handed keyboard is not at the left edge
+            var touchRight = maxOf(visibleKeyboardView.width, inputView.root.width)
             var touchBottom = inputHeight + EXTENDED_TOUCHABLE_REGION_HEIGHT // Extend touchable region below the keyboard.
             if (Settings.getValues().mIsFloatingKeyboard) {
                 val xy = FloatingKeyboardUtils.readPosition(themeContext, Int.MAX_VALUE, Int.MAX_VALUE)
@@ -291,12 +293,64 @@ class KeyboardSwitcher private constructor() {
     }
 
     fun onHideWindow() {
+        inputView?.resizeOverlay?.hide()
         inputView?.keyboardView?.onHideWindow()
+    }
+
+    /** Droneboard "Size & position": show or hide the resize overlay over the keyboard. */
+    fun toggleResizeOverlay() {
+        val overlay = inputView?.resizeOverlay ?: return
+        if (overlay.isShowing) overlay.hide() else overlay.show()
+    }
+
+    /** Switch between floating and docked, then rebuild the keyboard for the new size. */
+    fun setFloatingKeyboard(enabled: Boolean) {
+        val inputView = inputView ?: return
+        if (enabled != Settings.getValues().mIsFloatingKeyboard)
+            setFloatingKeyboardEnabled(themeContext, enabled)
+        if (enabled) placeFloatingWhenSettled(inputView.root)
+        else FloatingKeyboardUtils.disableFloating(inputView.root)
+        setBackgroundGatheringIndicatorPosition()
+        reloadKeyboard()
+        inputView.resizeOverlay.refresh()
+    }
+
+    /** Compact docked keyboard on or off for the current orientation; [gravity] / [width] change it too. */
+    fun setCompactKeyboard(enabled: Boolean, width: Float? = null, gravity: Int? = null) {
+        if (inputView == null) return
+        writeCompact(themeContext, enabled, width, gravity)
+        // compact and one-handed exclude each other; this also reloads the keyboard
+        setOneHandedModeEnabled(Settings.getValues().mOneHandedModeEnabled, true)
+    }
+
+    /** The floating window view (position and size), for the resize overlay. */
+    val floatingRoot: View? get() = inputView?.root
+
+    /** Re-place the floating keyboard after its size or position changed. */
+    fun updateFloatingPlacement() {
+        val root = inputView?.root ?: return
+        if (Settings.getValues().mIsFloatingKeyboard) FloatingKeyboardUtils.setFloating(root)
     }
 
     fun onWindowShown() {
         if (Settings.getValues().mIsFloatingKeyboard)
-            inputView?.let { FloatingKeyboardUtils.setFloating(it.root) }
+            inputView?.let { placeFloatingWhenSettled(it.root) }
+    }
+
+    /**
+     * The window frame is only right after the window is laid out, so the first placement can be off.
+     * Keep the floating keyboard invisible until it was placed again after layout, so it never jumps.
+     */
+    private fun placeFloatingWhenSettled(root: View) {
+        root.alpha = 0f
+        FloatingKeyboardUtils.setFloating(root)
+        root.post {
+            FloatingKeyboardUtils.setFloating(root)
+            root.post {
+                FloatingKeyboardUtils.setFloating(root)
+                root.alpha = 1f
+            }
+        }
     }
 
     fun updateSoftInputWindowLayoutParameters() = latinIME.updateSoftInputWindowLayoutParameters(inputView?.root)
@@ -707,6 +761,7 @@ class KeyboardSwitcher private constructor() {
             settingsValues.mHasHardwareKeyboard && toggleState == KeyboardSwitchState.HIDDEN
 
         private val InputViewBinding.wrapperView get() = mainKeyboardFrame.keyboardViewWrapper
+        private val InputViewBinding.resizeOverlay get() = mainKeyboardFrame.resizeOverlay
         private val InputViewBinding.keyboardFrame get() = mainKeyboardFrame.root
         private val InputViewBinding.keyboardView get() = mainKeyboardFrame.keyboardView
         private val InputViewBinding.emojiTabStrip get() = mainKeyboardFrame.stripContainer.emojiTabStrip

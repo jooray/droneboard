@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup.MarginLayoutParams
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import helium314.keyboard.keyboard.KeyboardActionListener
@@ -129,12 +130,42 @@ class KeyboardWrapperView @JvmOverloads constructor(
         }
     }
 
+    /** The suggestion strip and toolbar sit right above a compact keyboard, not across the whole screen. */
+    private fun alignStrip(leftMargin: Int, rightMargin: Int) {
+        val strip = KeyboardSwitcher.getInstance().stripContainer ?: return
+        val lp = strip.layoutParams as? MarginLayoutParams ?: return
+        if (lp.leftMargin == leftMargin && lp.rightMargin == rightMargin) return
+        // not during this layout pass
+        post {
+            lp.leftMargin = leftMargin
+            lp.rightMargin = rightMargin
+            strip.layoutParams = lp
+        }
+    }
+
     @SuppressLint("RtlHardcoded")
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        val sv = Settings.getValues()
         if (!oneHandedModeEnabled) {
             super.onLayout(changed, left, top, right, bottom)
+            val keyboardView = KeyboardSwitcher.getInstance().visibleKeyboardView
+            if (sv.mCompactEnabled && keyboardView != null && keyboardView.parent === this) {
+                // compact docked keyboard: at the bottom, on the left, in the middle or on the right
+                val spare = (right - left - keyboardView.measuredWidth).coerceAtLeast(0)
+                val keyboardLeft = when (sv.mCompactGravity) {
+                    Gravity.LEFT -> 0
+                    Gravity.RIGHT -> spare
+                    else -> spare / 2
+                }
+                keyboardView.layout(keyboardLeft, 0, keyboardLeft + keyboardView.measuredWidth, keyboardView.measuredHeight)
+                alignStrip(keyboardLeft, spare - keyboardLeft)
+                findViewById<KeyboardResizeOverlay>(R.id.resize_overlay)?.placeContent()
+            } else {
+                alignStrip(0, 0)
+            }
             return
         }
+        alignStrip(0, 0)
 
         val isLeftGravity = oneHandedGravity == Gravity.LEFT
         val width = right - left
@@ -162,5 +193,8 @@ class KeyboardWrapperView @JvmOverloads constructor(
         stopOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.2f).toInt())
         switchOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.5f).toInt())
         resizeOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.8f).toInt())
+        // the "Size & position" overlay covers the whole wrapper; it places its handles on the keyboard itself
+        findViewById<View>(R.id.resize_overlay)?.takeIf { it.visibility != GONE }
+            ?.let { it.layout(0, 0, width, it.measuredHeight) }
     }
 }

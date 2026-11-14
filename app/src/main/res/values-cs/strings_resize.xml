@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="size_position">Velikost a poloha</string>
+    <string name="resize_mode_one_handed">Jedna ruka</string>
+    <string name="resize_mode_floating">Plovoucí</string>
+    <string name="resize_mode_split">Rozdělená</string>
+    <string name="resize_reset">Původní</string>
+    <string name="resize_done">Hotovo</string>
+    <string name="resize_size_label">Šířka %1$d %% · Výška %2$d %%</string>
+    <string name="resize_hint">Táhni za okraje nebo rohy</string>
+    <string name="resize_handle_top">Změnit velikost klávesnice za horní okraj</string>
+    <string name="resize_handle_bottom">Změnit velikost klávesnice za dolní okraj</string>
+    <string name="resize_handle_left">Změnit velikost klávesnice za levý okraj</string>
+    <string name="resize_handle_right">Změnit velikost klávesnice za pravý okraj</string>
+    <string name="resize_handle_top_left">Změnit velikost klávesnice za levý horní roh</string>
+    <string name="resize_handle_top_right">Změnit velikost klávesnice za pravý horní roh</string>
+    <string name="resize_handle_bottom_left">Změnit velikost klávesnice za levý dolní roh</string>
+    <string name="resize_handle_bottom_right">Změnit velikost klávesnice za pravý dolní roh</string>
+    <string name="floating_drag_handle">Přesunout plovoucí klávesnici</string>
+    <string name="floating_release_to_dock">Pusť a klávesnice se přichytí dole</string>
+    <string name="resize_mode_full">Celá šířka</string>
+    <string name="resize_mode_compact">Kompaktní</string>
+    <string name="resize_position_left">Vlevo</string>
+    <string name="resize_position_center">Uprostřed</string>
+    <string name="resize_position_right">Vpravo</string>
+    <string name="compact_large_screens">Kompaktní klávesnice na velkých obrazovkách</string>
+    <string name="compact_large_screens_summary">Na tabletech a rozložených skládačkách má klávesnice přibližně šířku jako na telefonu a je vpravo dole, pod palcem. Velikost a stranu změníš klávesou Velikost a poloha.</string>
+</resources>
