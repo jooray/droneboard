@@ -49,7 +49,7 @@ T["en"] = dict(
     side_a="side a — today",
     feats=[
         ("multilingual swipe",
-         "Swipe in two languages in the same sentence without touching a language key. Today that means Slovak and English, with more on the way. FUTO Swipe reads the gesture; our decoder adds the accents and lets the previous word choose between candidates."),
+         "Swipe in several languages in the same sentence without touching a language key. Today that means Czech, Slovak and English; Spanish and German are next. FUTO Swipe reads the gesture; our decoder adds the accents and lets the previous word choose between candidates."),
         ("the next word, predicted on the phone",
          "A small neural network guesses your next word from what you have written so far. It runs on the phone; there is no server to send anything to."),
         ("dictation without leaving the keyboard",
@@ -65,8 +65,8 @@ T["en"] = dict(
     ],
     side_b="side b — coming",
     coming=[
-        "Czech, then Spanish and German, with their own swipe dictionaries and predictions",
-        "A smaller keyboard you can resize and place on tablets and unfolded phones",
+        "Spanish and German, with their own swipe dictionaries and predictions",
+        "A “fix sentence” button backed by a small model on the phone",
     ],
     shots=[
         ("shot-swipe", 1080, 884, "Droneboard in dark theme with English–Slovak on the space bar; after swiping “keyboard” the strip offers keynotes, keyboards and keypad, with the mic on the right.", "After a swipe: suggestions in the strip, the mic on the right."),
@@ -86,7 +86,7 @@ T["en"] = dict(
     num_cols=("test", "top-1", "top-3"),
     num_rows=[
         ("Czech gesture set, Google’s gesture library (as in HeliBoard)", "82.4", "96.3", False),
-        ("Czech gesture set, Droneboard", "81.8", "95.8", True),
+        ("Czech gesture set, Droneboard with its own Czech dictionary", "78.2", "92.0", True),
         ("A real phone, 106 prompted Slovak and English words", "82.1", "92.5", True),
     ],
     num_cap="Top-1: the right word comes first. Top-3: it is among the first three. Measured on the open “Sink-or-Swipe” gesture set and one person’s recordings; a direction, not a promise.",
@@ -140,7 +140,7 @@ T["sk"] = dict(
     side_a="strana a — dnes",
     feats=[
         ("viacjazyčné písanie potiahnutím",
-         "V jednej vete potiahnete slová v dvoch jazykoch a jazyk neprepínate. Dnes je to slovenčina a angličtina, ďalšie jazyky pribudnú. Gesto číta FUTO Swipe, náš dekodér doplní diakritiku a podľa predchádzajúceho slova vyberie správneho kandidáta."),
+         "V jednej vete potiahnete slová v niekoľkých jazykoch a jazyk neprepínate. Dnes je to slovenčina, čeština a angličtina, ďalej pribudne španielčina a nemčina. Gesto číta FUTO Swipe, náš dekodér doplní diakritiku a podľa predchádzajúceho slova vyberie správneho kandidáta."),
         ("ďalšie slovo odhadne telefón",
          "Malá neurónová sieť odhadne ďalšie slovo podľa toho, čo ste už napísali. Beží v telefóne, nie je žiadny server, kam by sa čokoľvek posielalo."),
         ("diktovanie bez opustenia klávesnice",
@@ -156,8 +156,8 @@ T["sk"] = dict(
     ],
     side_b="strana b — pripravujeme",
     coming=[
-        "Čeština, potom španielčina a nemčina, každá s vlastným slovníkom na písanie potiahnutím a s predikciami",
-        "Menšia klávesnica, ktorej veľkosť a polohu nastavíte na tablete aj na rozloženom telefóne",
+        "Španielčina a nemčina, každá s vlastným slovníkom na písanie potiahnutím a s predikciami",
+        "Tlačidlo „oprav vetu“, za ktorým je malý model priamo v telefóne",
     ],
     shots=[
         ("shot-swipe", 1080, 884, "Droneboard v tmavom motíve s nápisom English–Slovak na medzerníku; po potiahnutí slova „keyboard“ pruh ponúka keynotes, keyboards a keypad, vpravo je mikrofón.", "Po potiahnutí: návrhy v pruhu, vpravo mikrofón."),
@@ -177,7 +177,7 @@ T["sk"] = dict(
     num_cols=("test", "top-1", "top-3"),
     num_rows=[
         ("Sada českých gest, knižnica gest od Googlu (ako v HeliBoarde)", "82,4", "96,3", False),
-        ("Sada českých gest, Droneboard", "81,8", "95,8", True),
+        ("Sada českých gest, Droneboard s vlastným českým slovníkom", "78,2", "92,0", True),
         ("Skutočný telefón, 106 zadaných slovenských a anglických slov", "82,1", "92,5", True),
     ],
     num_cap="Top-1: správne slovo je prvé. Top-3: je medzi prvými tromi. Merané na otvorenej sade gest „Sink-or-Swipe“ a na nahrávkach jedného človeka. Berte to ako smer, nie ako sľub.",
@@ -231,7 +231,7 @@ T["cs"] = dict(
     side_a="strana a — dnes",
     feats=[
         ("vícejazyčné psaní tažením",
-         "V jedné větě přejedete slova ve dvou jazycích a jazyk nepřepínáte. Dnes je to slovenština a angličtina; čeština přijde jako další. Gesto čte FUTO Swipe, náš dekodér doplní diakritiku a podle předchozího slova vybere správného kandidáta."),
+         "V jedné větě přejedete slova v několika jazycích a jazyk nepřepínáte. Dnes je to čeština, slovenština a angličtina, dál přibude španělština a němčina. Gesto čte FUTO Swipe, náš dekodér doplní diakritiku a podle předchozího slova vybere správného kandidáta."),
         ("další slovo odhadne telefon",
          "Malá neuronová síť odhadne další slovo podle toho, co jste už napsali. Běží v telefonu, žádný server, kam by se cokoli posílalo, neexistuje."),
         ("diktování, aniž byste opustili klávesnici",
@@ -247,8 +247,8 @@ T["cs"] = dict(
     ],
     side_b="strana b — připravujeme",
     coming=[
-        "Čeština, potom španělština a němčina, každá s vlastním slovníkem pro psaní tažením a s předpovědí slov",
-        "Menší klávesnice, které nastavíte velikost a polohu na tabletu i na rozloženém telefonu",
+        "Španělština a němčina, každá s vlastním slovníkem pro psaní tažením a s předpovědí slov",
+        "Tlačítko „oprav větu“, za kterým je malý model přímo v telefonu",
     ],
     shots=[
         ("shot-swipe", 1080, 884, "Droneboard v tmavém motivu s nápisem English–Slovak na mezerníku; po tažení slova „keyboard“ pruh nabízí keynotes, keyboards a keypad, vpravo je mikrofon.", "Po tažení: návrhy v pruhu, vpravo mikrofon."),
@@ -268,7 +268,7 @@ T["cs"] = dict(
     num_cols=("test", "top-1", "top-3"),
     num_rows=[
         ("Sada českých gest, knihovna gest od Googlu (jako v HeliBoardu)", "82,4", "96,3", False),
-        ("Sada českých gest, Droneboard", "81,8", "95,8", True),
+        ("Sada českých gest, Droneboard s vlastním českým slovníkem", "78,2", "92,0", True),
         ("Skutečný telefon, 106 zadaných slovenských a anglických slov", "82,1", "92,5", True),
     ],
     num_cap="Top-1: správné slovo je první. Top-3: je mezi prvními třemi. Měřeno na otevřené sadě gest „Sink-or-Swipe“ a na nahrávkách jednoho člověka. Berte to jako směr, ne jako slib.",
@@ -322,7 +322,7 @@ T["de"] = dict(
     side_a="seite a — heute",
     feats=[
         ("mehrsprachig wischen",
-         "Wischen Sie Wörter aus zwei Sprachen im selben Satz, ohne eine Sprachtaste anzufassen. Heute sind das Slowakisch und Englisch, weitere folgen. FUTO Swipe liest die Geste, unser Decoder ergänzt die Akzente und lässt das vorherige Wort zwischen den Kandidaten entscheiden."),
+         "Wischen Sie Wörter aus mehreren Sprachen im selben Satz, ohne eine Sprachtaste anzufassen. Heute sind das Tschechisch, Slowakisch und Englisch; Spanisch und Deutsch folgen. FUTO Swipe liest die Geste, unser Decoder ergänzt die Akzente und lässt das vorherige Wort zwischen den Kandidaten entscheiden."),
         ("das nächste Wort, auf dem Telefon berechnet",
          "Ein kleines neuronales Netz errät Ihr nächstes Wort aus dem, was Sie schon geschrieben haben. Es läuft auf dem Telefon; es gibt keinen Server, an den etwas gehen könnte."),
         ("diktieren, ohne die Tastatur zu verlassen",
@@ -338,8 +338,8 @@ T["de"] = dict(
     ],
     side_b="seite b — in arbeit",
     coming=[
-        "Tschechisch, danach Spanisch und Deutsch, jeweils mit eigenem Wischwörterbuch und Wortvorhersage",
-        "Eine kleinere Tastatur, deren Größe und Position Sie auf Tablets und aufgeklappten Telefonen einstellen",
+        "Spanisch und Deutsch, jeweils mit eigenem Wischwörterbuch und Wortvorhersage",
+        "Eine Taste „Satz korrigieren“ mit einem kleinen Modell direkt auf dem Telefon",
     ],
     shots=[
         ("shot-swipe", 1080, 884, "Droneboard im dunklen Design, auf der Leertaste steht English–Slovak; nach dem Wischen von „keyboard“ bietet die Leiste keynotes, keyboards und keypad an, rechts das Mikrofon.", "Nach dem Wischen: Vorschläge in der Leiste, rechts das Mikrofon."),
@@ -359,7 +359,7 @@ T["de"] = dict(
     num_cols=("test", "top-1", "top-3"),
     num_rows=[
         ("Tschechischer Gestendatensatz, Googles Gestenbibliothek (wie in HeliBoard)", "82,4", "96,3", False),
-        ("Tschechischer Gestendatensatz, Droneboard", "81,8", "95,8", True),
+        ("Tschechischer Gestendatensatz, Droneboard mit eigenem tschechischem Wörterbuch", "78,2", "92,0", True),
         ("Echtes Telefon, 106 vorgegebene slowakische und englische Wörter", "82,1", "92,5", True),
     ],
     num_cap="Top-1: Das richtige Wort steht vorn. Top-3: Es ist unter den ersten drei. Gemessen mit dem offenen Datensatz „Sink-or-Swipe“ und den Aufnahmen einer Person; eine Richtung, kein Versprechen.",
@@ -413,7 +413,7 @@ T["es"] = dict(
     side_a="cara a — hoy",
     feats=[
         ("deslizar en varios idiomas",
-         "Desliza palabras de dos idiomas en la misma frase sin tocar ninguna tecla de idioma. Hoy son el eslovaco y el inglés, y vendrán más. FUTO Swipe lee el gesto; nuestro decodificador añade los acentos y deja que la palabra anterior elija entre los candidatos."),
+         "Desliza palabras de varios idiomas en la misma frase sin tocar ninguna tecla de idioma. Hoy son el checo, el eslovaco y el inglés; el español y el alemán llegan después. FUTO Swipe lee el gesto; nuestro decodificador añade los acentos y deja que la palabra anterior elija entre los candidatos."),
         ("la siguiente palabra, calculada en el teléfono",
          "Una pequeña red neuronal adivina tu siguiente palabra a partir de lo que ya has escrito. Funciona en el teléfono; no hay ningún servidor al que enviar nada."),
         ("dictar sin salir del teclado",
@@ -429,8 +429,8 @@ T["es"] = dict(
     ],
     side_b="cara b — en camino",
     coming=[
-        "El checo, y después el español y el alemán, cada uno con su diccionario para deslizar y sus predicciones",
-        "Un teclado más pequeño cuyo tamaño y posición ajustas en tabletas y en teléfonos desplegados",
+        "El español y el alemán, cada uno con su diccionario para deslizar y sus predicciones",
+        "Un botón «corregir frase» con un modelo pequeño en el propio teléfono",
     ],
     shots=[
         ("shot-swipe", 1080, 884, "Droneboard en tema oscuro con English–Slovak en la barra espaciadora; tras deslizar «keyboard» la barra ofrece keynotes, keyboards y keypad, con el micrófono a la derecha.", "Tras deslizar: sugerencias en la barra, el micrófono a la derecha."),
@@ -450,7 +450,7 @@ T["es"] = dict(
     num_cols=("prueba", "top-1", "top-3"),
     num_rows=[
         ("Conjunto de gestos en checo, biblioteca de gestos de Google (como en HeliBoard)", "82,4", "96,3", False),
-        ("Conjunto de gestos en checo, Droneboard", "81,8", "95,8", True),
+        ("Conjunto de gestos en checo, Droneboard con su propio diccionario checo", "78,2", "92,0", True),
         ("Un teléfono real, 106 palabras propuestas en eslovaco e inglés", "82,1", "92,5", True),
     ],
     num_cap="Top-1: la palabra correcta sale la primera. Top-3: está entre las tres primeras. Medido con el conjunto abierto «Sink-or-Swipe» y las grabaciones de una persona; una orientación, no una promesa.",
