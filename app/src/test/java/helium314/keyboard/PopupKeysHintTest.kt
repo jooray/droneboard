@@ -53,7 +53,7 @@ class PopupKeysHintTest {
     private fun KeyParams.firstPopup() = mPopupKeys?.firstOrNull()?.mLabel
 
     @Test fun preselectedPopupIsTheHint() {
-        for ((locale, layout) in listOf("sk" to "qwertz", "sk" to "qwerty", "cs" to "qwertz", "en" to "qwerty")) {
+        for ((locale, layout) in listOf("sk" to "qwertz", "sk" to "qwerty", "cs" to "qwertz", "cs" to "qwerty", "en" to "qwerty")) {
             for (numberRow in listOf(false, true)) {
                 val keys = letterKeys(params(locale), layout, numberRow)
                 keys.forEach { key ->

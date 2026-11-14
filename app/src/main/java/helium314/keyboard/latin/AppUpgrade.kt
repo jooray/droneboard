@@ -741,9 +741,9 @@ private fun droneboardUpgrade(context: Context) {
     val oldVersion = prefs.getInt(Settings.PREF_VERSION_CODE, 0)
     // 0.1.2: the word that space enters sits in the middle of the strip, like Gboard
     if (oldVersion in 1..5001) prefs.edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, true) }
-    // 0.1.10: long press selects the hint symbol, so the popup order follows the hint order;
+    // 0.1.11: long press selects the hint symbol, so the popup order follows the hint order;
     // only a value equal to the old default is rewritten, an order the user picked stays
-    if (oldVersion in 1..5009) migratePopupOrderDefault(context)
+    if (oldVersion in 1..5010) migratePopupOrderDefault(context)
     // the mic is pinned at the right end and emoji has its own key in the bottom row,
     // so neither belongs in the expandable toolbar
     val toolbar = prefs.getString(Settings.PREF_TOOLBAR_KEYS, null) ?: return
