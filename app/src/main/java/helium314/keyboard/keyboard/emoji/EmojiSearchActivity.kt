@@ -394,7 +394,7 @@ class EmojiSearchActivity : ComponentActivity() {
         const val EMOJI_SEARCH_DONE_ACTION: String = "EMOJI_SEARCH_DONE"
         const val IME_CLOSED_KEY: String = "IME_CLOSED"
         const val EMOJI_KEY: String = "EMOJI"
-        private const val PRIVATE_IME_OPTIONS_PREFIX: String = "helium314.keyboard.keyboard.emoji.search"
+        private const val PRIVATE_IME_OPTIONS_PREFIX: String = "today.cypherpunk.droneboard.emoji.search"
         private var dictionaryFacilitator: SingleDictionaryFacilitator? = null
         private var searchText: String = ""
 

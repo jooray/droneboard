@@ -18,7 +18,7 @@ object DictionaryPackConstants {
      * The root domain for the dictionary pack, upon which authorities and actions will append
      * their own distinctive strings.
      */
-    private const val DICTIONARY_DOMAIN = "helium314.keyboard.dictionarypack.aosp"
+    private const val DICTIONARY_DOMAIN = "today.cypherpunk.droneboard.dictionarypack"
     /**
      * Authority for the ContentProvider protocol.
      */
