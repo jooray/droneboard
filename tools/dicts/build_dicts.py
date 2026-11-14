@@ -29,7 +29,7 @@ LANG = {
     # letters a word may contain (lowercase); anything else rejects the token
     "sk": dict(alphabet="aáäbcčdďeéfghiíjklĺľmnňoóôpqrŕsštťuúvwxyýzž", top=320_000,
                one_letter="a v s z o k u i", min_count=4, description="Slovenčina"),
-    "cs": dict(alphabet="aábcčdďeéěfghiíjklmnňoópqrřsštťuúůvwxyýzž", top=320_000,
+    "cs": dict(alphabet="aábcčdďeéěfghiíjklmnňoópqrřsštťuúůvwxyýzž", top=500_000,
                one_letter="a v s z o k u i", min_count=4, description="Čeština"),
     "en": dict(alphabet="abcdefghijklmnopqrstuvwxyz'", top=160_000,
                one_letter="a I", min_count=4, description="English"),
