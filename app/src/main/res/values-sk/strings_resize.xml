@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
     <string name="size_position">Veľkosť a poloha</string>
-    <string name="resize_mode_docked">Dole</string>
     <string name="resize_mode_one_handed">Jedna ruka</string>
     <string name="resize_mode_floating">Plávajúca</string>
     <string name="resize_mode_split">Rozdelená</string>
@@ -20,6 +19,11 @@
     <string name="resize_handle_bottom_right">Zmeniť veľkosť klávesnice za pravý dolný roh</string>
     <string name="floating_drag_handle">Presunúť plávajúcu klávesnicu</string>
     <string name="floating_release_to_dock">Pusti a klávesnica sa prichytí dole</string>
-    <string name="auto_float_landscape">Plávajúca na šírku na tabletoch</string>
-    <string name="auto_float_landscape_summary">Na veľkej obrazovke sa klávesnica na šírku odpojí od okraja. Presunieš ju úchytom pod medzerníkom, potiahnutím k spodnému okraju ju znova prichytíš.</string>
+    <string name="resize_mode_full">Celá šírka</string>
+    <string name="resize_mode_compact">Kompaktná</string>
+    <string name="resize_position_left">Vľavo</string>
+    <string name="resize_position_center">V strede</string>
+    <string name="resize_position_right">Vpravo</string>
+    <string name="compact_large_screens">Kompaktná klávesnica na veľkých obrazovkách</string>
+    <string name="compact_large_screens_summary">Na tabletoch a rozložených skladačkách má klávesnica približne šírku ako na telefóne a je vpravo dole, pod palcom. Veľkosť a stranu zmeníš klávesom Veľkosť a poloha.</string>
 </resources>

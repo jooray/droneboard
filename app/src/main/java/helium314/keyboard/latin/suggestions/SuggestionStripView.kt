@@ -168,13 +168,32 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             if (pinnedKeyInToolbar != null && Settings.getValues().mQuickPinToolbarKeys)
                 pinnedKeyInToolbar.background = enabledToolKeyBackground
         }
-        toolbarContainer.doOnNextLayout {
-            // set min with of the toolbar so the weight of the toolbar keys actually does something
-            // todo: results in requestLayout() improperly called by android.widget.LinearLayout during layout: running second layout pass
-            toolbar.minimumWidth = toolbarContainer.width
+        // set min width of the toolbar so the weight of the toolbar keys actually does something, and on a narrow
+        // (compact or floating) keyboard make the keys narrower so all of them fit instead of the last one being cut
+        toolbarContainer.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
+            val width = right - left
+            if (width <= 0 || width == fittedToolbarWidth) return@addOnLayoutChangeListener
+            fittedToolbarWidth = width
+            post { fitToolbarKeys(width) }
         }
 
         updateKeys()
+    }
+
+    private var fittedToolbarWidth = -1
+
+    private fun fitToolbarKeys(width: Int) {
+        toolbar.minimumWidth = width
+        val count = toolbar.childCount
+        if (count == 0) return
+        val normal = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+        val narrowest = (resources.displayMetrics.density * 34).toInt()
+        val keyWidth = if (count * normal <= width) normal else (width / count).coerceAtLeast(narrowest)
+        for (i in 0 until count) {
+            val child = toolbar.getChildAt(i)
+            if (child.layoutParams.width != keyWidth)
+                child.layoutParams = LinearLayout.LayoutParams(keyWidth, LinearLayout.LayoutParams.MATCH_PARENT)
+        }
     }
 
     private lateinit var listener: Listener

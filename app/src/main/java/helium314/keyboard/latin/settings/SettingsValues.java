@@ -101,6 +101,9 @@ public class SettingsValues {
     public final boolean mOneHandedModeEnabled;
     public final int mOneHandedModeGravity;
     public final float mOneHandedModeScale;
+    public final boolean mCompactEnabled;
+    public final float mCompactWidth;
+    public final int mCompactGravity;
     public final float mKeyGapScale;
     public final String mShowMorePopupKeys;
     public final List<String> mPopupKeyOrder;
@@ -299,8 +302,14 @@ public class SettingsValues {
         mIsFloatingKeyboard = !mIsLocked && SettingsKt.isFloatingKeyboardEnabled(context);
         mFloatingWidth = SettingsKt.readFloatingWidth(context);
         mFloatingHeight = mIsFloatingKeyboard ? SettingsKt.readFloatingHeight(context) : 0;
-        mKeyboardHeightScale = mIsFloatingKeyboard ? 1f : Settings.readHeightScale(prefs, isLandscape, isFolded);
-        mOneHandedModeEnabled = !mIsFloatingKeyboard && Settings.readOneHandedModeEnabled(prefs, isLandscape, mIsSplitKeyboardEnabled, isFolded);
+        // Droneboard: compact docked keyboard (narrower, attached to the bottom), the default on large screens
+        mCompactEnabled = !mIsFloatingKeyboard && !mIsSplitKeyboardEnabled && SettingsKt.readCompactEnabled(context, isLandscape, isFolded);
+        mCompactWidth = mCompactEnabled ? SettingsKt.readCompactWidth(context, isLandscape, isFolded) : 1f;
+        mCompactGravity = SettingsKt.readCompactGravity(context, isLandscape, isFolded);
+        mKeyboardHeightScale = mIsFloatingKeyboard ? 1f
+                : mCompactEnabled ? SettingsKt.readCompactHeightScale(context, isLandscape, isFolded)
+                : Settings.readHeightScale(prefs, isLandscape, isFolded);
+        mOneHandedModeEnabled = !mIsFloatingKeyboard && !mCompactEnabled && Settings.readOneHandedModeEnabled(prefs, isLandscape, mIsSplitKeyboardEnabled, isFolded);
         mOneHandedModeGravity = Settings.readOneHandedModeGravity(prefs, isLandscape, mIsSplitKeyboardEnabled, isFolded);
         if (mOneHandedModeEnabled) {
             final float baseScale = res.getFraction(R.fraction.config_one_handed_mode_width, 1, 1);

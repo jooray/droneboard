@@ -111,7 +111,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_FLOATING_ENABLED_PREFIX = "floating_enabled";
     public static final String PREF_FLOATING_POS_X_PREFIX = "floating_pos_x";
     public static final String PREF_FLOATING_POS_Y_PREFIX = "floating_pos_y";
-    public static final String PREF_AUTO_FLOAT_LANDSCAPE = "auto_float_landscape";
+    public static final String PREF_COMPACT_LARGE_SCREENS = "compact_large_screens";
+    public static final String PREF_COMPACT_ENABLED_PREFIX = "compact_enabled";
+    public static final String PREF_COMPACT_WIDTH_PREFIX = "compact_width";
+    public static final String PREF_COMPACT_GRAVITY_PREFIX = "compact_gravity";
+    public static final String PREF_COMPACT_HEIGHT_SCALE_PREFIX = "compact_height_scale";
     public static final String PREF_FONT_SCALE = "font_scale";
     public static final String PREF_HINT_FONT_SCALE = "hint_font_scale";
     public static final String PREF_EMOJI_FONT_SCALE = "emoji_font_scale";
@@ -476,13 +480,20 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         return prefs.getFloat(SettingsKt.createPrefKeyForBooleanSettings(PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, index, 2), defaultValue);
     }
 
-    /** Keyboard height scale for the current orientation and fold state (the "Size & position" overlay). */
+    /** Keyboard height scale for the current orientation and fold state (compact keyboards have their own). */
     public float readCurrentHeightScale() {
         final boolean landscape = mSettingsValues.mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
-        return readHeightScale(mPrefs, landscape, FoldableUtils.INSTANCE.isFolded());
+        final boolean folded = FoldableUtils.INSTANCE.isFolded();
+        if (mSettingsValues.mCompactEnabled)
+            return SettingsKt.readCompactHeightScale(mContext, landscape, folded);
+        return readHeightScale(mPrefs, landscape, folded);
     }
 
     public void writeCurrentHeightScale(final float scale) {
+        if (mSettingsValues.mCompactEnabled) {
+            SettingsKt.writeCompact(mContext, null, null, null, scale);
+            return;
+        }
         final boolean landscape = mSettingsValues.mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE;
         int index = SettingsKt.findIndexOfDefaultSetting(landscape, FoldableUtils.INSTANCE.isFolded());
         String key = SettingsKt.createPrefKeyForBooleanSettings(PREF_KEYBOARD_HEIGHT_SCALE_PREFIX, index, 2);

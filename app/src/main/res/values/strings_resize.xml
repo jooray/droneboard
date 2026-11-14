@@ -3,7 +3,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
     <string name="size_position" tools:keep="@string/size_position">Size &amp; position</string>
-    <string name="resize_mode_docked">Docked</string>
     <string name="resize_mode_one_handed">One-handed</string>
     <string name="resize_mode_floating">Floating</string>
     <string name="resize_mode_split">Split</string>
@@ -22,6 +21,11 @@
     <string name="resize_handle_bottom_right">Resize keyboard on the bottom right corner</string>
     <string name="floating_drag_handle">Move the floating keyboard</string>
     <string name="floating_release_to_dock">Release to dock</string>
-    <string name="auto_float_landscape">Float in landscape on tablets</string>
-    <string name="auto_float_landscape_summary">On large screens the keyboard floats when the device is in landscape. Move it with the handle under the space bar, drag it to the bottom edge to dock it.</string>
+    <string name="resize_mode_full">Full width</string>
+    <string name="resize_mode_compact">Compact</string>
+    <string name="resize_position_left">Left</string>
+    <string name="resize_position_center">Center</string>
+    <string name="resize_position_right">Right</string>
+    <string name="compact_large_screens">Compact keyboard on large screens</string>
+    <string name="compact_large_screens_summary">On tablets and unfolded foldables the keyboard is about as wide as on a phone and sits at the bottom right, for your thumb. Change its size and side with the Size &amp; position key.</string>
 </resources>
