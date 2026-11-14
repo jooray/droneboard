@@ -2,131 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Droneboard: a multilingual keyboard for Android that works offline</title>
-<meta name="description" content="Droneboard is an open-source Android keyboard that feels like Gboard and never goes online: swipe across languages without switching, next-word predictions from a small neural network on the phone, offline dictation. No INTERNET permission.">
-<link rel="canonical" href="https://jooray.github.io/droneboard/">
-<link rel="alternate" hreflang="en" href="https://jooray.github.io/droneboard/">
-<link rel="alternate" hreflang="sk" href="https://jooray.github.io/droneboard/sk/">
-<link rel="alternate" hreflang="cs" href="https://jooray.github.io/droneboard/cs/">
-<link rel="alternate" hreflang="de" href="https://jooray.github.io/droneboard/de/">
-<link rel="alternate" hreflang="es" href="https://jooray.github.io/droneboard/es/">
-<link rel="alternate" hreflang="x-default" href="https://jooray.github.io/droneboard/">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Droneboard: a multilingual keyboard for Android that works offline">
-<meta property="og:description" content="Droneboard is an open-source Android keyboard that feels like Gboard and never goes online: swipe across languages without switching, next-word predictions from a small neural network on the phone, offline dictation. No INTERNET permission.">
-<meta property="og:url" content="https://jooray.github.io/droneboard/">
-<meta property="og:image" content="https://jooray.github.io/droneboard/img/og.jpg">
-<meta property="og:locale" content="en_US">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#2e3a44">
-<link rel="icon" href="img/icon-512.png">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-<link rel="preload" href="fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css">
+<title>Droneboard has moved</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/">
+<meta http-equiv="refresh" content="1; url=https://cypherpunk.today/droneboard/">
+<script>
+(function () {
+  var p = location.pathname.replace(/^\/droneboard(\/|$)/, '');
+  if (/(^|\/)(index|404)\.html$/.test(p)) p = p.replace(/(index|404)\.html$/, '');
+  location.replace('https://cypherpunk.today/droneboard/' + p + location.search + location.hash);
+})();
+</script>
 </head>
 <body>
-<a class="skip" href="#features">Skip to content</a>
-
-<header class="sleeve" id="top">
-  <picture><source type="image/webp" srcset="img/fog-photo.webp"><img class="fog" src="img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
-  <div class="masthead">
-    <a class="wordmark" href="#top">droneboard</a>
-    <nav class="topnav" aria-label="Droneboard">
-      <ul class="sections">
-        <li><a href="#features">features</a></li>
-        <li><a href="#privacy">privacy</a></li>
-        <li><a href="#install">install</a></li>
-        <li><a href="#nostr">nostr</a></li>
-      </ul>
-      <ul class="langs" aria-label="Language"><li><a href="" hreflang="en" lang="en" title="English" aria-current="page">en</a></li><li><a href="sk/" hreflang="sk" lang="sk" title="Slovenčina">sk</a></li><li><a href="cs/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="de/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="es/" hreflang="es" lang="es" title="Español">es</a></li></ul>
-    </nav>
-  </div>
-  <div class="stack">
-    <h1>a keyboard that plays along. offline.</h1>
-    <p class="sub">Swipe in several languages at once without switching, get next-word predictions from a small neural network on your phone, dictate offline. No INTERNET permission.</p>
-    <div class="kb" role="img" aria-label="Illustration: a swipe across the keyboard spelling ďakujem, with the suggestions ďakujem, thanks and diky in the strip." data-word="dakujem"><div class="kb-strip" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg><span class="w">ďakujem</span><span class="w">thanks</span><span class="w">diky</span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div><div class="kb-rows" aria-hidden="true"><div class="kb-row"><span class=k data-k=q>q</span><span class=k data-k=w>w</span><span class=k data-k=e>e</span><span class=k data-k=r>r</span><span class=k data-k=t>t</span><span class=k data-k=y>y</span><span class=k data-k=u>u</span><span class=k data-k=i>i</span><span class=k data-k=o>o</span><span class=k data-k=p>p</span></div><div class="kb-row mid"><span class=k data-k=a>a</span><span class=k data-k=s>s</span><span class=k data-k=d>d</span><span class=k data-k=f>f</span><span class=k data-k=g>g</span><span class=k data-k=h>h</span><span class=k data-k=j>j</span><span class=k data-k=k>k</span><span class=k data-k=l>l</span></div><div class="kb-row"><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 4 4 12h4.5v7h7v-7H20z"/></svg></span><span class=k data-k=z>z</span><span class=k data-k=x>x</span><span class=k data-k=c>c</span><span class=k data-k=v>v</span><span class=k data-k=b>b</span><span class=k data-k=n>n</span><span class=k data-k=m>m</span><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9l-6-6z"/><path d="m12 9.5 5 5m0-5-5 5"/></svg></span></div><div class="kb-row"><span class="k fn wide">?123</span><span class="k fn">,</span><span class="k fn"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 14a4.2 4.2 0 0 0 7 0"/><circle cx="9.3" cy="10" r=".6" fill="currentColor"/><circle cx="14.7" cy="10" r=".6" fill="currentColor"/></svg></span><span class="k space"></span><span class="k fn">.</span><span class="k fn wide"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 6v5a3 3 0 0 1-3 3H6"/><path d="m9.5 10.5-3.5 3.5 3.5 3.5"/></svg></span></div></div><canvas aria-hidden="true"></canvas></div>
-    <div class="install">
-      <a class="primary" href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Get it on Zapstore</a>
-      <span class="alt"><a href="https://github.com/jooray/droneboard/releases/latest">APK on GitHub</a><a href="obtainium://add/https://github.com/jooray/droneboard">Obtainium</a></span>
-    </div>
-  </div>
-  <a class="cue" href="#features"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><span>more features &amp; details</span></a>
-</header>
-
-<main>
-<section class="panel" id="features" aria-labelledby="features-h">
-  <h2 id="features-h">what it does today</h2>
-  <p class="lede">The keyboard you already know, with the parts that usually live in someone’s cloud rebuilt to stay on your phone. It is a beta: good enough for daily use if you don’t mind reporting the odd bug.</p>
-  <p class="side-label">side a — today</p>
-  <ol class="tracks"><li><span class="no">a1</span><h3>multilingual swipe</h3><p>Swipe in several languages in the same sentence without touching a language key. Today that means Czech, Slovak and English; Spanish and German are next. FUTO Swipe reads the gesture; our decoder adds the accents and lets the previous word choose between candidates.</p></li><li><span class="no">a2</span><h3>the next word, predicted on the phone</h3><p>A small neural network guesses your next word from what you have written so far. It runs on the phone; there is no server to send anything to.</p></li><li><span class="no">a3</span><h3>dictation without leaving the keyboard</h3><p>Tap the mic at the end of the suggestion strip and talk. The keyboard records the audio itself, from the phone or a Bluetooth headset, LE Audio buds or hearing aids, and Offline Speech to Text turns it into text on the device. Long dictation keeps going past the one-minute mark.</p></li><li><span class="no">a4</span><h3>feels like Gboard</h3><p>Material You colours, the same long-press characters, the word you typed in the middle of the strip, a number row in password fields, and no silent autocorrection.</p></li><li><span class="no">a5</span><h3>emoji by any part of a word</h3><p>Type “ocket” in emoji search and the rocket shows up. A matching emoji also appears in the strip while you write.</p></li><li><span class="no">a6</span><h3>the space bar as a trackpad</h3><p>Hold the space bar and slide to move the cursor, or set it to switch languages instead.</p></li><li><span class="no">a7</span><h3>HeliBoard underneath</h3><p>Clipboard history, one-handed and split layouts, themes, custom layouts and physical keyboards all come from HeliBoard.</p></li></ol>
-  <div class="side-b">
-    <p class="side-label">side b — coming</p>
-    <ol class="tracks b"><li><span class="no">b1</span><h3>Spanish and German, with their own swipe dictionaries and predictions</h3></li><li><span class="no">b2</span><h3>A “fix sentence” button backed by a small model on the phone</h3></li></ol>
-  </div>
-  <div class="shots"><figure><img src="img/shot-swipe.webp" width="1080" height="884" alt="Droneboard in dark theme with English–Slovak on the space bar; after swiping “keyboard” the strip offers keynotes, keyboards and keypad, with the mic on the right."><figcaption>After a swipe: suggestions in the strip, the mic on the right.</figcaption></figure><figure><img src="img/shot-emoji-search.webp" width="1080" height="1239" alt="Emoji search for the Slovak word “raketa”, showing rackets, astronauts and a rocket above the keyboard."><figcaption>Emoji search understands Slovak too: <span lang="sk">“raketa”</span>.</figcaption></figure></div>
-</section>
-
-<figure class="held">
-  <picture><img src="img/held-note.webp" alt="" width="1919" height="806" decoding="async"></picture>
-  <figcaption>Why “drone”? A swipe across the keys feels like sliding your hand along a synthesizer and letting the note hang, the way drone ambient does.</figcaption>
-</figure>
-
-<section class="panel" id="privacy" aria-labelledby="privacy-h">
-  <div class="two">
-    <div>
-      <h2 id="privacy-h">nothing leaves your phone</h2>
-      <p class="lede">Droneboard can’t reach the internet because Android never gave it permission to.</p>
-      <ul class="plainlist"><li>No <code>INTERNET</code> permission, no analytics, no crash reports.</li><li>It downloads nothing. Extra dictionaries are imported from a file.</li><li>Dictation audio goes to Offline Speech to Text on the same phone and nowhere else.</li><li>Contacts in suggestions are optional and off by default.</li></ul>
-      <p class="check"><strong>Check it yourself:</strong> Settings → Apps → Droneboard → Permissions. Network access isn’t on the list.</p>
-    </div>
-    <div>
-      <h2 id="numbers-h">how good is the swipe</h2>
-      <table class="stats" aria-labelledby="numbers-h">
-        <thead><tr><th scope="col">test</th><th scope="col" class="n">top-1</th><th scope="col" class="n">top-3</th></tr></thead>
-        <tbody><tr><th scope="row">Czech gesture set, Google’s gesture library (as in HeliBoard)</th><td class="n">82.4</td><td class="n">96.3</td></tr><tr class=us><th scope="row">Czech gesture set, Droneboard with its own Czech dictionary</th><td class="n">78.2</td><td class="n">92.0</td></tr><tr class=us><th scope="row">A real phone, 106 prompted Slovak and English words</th><td class="n">82.1</td><td class="n">92.5</td></tr></tbody>
-        <caption>Top-1: the right word comes first. Top-3: it is among the first three. Measured on the open “Sink-or-Swipe” gesture set and one person’s recordings; a direction, not a promise.</caption>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section class="panel" id="install" aria-labelledby="install-h">
-  <h2 id="install-h">install</h2>
-  <p class="lede">Zapstore is the easiest way: signed releases and updates from one app, no account.</p>
-  <div class="two">
-    <ol class="steps"><li><span>Install Zapstore from <a href="https://zapstore.dev">zapstore.dev</a>.</span></li><li><span>Open <a href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Droneboard on Zapstore</a> and install it.</span></li><li><span>Open Droneboard and follow the prompts to switch it on.</span></li><li><span>For dictation, also install <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text</a>.</span></li></ol>
-    <div class="routes">
-      <a class="primary" href="https://zapstore.dev/apps/today.cypherpunk.droneboard">Get it on Zapstore</a>
-      <div class="route"><a href="https://github.com/jooray/droneboard/releases/latest">APK on GitHub</a><span class="what">The signed APK from the latest GitHub release.</span></div><div class="route"><a href="obtainium://add/https://github.com/jooray/droneboard">Obtainium</a><span class="what">Track GitHub releases in <a href="https://obtainium.imranr.dev">Obtainium</a>; the link adds the repository directly.</span></div>
-    </div>
-  </div>
-  <p class="inst-note">Build it yourself from the <a href="https://github.com/jooray/droneboard">source code</a>. GPL-3.0.</p>
-</section>
-
-<section class="panel" id="nostr" aria-labelledby="nostr-h">
-  <h2 id="nostr-h">news on nostr</h2>
-  <p class="lede">Droneboard posts on nostr, an open network that no company owns. Your browser loads the newest posts straight from the relays; this page has no server of its own and sets no cookies.</p>
-  <div class="nostr-feed" data-nostr-live data-nprofile="nprofile1qqsg4hxewacqa46ypdcmvpzxae4eh2dnqnk3lrn7vrfsz2h5x0c5d4qpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgu62ll5" data-limit="4" data-lang="en" data-layout="list" data-relays="wss://nostr.cypherpunk.today,wss://relay.primal.net"></div>
-  <ul class="nostr-links">
-    <li><a href="https://njump.me/nprofile1qqsg4hxewacqa46ypdcmvpzxae4eh2dnqnk3lrn7vrfsz2h5x0c5d4qpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgu62ll5">Profile on njump.me</a></li>
-    <li>droneboard@cypherpunk.today</li>
-    <li>Zaps: droneboard@pay.cypherpunk.today</li>
-  </ul>
-</section>
-
-<section class="panel credits" id="credits" aria-labelledby="credits-h">
-  <h2 id="credits-h">credits</h2>
-  <dl><dt>keyboard</dt><dd>A fork of <a href="https://github.com/HeliBorg/HeliBoard">HeliBoard</a>, which builds on OpenBoard and AOSP LatinIME. GPL-3.0; some files Apache-2.0 or CC-BY-SA-4.0.</dd><dt>swipe</dt><dd>Swipe typing powered by FUTO Swipe (<a href="https://gitlab.futo.org/keyboard/swipe-library">swipe-library</a>, GPL-3.0). The model weights are under the FUTO Model Weights License.</dd><dt>headset recording</dt><dd>Bluetooth and LE Audio recording comes from <a href="https://github.com/jooray/third-ear">Third Ear</a> by the same author.</dd><dt>dictation</dt><dd><a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text</a>, installed separately.</dd><dt>word lists</dt><dd>FineWeb-2 (ODC-By), filtered through Hunspell dictionaries.</dd><dt>emoji data</dt><dd>Unicode CLDR annotations and Signal’s emoji search data, via aosp-dictionaries.</dd><dt>type</dt><dd>PT Sans by ParaType, SIL Open Font License.</dd></dl>
-</section>
-</main>
-
-<footer class="foot">
-  <span>Droneboard 0.1 beta · GPL-3.0 · built with AI assistance; contributions welcome</span>
-  <ul aria-label="Language"><li><a href="" hreflang="en" lang="en" aria-current="page">English</a></li><li><a href="sk/" hreflang="sk" lang="sk">Slovenčina</a></li><li><a href="cs/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="de/" hreflang="de" lang="de">Deutsch</a></li><li><a href="es/" hreflang="es" lang="es">Español</a></li></ul>
-</footer>
-
-<script src="drone.js" defer></script>
-<script src="nostr-live.js?v=1.0.1" defer></script>
+<p>Droneboard has moved to <a href="https://cypherpunk.today/droneboard/">cypherpunk.today/droneboard/</a>.</p>
 </body>
 </html>
