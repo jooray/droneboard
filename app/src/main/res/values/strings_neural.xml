@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="neural_predictions">Neural predictions</string>
+    <string name="neural_predictions_summary">Predict the next word with a small neural model on the phone, in the enabled languages. Off: word-triple statistics only.</string>
+</resources>

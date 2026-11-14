@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Record swipes for tuning</string>
+    <string name="swipe_recorder_summary">Swipe prompted words; the gestures are saved on this phone only</string>
+    <string name="swipe_recorder_intro">Swipe the word shown below into the field, the way you normally swipe. Every swipe moves on to the next word. The gestures are saved only on this phone, in the file shown at the bottom, and are never uploaded. Nothing you type outside this screen is recorded.</string>
+    <string name="swipe_recorder_progress">Word %1$d of %2$d · %3$d recorded</string>
+    <string name="swipe_recorder_last">Last swipe: %1$s</string>
+    <string name="swipe_recorder_skip">Skip word</string>
+    <string name="swipe_recorder_done">Done, thank you!</string>
+    <string name="swipe_recorder_file">Saved to %1$s</string>
+    <string name="swipe_recorder_no_storage">Cannot create the recording file.</string>
+</resources>

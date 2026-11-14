@@ -25,6 +25,7 @@ import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PR
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
+import helium314.keyboard.latin.swipe.SwipeGestureDecoder
 import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.BackgroundGatheringCache
@@ -172,6 +173,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 )
             }
         }
+        if (typedWordString.isNotEmpty()) moveEmojiToRightSlot(suggestionsList)
         val isTypedWordValid = firstOccurrenceOfTypedWordInSuggestions > -1 || (!resultsArePredictions && !allowsToBeAutoCorrected)
         return SuggestedWords(suggestionsList, suggestionResults.rawSuggestions, typedWordInfo,
             isTypedWordValid, hasAutoCorrection || correctToCapitalizedWord, false, inputStyle, sequenceNumber)
@@ -296,10 +298,20 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         settingsValuesForSuggestion: SettingsValuesForSuggestion,
         inputStyle: InputStyle, isCorrectionEnabled: Boolean, sequenceNumber: Int
     ): SuggestedWords {
-        val suggestionResults = mDictionaryFacilitator.getSuggestionResults(
-            wordComposer.composedDataSnapshot, ngramContext, keyboard,
-            settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
-        )
+        // FUTO Swipe decoder first; the native dictionaries only decode gestures with the
+        // proprietary Google library, which Droneboard does not need
+        val suggestionResults = SwipeGestureDecoder.getSuggestions(
+            wordComposer.composedDataSnapshot.mInputPointers, ngramContext, keyboard,
+            Settings.getValues().mSecondaryLocales, inputStyle != InputStyle.UPDATE_BATCH
+        )?.takeIf { it.isNotEmpty() } ?: if (helium314.keyboard.latin.utils.JniUtils.sHaveGestureLib) {
+            mDictionaryFacilitator.getSuggestionResults(
+                wordComposer.composedDataSnapshot, ngramContext, keyboard,
+                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
+            )
+        } else {
+            // without the Google library the native gesture path dereferences a null policy and crashes
+            SuggestionResults(1, ngramContext, false)
+        }
 
         // For transforming words that don't come from a dictionary, because it's our best bet
         val locale = mDictionaryFacilitator.mainLocale
@@ -538,6 +550,19 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                     }
                 }
             }
+            // Droneboard: the best emoji goes to the third visible slot, as in Gboard
+            if (words.size > 3 && !words[2].isEmoji) {
+                val emojiIndex = words.indexOfFirst { it.isEmoji }
+                if (emojiIndex > 2) words.add(2, words.removeAt(emojiIndex))
+            }
+        }
+
+        /** Droneboard: the best emoji takes the right slot of the strip (index 3: index 0 is the hidden typed
+         *  word, 1 the center, 2 the left slot), as in Gboard */
+        private fun moveEmojiToRightSlot(words: MutableList<SuggestedWordInfo>) {
+            if (words.size <= 3 || words[3].isEmoji) return
+            val emojiIndex = words.indexOfFirst { it.isEmoji }
+            if (emojiIndex > 3) words.add(3, words.removeAt(emojiIndex))
         }
 
         /** reduces score of the first suggestion if next one is close and has more than a single letter */

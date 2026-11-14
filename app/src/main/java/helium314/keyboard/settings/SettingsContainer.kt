@@ -65,13 +65,14 @@ class Setting(
 private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
         createCorrectionSettings(context) + createPreferencesSettings(context) + createToolbarSettings(context) +
         createLayoutSettings(context) + createAdvancedSettings(context) +
-        if (JniUtils.sHaveGestureLib) createGestureTypingSettings(context) else emptyList()
+        if (JniUtils.hasGestureTyping()) createGestureTypingSettings(context) else emptyList()
 
 object SettingsWithoutKey {
     const val EDIT_PERSONAL_DICTIONARY = "edit_personal_dictionary"
     const val APP = "app"
     const val VERSION = "version"
     const val LICENSE = "license"
+    const val FUTO_SWIPE = "futo_swipe"
     const val HIDDEN_FEATURES = "hidden_features"
     const val GITHUB = "github"
     const val GITHUB_WIKI = "github_wiki"
@@ -79,6 +80,7 @@ object SettingsWithoutKey {
     const val SAVE_LOG = "save_log"
     const val BACKUP_RESTORE = "backup_restore"
     const val DEBUG_SETTINGS = "screen_debug"
+    const val SWIPE_RECORDER = "screen_swipe_recorder"
     const val LOAD_GESTURE_LIB = "load_gesture_library"
     const val BACKGROUND_IMAGE = "background_image"
     const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"

@@ -1,141 +1,85 @@
-# HeliBoard
-HeliBoard is a privacy-conscious and customizable open-source keyboard, based on AOSP / OpenBoard.
-Does not use internet permission, and thus is 100% offline.
+<p align="center"><img src="art/droneboard-icon-512.png" width="128" alt="Droneboard icon"></p>
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/helium314.keyboard/)
-[<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="80">](https://github.com/HeliBorg/HeliBoard/releases/latest)
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/helium314.keyboard)
+# Droneboard
 
-## Table of Contents
+Droneboard is an open-source Android keyboard that works entirely offline and feels like Gboard. It has no `INTERNET` permission. It types in two languages at once, swipes with an open swipe engine, and turns speech into text without switching keyboards.
 
-- [Features](#features)
-- [Contributing](#contributing-)
-   * [Reporting Issues](#reporting-issues)
-   * [Translations](#translations)
-   * [To Community](#to-community)
-   * [Code Contribution](CONTRIBUTING.md)
-- [Links](#links)
-- [License](#license)
-- [Credits](#credits)
-  * [Funding](#funding)
+> **Status: beta (0.1.x).** It is good enough for daily use by people who like to report bugs. Expect rough edges.
 
-# Features
-<ul>
-  <li>Add dictionaries for suggestions and spell check</li>
-  <ul>
-    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a> (quality may vary)</li>
-    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
-    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
-  </ul>
-  <li>Customize keyboard themes (style, colors and background image)</li>
-  <li>Emoji search (inline and separate, requires <a href="https://codeberg.org/Helium314/aosp-dictionaries">emoji dictionary</a>)</li>
-  <ul>
-    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
-    <li>can follow dynamic colors for Android 12+</li>
-  </ul>
-  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
-  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
-  <li>Multilingual typing</li>
-  <li>Glide typing (<i>only with closed source library</i> ☹️)</li>
-  <ul>
-    <li>library not included in the app, as there is no compatible open source library available</li>
-    <li>can be extracted from GApps packages ("<i>swypelibs</i>"), or downloaded <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">here</a> (click on the file and then "raw" or the tiny download button)</li>
-  </ul>
-  <li>Clipboard history</li>
-  <li>One-handed mode</li>
-  <li>Split keyboard</li>
-  <li>Number pad</li>
-  <li>Backup and restore your settings and learned word / history data</li>
-</ul>
+The name comes from drone ambient music. A swipe across the keys feels like someone sliding their hand along a synth keyboard and letting the note hang.
 
-For [FAQ](https://github.com/HeliBorg/HeliBoard/wiki/FAQ), [hidden features](https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features) and more information about the app and features, please visit the [wiki](https://github.com/HeliBorg/HeliBoard/wiki)
+## What works today
 
-# Contributing ❤
+- **Swipe typing in several languages at once,** e.g. Slovak and English without switching. It runs on the [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) encoder with our own decoding:
+  - the dictionary is searched by base letters and the accents are added afterwards;
+  - the previous word re-ranks the candidates;
+  - a live preview runs while you swipe.
+- **One-tap dictation** with a microphone at the right end of the suggestion strip. The keyboard records the audio itself and hands it to [Offline Speech to Text](https://zapstore.dev/apps/app.offlinespeechtotext) for transcription on the phone.
+  - It records from Bluetooth headsets, including LE Audio and hearing aids, and falls back to the phone mic if the headset stays silent.
+  - Long dictation is split into pieces, so you can keep talking past OSTT's 60-second limit.
+- **The Gboard look and defaults:**
+  - Material You colors, rounded keys, pill-shaped enter and `?123` keys;
+  - Gboard's order of long-press characters;
+  - a number row in password fields;
+  - the word you typed in the middle of the strip;
+  - suggestions without silent autocorrection.
+- **Next-word prediction with a small neural network on the phone,** for Slovak and English. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
+- **Emoji:** search the emoji panel by any part of a word in English, Slovak or Czech ("ocket" finds 🚀). A matching emoji also appears in the strip while you type.
+- **Space bar long-press** moves the cursor like a trackpad, or switches the language if you prefer.
+- **Clipboard history, split and one-handed layouts, themes, custom layouts and a physical keyboard,** all inherited from HeliBoard.
+- **Swipe recording for tuning:** an optional screen shows words for you to swipe and saves the gestures to a local file. The `tools/swipe-replay` tool replays them through the exact decoder.
 
-## Reporting Issues
+## How good is the swipe?
 
-Whether you encountered a bug, or want to see a new feature in HeliBoard, you can contribute to the project by opening a new issue [here](https://github.com/HeliBorg/HeliBoard/issues). Your help is always welcome!
+| Test | Top-1 | Top-3 |
+|---|---|---|
+| Czech gestures, Google gesture library (as in HeliBoard) | 82.4 % | 96.3 % |
+| Czech gestures, Droneboard | 81.8 % | 95.8 % |
+| Real phone, 106 prompted Slovak and English words | 82.1 % | 92.5 % |
 
-Before opening a new issue, be sure to check the following:
- - **Does the issue already exist?** Make sure a similar issue has not been reported by browsing [existing issues](https://github.com/HeliBorg/HeliBoard/issues?q=). Please search open and closed issues. In case of feature requests you could also check the [FAQ](https://github.com/HeliBorg/HeliBoard/wiki/FAQ) and [hidden features](https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features).
- - **Is the issue still relevant?** Make sure your issue is not already fixed in the latest version of HeliBoard.
- - **Is it a single topic?** If you want to suggest multiple things, open multiple issues.
- - **Did you use the issue template?** It is important to make life of our kind contributors easier by avoiding issues that miss key information to their resolution.
- - **Is it written by a human?** Do not use LLMs or similar to generate issues. Having LLMs help with translation or similar is acceptable, but must be disclosed. See also [AI_USAGE.md](AI_USAGE.md)
-Note that issues that that ignore part of the issue template will likely get treated with very low priority, as often they are needlessly hard to read or understand (e.g. huge screenshots, not providing a proper description, or addressing multiple topics). Blatant violation of the guidelines may result in the issue getting closed.
+These numbers come from the offline gesture set "sink-or-swipe" and from one person's recordings. Treat them as a direction, not a promise.
 
-If you're interested, you can read the following useful text about effective bug reporting (a bit longer read): https://www.chiark.greenend.org.uk/~sgtatham/bugs.html
+## Planned
 
-## Translations
-Translations can be added using [Weblate](https://translate.codeberg.org/projects/heliboard/). You will need an account to update translations and add languages. Add the language you want to translate to in Languages -> Manage translated languages in the top menu bar.
-Updating translations in a PR will not be accepted, as it may cause conflicts with Weblate translations.
+- Czech, then Spanish and German, with the same swipe dictionaries and neural prediction.
+- Resizing and moving the keyboard with handles, and a floating keyboard on tablets in landscape.
+- A clipboard chip for fresh links, e-mails and one-time codes, like Gboard's.
+- Hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo.
+- A "fix sentence" button backed by a small on-device model.
+- A geek mode with a terminal row and snippets for AI agents. It will be off by default.
 
-Some notes on translations
-* when translating metadata, translating the changelogs is rather useless. It's available as it was requested by translators.
-* the `hidden_features_message` is horrible to translate with Weblate, and serves little benefit as it's just a copy of what's already in the wiki: https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features. It's been made available in the app on user request/contribution.
+## Install
 
-## To Community
-There is the [discussions on GitHub](https://github.com/HeliBorg/HeliBoard/discussions), or if you prefer a more open network there is [Lemmy](https://lemmy.world/c/Heliboard).
-You can share your themes, layouts and dictionaries with other people:
-* Themes can be saved and loaded using the menu on top-right in the _adjust colors_ screen
-  * you can share custom colors in a separate [discussion section](https://github.com/HeliBorg/HeliBoard/discussions/categories/custom-colors)
-  * there are theme collections available at [Star-Trowa/heliboard-themes](https://github.com/Star-Trowa/heliboard-themes) and [PickleHik3/droid-tings](https://github.com/PickleHik3/droid-tings)
-* Custom keyboard layouts are text files whose content you can edit, copy and share
-  * this applies to main keyboard layouts and to special layouts adjustable in advanced settings
-  * see [layouts.md](layouts.md) for details
-  * you can share custom layouts in a separate [discussion section](https://github.com/HeliBorg/HeliBoard/discussions/categories/custom-layout)
-  * [Roccobot's Layout Maker](https://roccobot.github.io/HeliBoard-RLM/) is a browser-based editor for json layout files
-* Creating dictionaries is a little more work
-  * first you will need a wordlist in the format from [here](https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/sample.combined) and in the repository readme
-    * you can load the wordlist dictionary directly in HeliBoard like you would load a dictionary, but other AOSP keyboard forks will likely need the .dict file
-  * then you need to compile the dictionary using [external tools](https://github.com/remi0s/aosp-dictionary-tools)
-    * when you want to add the dictionary to the [repository](https://codeberg.org/Helium314/aosp-dictionaries/), no need to compile to a .dict file
-  * the resulting file (and ideally the wordlist too) can be shared with other users
-  * note that there will not be any further dictionaries added to this app, but you can add dictionaries to the [dictionaries repository](https://codeberg.org/Helium314/aosp-dictionaries)
+Droneboard will be on [Zapstore](https://zapstore.dev) in the beta channel. Dictation needs [Offline Speech to Text](https://zapstore.dev/apps/app.offlinespeechtotext) installed next to it.
 
-## Code Contribution
-See [Contribution Guidelines](CONTRIBUTING.md)
+## Building
 
-# Links
-* Info
-  * [Wiki](https://github.com/HeliBorg/HeliBoard/wiki), including FAQ, help on customizing layouts, and gesture data gathering
-  * [Layout documentation](layouts.md) (more technical info regarding layout customization)
-  * [For creating custom dictionaries](https://codeberg.org/Helium314/aosp-dictionaries#wordlist-information) (see also top of the linked readme)
-* Community
-  * [Lemmy](https://lemmy.world/c/Heliboard)
-  * [Reddit](https://www.reddit.com/r/HeliBoard)
-  * GitHub [discussions](https://github.com/HeliBorg/HeliBoard/discussions)
-* Other
-  * [Translations](https://translate.codeberg.org/projects/heliboard/)
-  * [Dictionaries](https://codeberg.org/Helium314/aosp-dictionaries)
-  * [k3lp](https://codeberg.org/k3lp/k3lp) is a WIP library for keyboard layout parsing that will be implemented in HeliBoard when ready (created by [FlorisBoard](https://github.com/florisboard/florisboard/) maintainers)
-  * [swipe-o-scope](https://codeberg.org/eclexic/swipe-o-scope) for visualizing gesture data as created when using gesture data gathering
+```sh
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"   # or any JDK 17+
+./gradlew assembleDebug
+```
 
-# License
+You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Slovak dictionaries are rebuilt from open data with the scripts in `tools/dicts`.
 
-HeliBoard (as a fork of OpenBoard) is licensed under GNU General Public License v3.0.
+## Privacy
 
- > Permissions of this strong copyleft license are conditioned on making available complete source code of licensed works and modifications, which include larger works using a licensed work, under the same license. Copyright and license notices must be preserved. Contributors provide an express grant of patent rights.
+- No `INTERNET` permission, no analytics, no crash reporting.
+- The keyboard downloads nothing. Extra dictionaries are imported from a file, see [docs/dictionaries.md](docs/dictionaries.md).
+- Dictation audio goes to Offline Speech to Text on the same phone and nowhere else.
+- Contacts in suggestions are optional and off by default.
 
-See repo's [LICENSE](/LICENSE) file.
+## Contributing
 
-Since the app is based on Apache 2.0 licensed AOSP Keyboard, an [Apache 2.0](LICENSE-Apache-2.0) license file is provided.
-The icon is licensed under [Creative Commons BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). A [license file](LICENSE-CC-BY-SA-4.0) is also included.
+Droneboard is built with AI assistance, and AI-assisted contributions are welcome. Issues and pull requests too. Anyone may take any part of it under the license.
 
-# Credits
-- Icon by [Fabian OvrWrt](https://github.com/FabianOvrWrt) with contributions from [The Eclectic Dyslexic](https://github.com/the-eclectic-dyslexic)
-- [OpenBoard](https://github.com/openboard-team/openboard)
-- [AOSP Keyboard](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/)
-- [LineageOS](https://review.lineageos.org/admin/repos/LineageOS/android_packages_inputmethods_LatinIME)
-- [Simple Keyboard](https://github.com/rkkr/simple-keyboard)
-- [Indic Keyboard](https://gitlab.com/indicproject/indic-keyboard)
-- [FlorisBoard](https://github.com/florisboard/florisboard/)
-- Our [contributors](https://github.com/HeliBorg/HeliBoard/graphs/contributors)
+## Credits
 
-## Funding
+- Droneboard started as a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard), which is based on [OpenBoard](https://github.com/openboard-team/openboard) and AOSP LatinIME. Thank you to everyone who built them.
+- Swipe typing is powered by FUTO Swipe ([swipe-library](https://gitlab.futo.org/keyboard/swipe-library), GPL-3.0). The model weights are under the FUTO Model Weights License.
+- The Bluetooth and LE Audio recording comes from [Third Ear](https://github.com/jooray/third-ear) ([website](https://jooray.github.io/third-ear/), [Zapstore](https://zapstore.dev/apps/app.thirdear)) by the same author, relicensed under GPL-3.0 for Droneboard.
+- The word lists come from [FineWeb-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) (ODC-By), filtered through Hunspell dictionaries.
+- The emoji dictionaries come from [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries). They are built from Unicode CLDR annotations (Unicode License v3) and Signal's emoji search data (AGPL-3.0).
 
-This project is funded through [NGI Mobifree Fund](https://nlnet.nl/mobifree), a fund established by [NLnet](https://nlnet.nl) with financial support from the European Commission's [Next Generation Internet](https://ngi.eu) program. Learn more at the [NLnet project page](https://nlnet.nl/project/GestureTyping).
+## License
 
-[<img src="https://nlnet.nl/logo/banner.png" alt="NLnet foundation logo" width="20%" />](https://nlnet.nl)
-
-Further the project benefits from donations provided by many users (thank you all!).
+GPL-3.0, see [LICENSE](LICENSE). Some files are under Apache-2.0 or CC-BY-SA-4.0, as their headers say (`LICENSE-Apache-2.0`, `LICENSE-CC-BY-SA-4.0`). Third-party model weights keep their own licenses.

@@ -173,6 +173,33 @@ abstract public class ExpandableBinaryDictionary extends Dictionary {
         return NOT_A_PROBABILITY;
     }
 
+    /**
+     * Droneboard: the words of this dictionary with their probability (0-255), for swipe typing.
+     * Returns at most maxWords entries; empty if the dictionary is busy (never blocks the caller).
+     */
+    @NonNull
+    public Map<String, Integer> dumpWordsForSwipe(final int maxWords) {
+        final HashMap<String, Integer> out = new HashMap<>();
+        if (!mLock.readLock().tryLock()) return out;
+        try {
+            final BinaryDictionary dict = mBinaryDictionary;
+            if (dict == null || !dict.isValidDictionary()) return out;
+            int token = 0;
+            do {
+                final BinaryDictionary.GetNextWordPropertyResult next = dict.getNextWordProperty(token);
+                final WordProperty wp = next.mWordProperty;
+                if (wp != null && wp.mWord != null && !wp.mWord.isEmpty() && !wp.mIsNotAWord
+                        && !wp.mIsBeginningOfSentence) {
+                    out.put(wp.mWord, Math.max(0, wp.getProbability()));
+                }
+                token = next.mNextToken;
+            } while (token != 0 && out.size() < maxWords);
+        } finally {
+            mLock.readLock().unlock();
+        }
+        return out;
+    }
+
     void closeBinaryDictionary() {
         if (mBinaryDictionary != null) {
             mBinaryDictionary.close();

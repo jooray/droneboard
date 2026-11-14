@@ -108,11 +108,18 @@ object DictionaryInfoUtils {
     @JvmStatic
     fun getLocalesWithEmojiDicts(context: Context): List<Locale> =
         SubtypeSettings.getEnabledSubtypes(true)
-            .map { it.locale() }.filter { getCachedDictForLocaleAndType(it, Dictionary.TYPE_EMOJI, context) != null }
+            .map { it.locale() }.filter { getCachedDictForLocaleAndType(it, Dictionary.TYPE_EMOJI, context) != null || hasAssetsEmojiDict(it, context) }
+
+    // Droneboard bundles emoji dictionaries; they are only extracted on first use, but search should be available right away
+    private fun hasAssetsEmojiDict(locale: Locale, context: Context): Boolean =
+        getAssetsDictionaryList(context).orEmpty().any {
+            it.startsWith(Dictionary.TYPE_EMOJI + "_") && extractLocaleFromAssetsDictionaryFile(it).language == locale.language
+        }
 
     @JvmStatic
     fun getCachedDictForLocaleAndType(locale: Locale, type: String, context: Context): File? =
-        getCachedDictsForLocale(locale, context).firstOrNull { it.name.substringBefore("_") == type }
+        // extracted built-in dictionaries are named "<type>.dict", user-added ones "<type>_<suffix>.dict"
+        getCachedDictsForLocale(locale, context).firstOrNull { it.name.substringBefore("_").substringBefore(".") == type }
 
     fun getCachedDictsForLocale(locale: Locale, context: Context) =
         getCacheDirectoryForLocale(locale, context)?.let { File(it).listFiles() }.orEmpty()

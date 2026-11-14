@@ -1,4 +1,6 @@
 import com.android.build.api.variant.ApplicationVariant
+import java.io.File
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -6,15 +8,32 @@ plugins {
     kotlin("plugin.compose") version "2.4.0"
 }
 
+val keystoreProperties = Properties().apply {
+    val path = System.getenv("APP_SIGNING_PROPERTIES")
+        ?: "${System.getProperty("user.home")}/.apk-signing-keystore/signing.properties"
+    File(path).takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     compileSdk = 37
 
+    signingConfigs {
+        if (keystoreProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     defaultConfig {
-        applicationId = "helium314.keyboard"
+        applicationId = "today.cypherpunk.droneboard"
         minSdk = 21
         targetSdk = 37
-        versionCode = 4300
-        versionName = "4.3-beta1"
+        versionCode = 5007
+        versionName = "0.1.7"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -25,6 +44,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.findByName("release")
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
@@ -66,7 +86,7 @@ android {
             }
             variant.outputs.forEach { output ->
                 if (output is com.android.build.api.variant.impl.VariantOutputImpl) {
-                    output.outputFileName = "HeliBoard_${defaultConfig.versionName}-${variant.buildType}.apk"
+                    output.outputFileName = "Droneboard_${defaultConfig.versionName}-${variant.buildType}.apk"
                 }
             }
         }

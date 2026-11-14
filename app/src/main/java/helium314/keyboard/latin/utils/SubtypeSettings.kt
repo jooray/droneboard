@@ -14,6 +14,7 @@ import helium314.keyboard.compat.locale
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Constants.Separators
+import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue
 import helium314.keyboard.latin.common.LocaleUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.settings.Defaults
@@ -211,9 +212,40 @@ object SubtypeSettings {
         reloadSystemLocales(context)
 
         loadResourceSubtypes(context.resources)
+        setUpMultilingualDefault(context.prefs())
         loadAdditionalSubtypes(context.prefs())
         loadEnabledSubtypes(context)
     }
+
+    /**
+     * Gboard-like first start: one keyboard for the first system language that also suggests words in
+     * the other system languages of the same script (Gboard's "multilingual typing", e.g. "SK • EN").
+     * Runs only once, and only if the user has not chosen any languages yet.
+     */
+    private fun setUpMultilingualDefault(prefs: SharedPreferences) {
+        if (prefs.getBoolean(PREF_MULTILINGUAL_DEFAULT_DONE, false)) return
+        prefs.edit { putBoolean(PREF_MULTILINGUAL_DEFAULT_DONE, true) }
+        if (prefs.contains(Settings.PREF_ENABLED_SUBTYPES)) return
+        val locales = systemLocales.mapNotNull { locale ->
+            (resourceSubtypesByLocale[locale]
+                ?: LocaleUtils.getBestMatch(locale, resourceSubtypesByLocale.keys) { it }?.let { resourceSubtypesByLocale[it] })
+                ?.firstOrNull()?.locale()
+        }.distinct()
+        if (locales.size < 2) return
+        val main = locales.first()
+        val secondary = locales.drop(1).filter { it.script() == main.script() }.take(2)
+        if (secondary.isEmpty()) return
+        val base = resourceSubtypesByLocale[main]?.firstOrNull()?.toSettingsSubtype() ?: return
+        val multilingual = base.with(ExtraValue.SECONDARY_LOCALES, secondary.joinToString(Separators.KV) { it.toLanguageTag() })
+        val additional = createSettingsSubtypes(prefs.getString(Settings.PREF_ADDITIONAL_SUBTYPES, Defaults.PREF_ADDITIONAL_SUBTYPES)!!) + multilingual
+        prefs.edit {
+            putString(Settings.PREF_ADDITIONAL_SUBTYPES, createPrefSubtypes(additional))
+            putString(Settings.PREF_ENABLED_SUBTYPES, createPrefSubtypes(listOf(multilingual)))
+            putString(Settings.PREF_SELECTED_SUBTYPE, multilingual.toPref())
+        }
+    }
+
+    private const val PREF_MULTILINGUAL_DEFAULT_DONE = "droneboard_multilingual_default_done"
 
     @Suppress("SameReturnValue")
     private fun getDefaultEnabledSubtypes(): List<InputMethodSubtype> {

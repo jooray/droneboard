@@ -35,6 +35,7 @@ import helium314.keyboard.keyboard.KeyboardSwitcher;
 import helium314.keyboard.keyboard.emoji.EmojiSearchActivity;
 import helium314.keyboard.keyboard.emoji.RecentEmojis;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
+import helium314.keyboard.latin.lm.NeuralLanguageModel;
 import helium314.keyboard.latin.CapsMode;
 import helium314.keyboard.latin.InputStyle;
 import helium314.keyboard.latin.common.CoordinateUtils;
@@ -2505,6 +2506,9 @@ public final class InputLogic {
         final SettingsValues settingsValues = Settings.getValues();
         mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
                 getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
+        // Droneboard: the neural language model reads the text before the cursor (cached, no IPC in most cases)
+        NeuralLanguageModel.textBeforeCursor.set(inputStyle == InputStyle.UPDATE_BATCH || inputStyle == InputStyle.TAIL_BATCH
+                ? null : mConnection.getTextBeforeCursor(NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0));
         try {
             SuggestedWords suggestedWords = mSuggest.getSuggestedWords(
                     mWordComposer.copy(),
@@ -2525,6 +2529,8 @@ public final class InputLogic {
             Log.e(TAG, "Error fetching suggested words, using empty words instead", e);
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance());
             KeyboardSwitcher.getInstance().showToast("Error getting suggestions", true);
+        } finally {
+            NeuralLanguageModel.textBeforeCursor.remove();
         }
     }
 

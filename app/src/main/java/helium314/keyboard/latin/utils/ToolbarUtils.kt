@@ -131,14 +131,16 @@ enum class ToolbarMode {
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
 val defaultToolbarPref by lazy {
-    val default = listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, REDO, SELECT_WORD, COPY, PASTE, LEFT, RIGHT)
+    // Gboard-like order: clipboard and text editing first, settings last (the mic is pinned, see below)
+    val default = listOf(CLIPBOARD, DPAD, SPLIT, ONE_HANDED, UNDO, REDO, SELECT_ALL, COPY, PASTE, SETTINGS)
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
 }
 
+// Droneboard: the mic sits at the right end of the suggestion strip, as in Gboard
 val defaultPinnedToolbarPref = entries.filterNot { it == CLOSE_HISTORY }.joinToString(Separators.ENTRY) {
-    it.name + Separators.KV + false
+    it.name + Separators.KV + (it == VOICE)
 }
 
 val defaultClipboardToolbarPref by lazy {

@@ -9,11 +9,11 @@
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
     tools:ignore="MissingTranslation">
     <!-- Name of Android spell checker service. The app name should not be translated. -->
-    <string name="spell_checker_service_name">HeliBoard Spell Checker</string>
+    <string name="spell_checker_service_name">Droneboard Spell Checker</string>
     <!-- Title for IME settings screen. The app name should not be translated. -->
-    <string name="ime_settings">HeliBoard Settings</string>
+    <string name="ime_settings">Droneboard Settings</string>
     <!-- Title for the spell checking service settings screen. The app name should not be translated. -->
-    <string name="android_spell_checker_settings">HeliBoard Spell Checker Settings</string>
+    <string name="android_spell_checker_settings">Droneboard Spell Checker Settings</string>
     <!-- Option to provide vibrate/haptic feedback on keypress -->
     <string name="vibrate_on_keypress">Vibrate on keypress</string>
     <!-- Option to provide vibrate/haptic feedback on keypress even in do not disturb mode -->
@@ -305,6 +305,10 @@
     <string name="number_row">Number row</string>
     <!-- Description of the settings to enable number row -->
     <string name="number_row_summary">Always show number row</string>
+    <!-- Title of the setting to show the number row in password fields -->
+    <string name="number_row_for_passwords">Number row for passwords</string>
+    <!-- Description of the setting to show the number row in password fields -->
+    <string name="number_row_for_passwords_summary">Show the number row when typing a password</string>
     <!-- Title of the setting to replace the top row in symbols layout with number row -->
     <string name="number_row_in_symbols">Show number row in symbols view</string>
     <!-- Title of the setting to localize number row -->
@@ -396,6 +400,12 @@
     <string name="remove_redundant_popups">Remove redundant popups</string>
     <!-- Description of the remove_redundant_popups setting -->
     <string name="remove_redundant_popups_summary">Suppress popup keys that are already present on the base layout</string>
+    <!-- Title of the setting choosing what a long press on the space bar does -->
+    <string name="space_long_press">Long press on space bar</string>
+    <!-- Long press on space bar: the keyboard becomes a trackpad for moving the cursor -->
+    <string name="space_long_press_trackpad">Trackpad</string>
+    <!-- Long press on space bar: switch language or input method -->
+    <string name="space_long_press_language">Switch language or keyboard</string>
     <!-- Title of the setting enabling long press on space key to change IME -->
     <string name="prefs_long_press_keyboard_to_change_lang">Change input method with space key</string>
     <!-- Description of the settings to change IME indicating long press triggers change. -->

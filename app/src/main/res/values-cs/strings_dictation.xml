@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="voice_starting">Zapíná se mikrofon…</string>
+    <string name="voice_waiting_bluetooth">Čekám na mikrofon ve sluchátkách…</string>
+    <string name="voice_speak_now">Mluvte</string>
+    <string name="voice_silent">Mikrofon nic neslyší. Není ztlumený?</string>
+    <string name="voice_transcribing">Přepisuji…</string>
+    <string name="voice_stop">Zastavit diktování</string>
+    <string name="voice_cancel">Zrušit diktování</string>
+    <string name="voice_mic_phone">Mikrofon telefonu</string>
+    <string name="voice_mic_phone_fallback">Mikrofon telefonu (sluchátka neodpověděla)</string>
+    <string name="voice_mic_headset">Mikrofon: %s</string>
+    <string name="voice_mic_bluetooth">Bluetooth sluchátka</string>
+    <string name="voice_mic_failed">Mikrofon se nepodařilo zapnout</string>
+    <string name="voice_transcription_failed">Přepis selhal</string>
+    <string name="voice_ostt_missing">K diktování je potřeba Offline Speech to Text</string>
+    <string name="voice_ostt_missing_detail">Bezplatná aplikace, která přepisuje řeč přímo v telefonu, bez internetu.</string>
+    <string name="voice_install_ostt">Stáhnout ze Zapstore</string>
+</resources>

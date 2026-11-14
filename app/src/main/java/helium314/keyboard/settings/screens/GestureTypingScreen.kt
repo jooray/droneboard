@@ -25,6 +25,11 @@ import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
+import helium314.keyboard.latin.swipe.FutoSwipe
+import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.settings.SettingsDestination
+import helium314.keyboard.settings.SettingsWithoutKey
+import helium314.keyboard.settings.preferences.Preference
 
 @Composable
 fun GestureTypingScreen(
@@ -50,7 +55,8 @@ fun GestureTypingScreen(
             Settings.PREF_GESTURE_FAST_TYPING_COOLDOWN else null,
         if (gestureEnabled &&
             (prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL, Defaults.PREF_GESTURE_PREVIEW_TRAIL) || gestureFloatingPreviewEnabled))
-            Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION else null
+            Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION else null,
+        if (gestureEnabled && FutoSwipe.isAvailable) SettingsWithoutKey.SWIPE_RECORDER else null,
         )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -109,6 +115,13 @@ fun createGestureTypingSettings(context: Context) = listOf(
             description = { stringResource(R.string.abbreviation_unit_milliseconds, (it + 100).toString()) },
             stepSize = 10,
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, SettingsWithoutKey.SWIPE_RECORDER, R.string.swipe_recorder_title, R.string.swipe_recorder_summary) {
+        Preference(
+            name = it.title,
+            description = it.description,
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.SwipeRecorder) }
+        ) { NextScreenIcon() }
     },
 )
 

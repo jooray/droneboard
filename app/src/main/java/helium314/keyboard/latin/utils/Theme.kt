@@ -11,7 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import helium314.keyboard.latin.R
 
@@ -22,12 +22,14 @@ fun Theme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit
         if (dark) dynamicDarkColorScheme(LocalContext.current)
         else dynamicLightColorScheme(LocalContext.current)
     } else {
-        // todo (later): more colors
+        // no Material You before Android 12: use the Droneboard brand colors (indigo and lime)
         if (dark) darkColorScheme(
-            primary = colorResource(R.color.accent),
+            primary = Color(0xFFB6FF3B),
+            onPrimary = Color(0xFF1D2242),
         )
         else lightColorScheme(
-            primary = colorResource(R.color.accent)
+            primary = Color(0xFF1D2242),
+            secondary = Color(0xFF4A6B00),
         )
     }
     MaterialTheme(

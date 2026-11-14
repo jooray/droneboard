@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Synthetic swipes with real sentence context, in swipe-replay's input format.
+
+usage: synth.py <corpus.txt> <lang> <n> <out.jsonl> [--seed 1] [--layout qwerty|qwertz] [--min-len 2]
+
+Picks random sentences from the corpus (one per line or plain text), a random word of length
+>= min-len in each, and writes the swipe for that word together with the up to 3 words before
+it. The path follows the bench-swipe generator (internal research): key centres of the base
+letters with Gaussian aim error (sigma 0.18 key widths), mild corner rounding, variable speed
+and 60-120 Hz sampling. Coordinates are normalized like the keyboard does it: x by keyboard
+width, letter rows at y = 1/6, 1/2, 5/6.
+"""
+import argparse
+import json
+import math
+import random
+import re
+import unicodedata
+
+ROWS = {"qwerty": ["qwertyuiop", "asdfghjkl", "zxcvbnm"], "qwertz": ["qwertzuiop", "asdfghjkl", "yxcvbnm"]}
+
+
+def layout(name):
+    keys = {}
+    for r, row in enumerate(ROWS[name]):
+        offset = {0: 0.0, 1: 0.5, 2: 1.5}[r]
+        for i, c in enumerate(row):
+            keys[c] = ((offset + i + 0.5) / 10.0, (2 * r + 1) / 6.0)
+    return keys
+
+
+def base(word):
+    out = []
+    for ch in word.lower():
+        b = unicodedata.normalize("NFD", ch)[0]
+        if not ("a" <= b <= "z"):
+            return None
+        if not out or out[-1] != b:
+            out.append(b)
+    return out
+
+
+def chaikin(pts, r=0.12):
+    if len(pts) < 3:
+        return pts
+    new = [pts[0]]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        new.append((x0 + r * (x1 - x0), y0 + r * (y1 - y0)))
+        new.append((x1 - r * (x1 - x0), y1 - r * (y1 - y0)))
+    new.append(pts[-1])
+    return new
+
+
+def gesture(word, keys, rnd):
+    letters = base(word)
+    kw = 0.1  # key width in normalized units
+    centers = [(keys[c][0] + rnd.gauss(0, 0.18 * kw), keys[c][1] + rnd.gauss(0, 0.18 * kw * 1.6)) for c in letters]
+    if len(centers) == 1:
+        x, y = centers[0]
+        centers = [(x, y), (x + 0.01, y + 0.005)]
+    pts = chaikin(centers)
+    speed = rnd.uniform(0.9, 1.8) / 1000.0  # keyboard widths per ms
+    hz = rnd.uniform(60, 120)
+    step = speed * 1000.0 / hz
+    xs, ys, ts = [], [], []
+    t = 0.0
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        d = math.dist((x0, y0), (x1, y1))
+        n = max(1, int(d / step))
+        for k in range(n):
+            f = k / n
+            xs.append(x0 + f * (x1 - x0) + rnd.gauss(0, 0.002))
+            ys.append(y0 + f * (y1 - y0) + rnd.gauss(0, 0.003))
+            ts.append(t)
+            t += 1000.0 / hz * rnd.uniform(0.85, 1.15)
+    xs.append(pts[-1][0]); ys.append(pts[-1][1]); ts.append(t)
+    return xs, ys, ts
+
+
+WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)?", re.UNICODE)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("corpus")
+    ap.add_argument("lang")
+    ap.add_argument("n", type=int)
+    ap.add_argument("out")
+    ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--layout", default="qwerty")
+    ap.add_argument("--min-len", type=int, default=2)
+    ap.add_argument("--max-lines", type=int, default=400000)
+    ap.add_argument("--require", default="", help="keep only lines containing one of these letters")
+    ap.add_argument("--forbid", default="", help="drop lines containing any of these letters")
+    a = ap.parse_args()
+    rnd = random.Random(a.seed)
+    keys = layout(a.layout)
+    lines = []
+    with open(a.corpus, encoding="utf-8", errors="ignore") as f:
+        for i, line in enumerate(f):
+            if i >= a.max_lines:
+                break
+            if len(line) <= 20:
+                continue
+            if a.require and not any(c in line for c in a.require):
+                continue
+            if a.forbid and any(c in line for c in a.forbid):
+                continue
+            lines.append(line)
+    lay = [{"c": c, "x": x, "y": y} for c, (x, y) in sorted(keys.items())]
+    written = 0
+    with open(a.out, "w") as o:
+        while written < a.n:
+            words = WORD.findall(rnd.choice(lines))
+            idx = [i for i, w in enumerate(words) if len(w) >= a.min_len and base(w) and w.lower() == w]
+            if not idx:
+                continue
+            i = rnd.choice(idx)
+            xs, ys, ts = gesture(words[i], keys, rnd)
+            o.write(json.dumps({"target": words[i], "lang": a.lang, "context": [w for w in words[max(0, i - 3):i]],
+                                "layout": lay, "x": xs, "y": ys, "t": ts}, ensure_ascii=False) + "\n")
+            written += 1
+
+
+main()

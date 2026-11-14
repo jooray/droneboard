@@ -87,8 +87,7 @@ fun SwitchPreferenceWithEmojiDictWarning(setting: Setting, default: Boolean) {
     SwitchPreference(setting, default && hasEmojiDict) { showWarningDialog = it && !hasEmojiDict }
     if (showWarningDialog) {
         // emoji_dictionary_required contains "%s" since we didn't supply a formatArg
-        val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL + Links.DICTIONARY_DOWNLOAD_SUFFIX.replace("raw", "src")
-            + Links.DICTIONARY_EMOJI_CLDR_SUFFIX)
+        val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_HELP)
         val message = stringResource(R.string.emoji_dictionary_required, link)
         InfoDialog(message.htmlToAnnotated(), onDismissRequest = { showWarningDialog = false })
     }

@@ -51,7 +51,8 @@ data class KeyboardId(
         params.editorInfo.imeOptions,
         InputTypeUtils.getImeOptionsActionIdFromEditorInfo(params.editorInfo),
         params.deviceLocked,
-        params.settingsValues?.mShowsNumberRow ?: false,
+        (params.settingsValues?.mShowsNumberRow ?: false) || (params.settingsValues?.mShowsNumberRowForPasswords == true
+                && InputTypeUtils.isAnyPasswordInputType(params.editorInfo.inputType)),
         params.settingsValues?.mShowsNumberRowInSymbols ?: false,
         params.settingsValues?.isLanguageSwitchKeyEnabled ?: false,
         params.settingsValues?.mShowsEmojiKey ?: false,

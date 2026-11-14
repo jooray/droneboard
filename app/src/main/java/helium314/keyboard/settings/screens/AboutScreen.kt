@@ -55,6 +55,7 @@ fun AboutScreen(
         SettingsWithoutKey.APP,
         SettingsWithoutKey.VERSION,
         SettingsWithoutKey.LICENSE,
+        SettingsWithoutKey.FUTO_SWIPE,
         SettingsWithoutKey.HIDDEN_FEATURES,
         SettingsWithoutKey.GITHUB_WIKI,
         SettingsWithoutKey.COMMUNITY_LINKS,
@@ -107,6 +108,15 @@ fun createAboutSettings(context: Context) = listOf(
                 ctx.startActivity(intent)
             },
             icon = R.drawable.ic_settings_about_license
+        )
+    },
+    // required by the FUTO Model Weights License: visible "powered by FUTO Swipe" notice
+    Setting(context, SettingsWithoutKey.FUTO_SWIPE, R.string.about_futo_swipe_title, R.string.about_futo_swipe_summary) {
+        Preference(
+            name = it.title,
+            description = it.description,
+            onClick = { },
+            icon = R.drawable.ic_settings_gesture
         )
     },
     Setting(context, SettingsWithoutKey.HIDDEN_FEATURES, R.string.hidden_features_title, R.string.hidden_features_summary) {

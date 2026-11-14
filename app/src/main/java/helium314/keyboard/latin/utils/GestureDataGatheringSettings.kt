@@ -34,6 +34,10 @@ import kotlin.random.Random
 // will be removed once the project is finished
 
 object GestureDataGatheringSettings {
+    /** Droneboard: HeliBoard's gesture data donation (Google library, e-mail export) is disabled;
+     *  Droneboard has its own local "Record swipes for tuning" screen instead */
+    const val DONATION_UI_ENABLED = false
+
     private const val PREF_WORD_EXCLUSIONS = "gesture_data_word_exclusions"
     private const val PREF_APP_EXCLUSIONS = "gesture_data_app_exclusions"
     private const val PREF_APP_EXCLUSIONS_INCLUDE_BY_DEFAULT = "gesture_data_app_exclusions_ignore_by_default"
@@ -52,6 +56,7 @@ object GestureDataGatheringSettings {
         dictTestImeOption == editorInfo.privateImeOptions && gestureDataActiveFacilitator != null
 
     fun isBackgroundGatheringEnabled(prefs: SharedPreferences): Boolean {
+        if (!DONATION_UI_ENABLED) return false
         if (!prefs.getBoolean(PREF_BACKGROUND_GATHERING_ENABLED, false)) return false
         val disabledBefore = prefs.getLong(PREF_BACKGROUND_DISABLED_BEFORE_TIME_MILLIS, 0L)
         if (disabledBefore > SystemClock.elapsedRealtime() + 5 * 60 * 1000L) {
@@ -173,6 +178,7 @@ object GestureDataGatheringSettings {
 
     /** shows dialog promoting contribution of gesture data, or ask to do again if last contribution was more than 2 weeks ago */
     @Composable fun GestureDataPromotionReminderDialog() {
+        if (!DONATION_UI_ENABLED) return
         val ctx = LocalContext.current
         val promotionShowNext = ctx.prefs().getLong(PREF_SHOW_PROMOTION_DIALOG_NEXT, 0)
         val reminderShowNext = ctx.prefs().getLong(PREF_SHOW_REMINDER_DIALOG_NEXT, 0)
@@ -226,6 +232,7 @@ object GestureDataGatheringSettings {
 
     /** shows a toast notification if we're close to the end of the data gathering phase (at most once per 24 hours, only if there is non-exported data) */
     fun showEndNotificationIfNecessary(context: Context) {
+        if (!DONATION_UI_ENABLED) return
         val now = System.currentTimeMillis()
         if (now < END_DATE_EPOCH_MILLIS - TWO_WEEKS_IN_MILLIS) return
         val lastShown = context.prefs().getLong(PREF_END_NOTIFICATION_LAST_SHOWN, 0)

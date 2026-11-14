@@ -27,6 +27,9 @@ import helium314.keyboard.latin.dictionary.ExpandableBinaryDictionary
 import helium314.keyboard.latin.dictionary.UserBinaryDictionary
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.dictionary.history.UserHistoryDictionary
+import helium314.keyboard.latin.lm.LanguageModelSuggestions
+import helium314.keyboard.latin.lm.LanguageModels
+import helium314.keyboard.latin.lm.WordPrediction
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestedWords
@@ -61,6 +64,11 @@ import kotlin.time.Duration.Companion.seconds
  */
 class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private var dictionaryGroups = listOf(DictionaryGroup())
+
+    /** Droneboard: merge [LanguageModels.current] predictions into tap-typing suggestions (the keyboard's
+     *  facilitator only, not the spell checker's) */
+    @Volatile
+    var useLanguageModel = false
 
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
@@ -527,9 +535,42 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             suggestionResults.addAll(it)
         }
 
+        if (useLanguageModel && !composedData.mIsBatchMode) addLanguageModelSuggestions(suggestionResults, composedData, ngramContext)
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
+        keepBestEmoji(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
         return suggestionResults
+    }
+
+    /** Next-word predictions and completions of the language model, restricted to this keyboard's languages. */
+    private fun addLanguageModelSuggestions(results: SuggestionResults, composedData: ComposedData, ngramContext: NgramContext) {
+        val model = LanguageModels.current ?: return
+        val typed = composedData.mTypedWord
+        if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return
+        val locales = dictionaryGroups.map { it.locale }.filter { it.language.isNotEmpty() }
+        if (locales.isEmpty()) return
+        val predictions = try {
+            model.predict(LanguageModelSuggestions.contextWords(ngramContext), typed, locales, 8)
+        } catch (e: Exception) {
+            Log.w(TAG, "language model failed", e)
+            return
+        }
+        if (predictions.isEmpty()) return
+        val native = results.toList()
+        val makeInfo = { p: WordPrediction, score: Int ->
+            SuggestedWordInfo(
+                p.word, "", score,
+                if (typed.isEmpty()) SuggestedWordInfo.KIND_PREDICTION else SuggestedWordInfo.KIND_COMPLETION,
+                dictionaryGroups.firstOrNull { it.locale.language == p.locale.language }?.getDict(Dictionary.TYPE_MAIN)
+                    ?: Dictionary.DICTIONARY_USER_TYPED,
+                SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE
+            )
+        }
+        val merged = if (typed.isEmpty()) LanguageModelSuggestions.mergeNextWord(native, predictions, makeInfo)
+            else LanguageModelSuggestions.mergeCompletions(native, predictions, typed, makeInfo)
+        if (merged === native) return
+        results.clear()
+        merged.forEach { results.add(it) }
     }
 
     private fun getSuggestions(
@@ -598,6 +639,23 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.removeWord(word)
         }
+    }
+
+    override fun getUserWordsForSwipe(maxWords: Int): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        for (group in dictionaryGroups) {
+            for (type in arrayOf(Dictionary.TYPE_USER, Dictionary.TYPE_USER_HISTORY)) {
+                val dict = group.getSubDict(type) ?: continue
+                // personal dictionary words count as written often
+                val floor = if (type == Dictionary.TYPE_USER) 200 else 0
+                dict.dumpWordsForSwipe(maxWords).forEach { (word, p) ->
+                    val w = maxOf(p, floor).coerceIn(0, 255)
+                    if ((out[word] ?: -1) < w) out[word] = w
+                }
+                if (out.size >= maxWords) return out
+            }
+        }
+        return out
     }
 
     override fun clearUserHistoryDictionary(context: Context) {
@@ -693,6 +751,19 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 suggestionResults.add(firstNonEmojiNonTypedWord)
                 addedWord = firstNonEmojiNonTypedWord.word
             }
+        }
+
+        /** Droneboard: like Gboard, a matching emoji keeps a place even when many word forms outrank it
+         *  (e.g. Slovak "raketa" has many inflections that push the rocket out of the capped results) */
+        private fun keepBestEmoji(
+            suggestionResults: SuggestionResults,
+            suggestionsArray: Array<List<SuggestedWordInfo>?>,
+            typedWord: String
+        ) {
+            if (typedWord.length < 3 || suggestionResults.any { it.isEmoji }) return
+            val bestEmoji = suggestionsArray.filterNotNull().flatten().filter { it.isEmoji }.maxByOrNull { it.score } ?: return
+            if (suggestionResults.size >= SuggestedWords.MAX_SUGGESTIONS) suggestionResults.remove(suggestionResults.last())
+            suggestionResults.add(bestEmoji)
         }
 
         private fun isEmojiOrTypedWord(info: SuggestedWordInfo, typedWord: String): Boolean =

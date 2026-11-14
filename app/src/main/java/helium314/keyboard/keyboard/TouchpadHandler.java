@@ -70,6 +70,19 @@ public class TouchpadHandler {
         onMove(x, y);
     }
 
+    /** start trackpad mode right away, e.g. after a long press (which already gave haptic feedback) */
+    public void startTouchpadNow(int x, int y, KeyboardActionListener listener) {
+        mListener = listener;
+        mInTouchpadMode = true;
+        mHasVibrated = true;
+        mTouchpadLastX = x;
+        mTouchpadLastY = y;
+        // no debounce: the long press timeout has already passed
+        mTouchpadActivationTime = SystemClock.elapsedRealtime() - Settings.getValues().mKeyLongpressTimeout;
+        mListener.onCustomRequest(KeyboardActionListener.CustomAction.TOUCHPAD_ON);
+        mListener.onCustomRequest(KeyboardActionListener.CustomAction.PERFORM_HAPTIC);
+    }
+
     private void onMove(int x, int y) {
         SettingsValues sv = Settings.getValues();
 

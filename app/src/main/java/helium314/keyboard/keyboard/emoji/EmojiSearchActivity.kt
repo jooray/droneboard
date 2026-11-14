@@ -355,8 +355,15 @@ class EmojiSearchActivity : ComponentActivity() {
         keyboard.removeAllKeys()
         firstKey = null
         pressedKey = null
-        dictionaryFacilitator!!.getSuggestions(text.splitOnWhitespace()).filter { it.isEmoji }.forEach {
-            val emoji = getEmojiDefaultVersion(it.word)
+        // Droneboard: substring search over emoji keywords and names of all languages with emoji dictionaries,
+        // falling back to the dictionary's own (prefix) suggestions
+        val locales = listOf(RichInputMethodManager.getInstance().currentSubtype.locale) +
+            Settings.getValues().mSecondaryLocales + DictionaryInfoUtils.getLocalesWithEmojiDicts(this)
+        val found = EmojiSearchIndex.search(this, text, locales).ifEmpty {
+            dictionaryFacilitator!!.getSuggestions(text.splitOnWhitespace()).filter { it.isEmoji }.map { it.word }
+        }
+        found.distinctBy { getEmojiDefaultVersion(it) }.forEach {
+            val emoji = getEmojiDefaultVersion(it)
             val popupSpec = getEmojiPopupSpec(emoji)
             val keyParams = Key.KeyParams(emoji, emoji.getCode(), if (popupSpec != null) EMOJI_HINT_LABEL else null, popupSpec,
                 Key.LABEL_FLAGS_FONT_NORMAL, keyboardParams)

@@ -98,12 +98,12 @@
     <string name="enable_clipboard_history">Povoliť históriu schránky</string>
     <string name="prefs_force_incognito_mode_summary">Vypnúť učenie nových slov</string>
     <string name="more_keys_strip_description">Viac kláves</string>
-    <string name="spell_checker_service_name">Kontrola pravopisu v HeliBoard</string>
-    <string name="android_spell_checker_settings">Nastavenia kontroly pravopisu v HeliBoard</string>
+    <string name="spell_checker_service_name">Kontrola pravopisu v Droneboard</string>
+    <string name="android_spell_checker_settings">Nastavenia kontroly pravopisu v Droneboard</string>
     <string name="show_emoji_key">Emoji klávesa</string>
     <string name="incognito">Vynútiť režim inkognito</string>
     <string name="settings_category_input">Vstup</string>
-    <string name="ime_settings">Nastavenia HeliBoardu</string>
+    <string name="ime_settings">Nastavenia Droneboardu</string>
     <string name="settings_category_additional_keys">Dodatočné klávesy</string>
     <string name="settings_category_correction">Korekcie</string>
     <string name="settings_category_suggestions">Návrhy</string>
@@ -550,4 +550,9 @@
     <string name="recent_emojis_cleared">Vyčistené nedávne emodži</string>
     <string name="prefs_enable_hardware_keyboard">Podpora hardvérovej klávesnice</string>
     <string name="accent_shifted_icon">Ikona klávesy Shift s zvýraznením</string>
+    <string name="space_long_press">Podržanie medzerníka</string>
+    <string name="space_long_press_trackpad">Trackpad</string>
+    <string name="space_long_press_language">Prepnúť jazyk alebo klávesnicu</string>
+    <string name="number_row_for_passwords">Rad čísel pre heslá</string>
+    <string name="number_row_for_passwords_summary">Zobraziť rad čísel pri písaní hesla</string>
 </resources>

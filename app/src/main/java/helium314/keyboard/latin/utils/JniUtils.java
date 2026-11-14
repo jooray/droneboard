@@ -40,6 +40,11 @@ public final class JniUtils {
     }
 
     public static boolean sHaveGestureLib = false;
+
+    /** Gesture typing works with Droneboard's own FUTO Swipe decoder, or with a user-supplied library. */
+    public static boolean hasGestureTyping() {
+        return sHaveGestureLib || helium314.keyboard.latin.swipe.FutoSwipe.isAvailable();
+    }
     static {
         // hardcoded default path, may not work on all phones
         @SuppressLint("SdCardPath") String filesDir = "/data/data/" + BuildConfig.APPLICATION_ID + "/files";

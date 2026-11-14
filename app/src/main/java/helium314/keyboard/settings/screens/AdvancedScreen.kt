@@ -58,6 +58,8 @@ fun AdvancedSettingsScreen(
     val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
     if ((b?.value ?: 0) < 0)
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+    val usesTouchpad = Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SwipeAction.TOUCHPAD_MODE
+        || prefs.getString(Settings.PREF_SPACE_LONG_PRESS, Defaults.PREF_SPACE_LONG_PRESS) == Defaults.SPACE_LONG_PRESS_TRACKPAD
     val items = listOf(
         Settings.PREF_ALWAYS_INCOGNITO_MODE,
         Settings.PREF_KEY_LONGPRESS_TIMEOUT,
@@ -66,12 +68,10 @@ fun AdvancedSettingsScreen(
         if (Settings.readHorizontalSpaceSwipe(prefs) == KeyboardActionListener.SwipeAction.SWITCH_LANGUAGE
             || Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SwipeAction.SWITCH_LANGUAGE)
             Settings.PREF_LANGUAGE_SWIPE_DISTANCE else null,
-        if (Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SwipeAction.TOUCHPAD_MODE)
-            Settings.PREF_TOUCHPAD_SENSITIVITY else null,
-        if (Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SwipeAction.TOUCHPAD_MODE)
-            Settings.PREF_TOUCHPAD_EDGE_SCROLL else null,
+        Settings.PREF_SPACE_LONG_PRESS,
+        if (usesTouchpad) Settings.PREF_TOUCHPAD_SENSITIVITY else null,
+        if (usesTouchpad) Settings.PREF_TOUCHPAD_EDGE_SCROLL else null,
         Settings.PREF_DELETE_SWIPE,
-        Settings.PREF_SPACE_TO_CHANGE_LANG,
         Settings.PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD,
         Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) Settings.PREF_SHOW_SETUP_WIZARD_ICON else null,
@@ -89,7 +89,8 @@ fun AdvancedSettingsScreen(
         Settings.PREF_EMOJI_MAX_SDK,
         Settings.PREF_URL_DETECTION,
         Settings.PREF_ENABLE_HARDWARE_KEYBOARD,
-        if (BuildConfig.BUILD_TYPE != "nouserlib") SettingsWithoutKey.LOAD_GESTURE_LIB else null
+        // Droneboard: swipe is FUTO Swipe; loading the proprietary Google library is hidden (code kept for a possible opt-in engine)
+        if (DRONEBOARD_SHOW_GESTURE_LIB_LOADER && BuildConfig.BUILD_TYPE != "nouserlib") SettingsWithoutKey.LOAD_GESTURE_LIB else null
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -165,11 +166,13 @@ fun createAdvancedSettings(context: Context) = listOf(
         )
         ListPreference(it, items, Defaults.PREF_DELETE_SWIPE, description = stringResource(R.string.delete_swipe_summary))
     },
-    Setting(context, Settings.PREF_SPACE_TO_CHANGE_LANG,
-        R.string.prefs_long_press_keyboard_to_change_lang,
-        R.string.prefs_long_press_keyboard_to_change_lang_summary)
-    {
-        SwitchPreference(it, Defaults.PREF_SPACE_TO_CHANGE_LANG)
+    Setting(context, Settings.PREF_SPACE_LONG_PRESS, R.string.space_long_press) {
+        val items = listOf(
+            stringResource(R.string.space_long_press_trackpad) to Defaults.SPACE_LONG_PRESS_TRACKPAD,
+            stringResource(R.string.space_long_press_language) to Defaults.SPACE_LONG_PRESS_LANGUAGE,
+            stringResource(R.string.action_none) to Defaults.SPACE_LONG_PRESS_NONE,
+        )
+        ListPreference(it, items, Defaults.PREF_SPACE_LONG_PRESS)
     },
     Setting(context, Settings.PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD, R.string.prefs_long_press_symbol_for_numpad) {
         SwitchPreference(it, Defaults.PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD)
@@ -297,3 +300,6 @@ private fun Preview() {
         }
     }
 }
+
+/** Droneboard: the proprietary gesture library loader is hidden from the settings */
+const val DRONEBOARD_SHOW_GESTURE_LIB_LOADER = false

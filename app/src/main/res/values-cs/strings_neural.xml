@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="neural_predictions">Neuronové návrhy</string>
+    <string name="neural_predictions_summary">Další slovo předpovídá malý neuronový model přímo v telefonu, v zapnutých jazycích. Vypnuto: jen statistika trojic slov.</string>
+</resources>

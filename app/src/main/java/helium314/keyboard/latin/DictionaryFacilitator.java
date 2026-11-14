@@ -135,6 +135,11 @@ public interface DictionaryFacilitator {
 
     boolean isValidSuggestionWord(final String word);
 
+    /** Droneboard: the user's own words (typing history, personal dictionary) with weights 0-255, for swipe. */
+    default java.util.Map<String, Integer> getUserWordsForSwipe(final int maxWords) {
+        return java.util.Collections.emptyMap();
+    }
+
     void clearUserHistoryDictionary(final Context context);
 
     @NonNull List<DictionaryStats> getDictionaryStats(final Context context);

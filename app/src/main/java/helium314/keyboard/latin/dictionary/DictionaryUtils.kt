@@ -56,9 +56,9 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale) {
         return
     }
     val availableDicts = createDictionaryTextAnnotated(locale)
-    val repositoryLink = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)
-    val dictUrl = "${Links.DICTIONARY_URL}${Links.DICTIONARY_DOWNLOAD_SUFFIX}dictionaries/main_$locale.dict"
-    val dictionaryLink = stringResource(R.string.dictionary_link_text).withHtmlLink(dictUrl)
+    // Droneboard is offline: both links lead to the page explaining where dictionaries come from
+    val repositoryLink = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_HELP)
+    val dictionaryLink = repositoryLink
     val message = stringResource(R.string.no_dictionary_message, repositoryLink, locale.toString(), dictionaryLink)
     var annotatedString = message.htmlToAnnotated()
     if (availableDicts.isNotEmpty())
@@ -76,6 +76,8 @@ fun MissingDictionaryDialog(onDismissRequest: () -> Unit, locale: Locale) {
 /** if dictionaries for [locale] or language are available returns links to them */
 @Composable
 fun createDictionaryTextAnnotated(locale: Locale): AnnotatedString {
+    // Droneboard: no direct download links to dictionary repositories, see Links.DICTIONARY_HELP
+    if (DRONEBOARD_HIDE_DICTIONARY_DOWNLOADS) return AnnotatedString("")
     val context = LocalContext.current
     val knownDicts = getKnownDictionariesForLocale(locale, context)
     if (knownDicts.isEmpty()) return AnnotatedString("")
@@ -187,3 +189,6 @@ fun createPersonalDictionaryRequest(locale: Locale, alsoUseMoreRestrictiveLocale
     }
     return request.toString() to localeStrings.toTypedArray()
 }
+
+/** Droneboard is offline and bundles its dictionaries, so no download links are offered */
+const val DRONEBOARD_HIDE_DICTIONARY_DOWNLOADS = true

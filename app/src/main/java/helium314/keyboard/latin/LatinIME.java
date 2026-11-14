@@ -60,6 +60,7 @@ import helium314.keyboard.latin.suggestions.SuggestedWordInfo;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
+import helium314.keyboard.latin.voice.DictationController;
 import helium314.keyboard.latin.utils.ColorUtilKt;
 import helium314.keyboard.latin.utils.GestureDataGatheringKt;
 import helium314.keyboard.latin.utils.GestureDataGatheringSettings;
@@ -137,6 +138,7 @@ public class LatinIME extends InputMethodService implements
     private GestureConsumer mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
+    private final DictationController mDictation = new DictationController(this);
 
     public static final class UIHandler extends LeakGuardHandlerWrapper<LatinIME> {
         private static final int MSG_UPDATE_SHIFT_STATE = 0;
@@ -497,6 +499,10 @@ public class LatinIME extends InputMethodService implements
         super.onCreate();
 
         loadSettings();
+        helium314.keyboard.latin.swipe.SwipeGestureDecoder.init(this);
+        // swipe ranks words the user has written (typing history, personal dictionary) higher
+        helium314.keyboard.latin.swipe.SwipeGestureDecoder.setUserWordsProvider(
+                max -> mDictionaryFacilitator.getUserWordsForSwipe(max));
         mClipboardHistoryManager.onCreate();
         mHandler.onCreate();
         mReceiver.register(this);
@@ -709,6 +715,7 @@ public class LatinIME extends InputMethodService implements
     public void onFinishInputView(final boolean finishingInput) {
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
+        mDictation.onFinishInputView();
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
         BackgroundGatheringCache.saveOrClear(this);
@@ -1244,7 +1251,9 @@ public class LatinIME extends InputMethodService implements
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
-            mRichImm.switchToShortcutIme(this);
+            // Droneboard: dictate in place through Offline Speech to Text; older Android switches IME
+            if (!mDictation.onMicKey())
+                mRichImm.switchToShortcutIme(this);
         }
         InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event, mKeyboardSwitcher.getKeyboardCapsMode(), mHandler);

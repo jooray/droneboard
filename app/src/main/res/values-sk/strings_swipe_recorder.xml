@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Nahrávanie ťahov na ladenie</string>
+    <string name="swipe_recorder_summary">Ťahaj zobrazené slová; ťahy sa uložia len v tomto telefóne</string>
+    <string name="swipe_recorder_intro">Napíš ťahom do poľa slovo zobrazené nižšie, tak ako bežne píšeš. Po každom ťahu príde ďalšie slovo. Ťahy sa ukladajú len v tomto telefóne, do súboru uvedeného dole, a nikam sa neposielajú. Nič, čo píšeš mimo tejto obrazovky, sa nenahráva.</string>
+    <string name="swipe_recorder_progress">Slovo %1$d z %2$d · nahraných %3$d</string>
+    <string name="swipe_recorder_last">Posledný ťah: %1$s</string>
+    <string name="swipe_recorder_skip">Preskočiť slovo</string>
+    <string name="swipe_recorder_done">Hotovo, ďakujem!</string>
+    <string name="swipe_recorder_file">Uložené v %1$s</string>
+    <string name="swipe_recorder_no_storage">Súbor na nahrávanie sa nedá vytvoriť.</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- About screen: attribution required by the FUTO Model Weights License -->
+    <string name="about_futo_swipe_title">Swipe typing powered by FUTO Swipe</string>
+    <string name="about_futo_swipe_summary">Gesture recognition uses the FUTO Swipe model by FUTO Holdings, Inc., under the FUTO Model Weights License.</string>
+</resources>

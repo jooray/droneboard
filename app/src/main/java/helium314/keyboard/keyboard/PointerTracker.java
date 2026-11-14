@@ -145,6 +145,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private long mStartTime;
     private boolean mInHorizontalSwipe = false;
     private boolean mInVerticalSwipe = false;
+    /** trackpad mode started by a long press on the space bar */
+    private boolean mInLongPressTrackpad = false;
 
     // true if keyboard layout has been changed.
     private boolean mKeyboardLayoutHasBeenChanged;
@@ -241,7 +243,15 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sListener = listener;
     }
 
+    private static KeyDetector sMainKeyDetector;
+
+    /** Key detector of the main keyboard: converts view coordinates of gesture points into keyboard coordinates. */
+    public static KeyDetector getMainKeyDetector() {
+        return sMainKeyDetector;
+    }
+
     public static void setKeyDetector(final KeyDetector keyDetector) {
+        sMainKeyDetector = keyDetector;
         final Keyboard keyboard = keyDetector.getKeyboard();
         if (keyboard == null) {
             return;
@@ -767,7 +777,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         final SettingsValues sv = Settings.getValues();
         return switch (code) {
             case Constants.CODE_SPACE -> sv.mSpaceSwipeHorizontal != KeyboardActionListener.SwipeAction.NONE
-                    || sv.mSpaceSwipeVertical != KeyboardActionListener.SwipeAction.NONE;
+                    || sv.mSpaceSwipeVertical != KeyboardActionListener.SwipeAction.NONE
+                    || sv.mSpaceLongPressTrackpad;
             case KeyCode.DELETE -> sv.mDeleteSwipe > 0;
             default -> false;
         };
@@ -953,6 +964,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
             // Touchpad mode
             mTouchpadHandler.enableTouchpadMove(x, y, sListener);
+            if (mInLongPressTrackpad) return; // trackpad owns all movement
 
             // Vertical movement
             int stepsY = dY / sPointerStep;
@@ -1106,6 +1118,15 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             // Touchpad mode
             mTouchpadHandler.disableTouchpadMode();
 
+            if (mInLongPressTrackpad) {
+                // trackpad started by long press on space: lifting the finger must not type a space
+                mInLongPressTrackpad = false;
+                mInHorizontalSwipe = false;
+                mInVerticalSwipe = false;
+                callListenerOnRelease(currentKey, currentKey.getCode(), true);
+                return;
+            }
+
             if (mInHorizontalSwipe || mInVerticalSwipe) {
                 mInHorizontalSwipe = false;
                 mInVerticalSwipe = false;
@@ -1168,6 +1189,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             sListener.onPressKey(popupKeyCode, 0, 1, HapticEvent.NO_HAPTICS);
             sListener.onCodeInput(popupKeyCode, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
             sListener.onReleaseKey(popupKeyCode, false);
+            return;
+        }
+        if (code == Constants.CODE_SPACE && key.getPopupKeys() == null && Settings.getValues().mSpaceLongPressTrackpad
+                && mKeySwipeAllowed && !mInHorizontalSwipe && !mInVerticalSwipe) {
+            // Gboard-like: long press on the space bar turns the whole keyboard into a trackpad
+            mInLongPressTrackpad = true;
+            TouchpadHandler.setTouchpadModeActive(true);
+            mTouchpadHandler.startTouchpadNow(mLastX, mLastY, sListener);
             return;
         }
         if (code == KeyCode.LANGUAGE_SWITCH

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="voice_starting">Starting the microphone…</string>
+    <string name="voice_waiting_bluetooth">Waiting for the headset microphone…</string>
+    <string name="voice_speak_now">Speak now</string>
+    <string name="voice_silent">The microphone hears nothing. Is it muted?</string>
+    <string name="voice_transcribing">Writing it down…</string>
+    <string name="voice_stop">Stop dictation</string>
+    <string name="voice_cancel">Cancel dictation</string>
+    <string name="voice_mic_phone">Phone microphone</string>
+    <string name="voice_mic_phone_fallback">Phone microphone (the headset did not respond)</string>
+    <string name="voice_mic_headset">Microphone: %s</string>
+    <string name="voice_mic_bluetooth">Bluetooth headset</string>
+    <string name="voice_mic_failed">The microphone could not start</string>
+    <string name="voice_transcription_failed">Transcription failed</string>
+    <string name="voice_ostt_missing">Dictation needs Offline Speech to Text</string>
+    <string name="voice_ostt_missing_detail">A free app that transcribes on your phone, without internet.</string>
+    <string name="voice_install_ostt">Get it on Zapstore</string>
+</resources>

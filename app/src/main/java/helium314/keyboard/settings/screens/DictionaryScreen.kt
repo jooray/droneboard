@@ -118,7 +118,7 @@ fun DictionaryScreen(
             },
             title = { Text(stringResource(R.string.add_new_dictionary_title)) },
             content = {
-                val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_URL)
+                val link = stringResource(R.string.dictionary_link_text).withHtmlLink(Links.DICTIONARY_HELP)
                 val addDictString = stringResource(R.string.add_dictionary, link)
                 Text(addDictString.htmlToAnnotated())
             }

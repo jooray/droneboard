@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="about_futo_swipe_title">Písanie ťahom: powered by FUTO Swipe</string>
+    <string name="about_futo_swipe_summary">Rozpoznávanie ťahov používa model FUTO Swipe od FUTO Holdings, Inc. pod licenciou FUTO Model Weights License.</string>
+</resources>

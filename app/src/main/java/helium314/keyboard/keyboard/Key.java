@@ -916,6 +916,15 @@ public class Key implements Comparable<Key> {
             // 4: BACKGROUND_TYPE_SPACEBAR
             new KeyBackgroundState(),
         };
+
+        /** functional keys drawn as a pill like in Gboard (?123 / ABC), state_first selects the pill shape */
+        public static final KeyBackgroundState PILL = new KeyBackgroundState(android.R.attr.state_first);
+    }
+
+    /** Gboard draws the symbol / alphabet switch keys as pills, like the action key */
+    private boolean isPillKey() {
+        return mBackgroundType == BACKGROUND_TYPE_FUNCTIONAL
+                && (mCode == KeyCode.SYMBOL_ALPHA || mCode == KeyCode.SYMBOL || mCode == KeyCode.ALPHA);
     }
 
     /**
@@ -938,7 +947,9 @@ public class Key implements Comparable<Key> {
         } else {
             background = keyBackground;
         }
-        final int[] state = KeyBackgroundState.STATES[mBackgroundType].getState(mPressed || mLocked);
+        final KeyBackgroundState backgroundState = isPillKey()
+                ? KeyBackgroundState.PILL : KeyBackgroundState.STATES[mBackgroundType];
+        final int[] state = backgroundState.getState(mPressed || mLocked);
         background.setState(state);
         return background;
     }

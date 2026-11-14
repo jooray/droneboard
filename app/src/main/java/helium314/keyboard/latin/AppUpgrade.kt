@@ -88,6 +88,13 @@ private object AppUpgrade {
             prefs.edit { putInt(Settings.PREF_VERSION_CODE, BuildConfig.VERSION_CODE) }
             return
         }
+        if (oldVersion < 5000) {
+            // Droneboard dev builds used versionCode 1; HeliBoard migrations (all <= 4300) do not apply
+            droneboardUpgrade(context)
+            prefs.edit { putInt(Settings.PREF_VERSION_CODE, BuildConfig.VERSION_CODE) }
+            return
+        }
+        droneboardUpgrade(context)
         // clear extracted dictionaries, in case updated version contains newer ones
         DictionaryInfoUtils.getCacheDirectories(context).forEach {
             for (file in it.listFiles()!!) {
@@ -724,4 +731,20 @@ private object AppUpgrade {
     // old variant for old folder structure
     private fun getCustomLayoutFile(layoutName: String, context: Context): File =
         File(File(DeviceProtectedUtils.getFilesDir(context), "layouts"), layoutName)
+}
+
+/** Droneboard's own migrations; idempotent, run on every Droneboard version change. */
+private fun droneboardUpgrade(context: Context) {
+    val prefs = context.prefs()
+    val oldVersion = prefs.getInt(Settings.PREF_VERSION_CODE, 0)
+    // 0.1.2: the word that space enters sits in the middle of the strip, like Gboard
+    if (oldVersion in 1..5001) prefs.edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, true) }
+    // the mic is pinned at the right end and emoji has its own key in the bottom row,
+    // so neither belongs in the expandable toolbar
+    val toolbar = prefs.getString(Settings.PREF_TOOLBAR_KEYS, null) ?: return
+    val updated = toolbar.split(Separators.ENTRY).joinToString(Separators.ENTRY) {
+        val name = it.substringBefore(Separators.KV)
+        if (name == "EMOJI" || name == "VOICE") name + Separators.KV + false else it
+    }
+    if (updated != toolbar) prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, updated) }
 }

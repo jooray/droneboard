@@ -33,11 +33,22 @@ object DictionaryFactory {
     fun createEmojiDictionaryCollection(context: Context, locale: Locale, otherLocales: Collection<Locale>): DictionaryCollection? {
         val locales = listOf(locale) + otherLocales
         val dicts = locales.mapNotNull { locale ->
-            DictionaryInfoUtils.getCachedDictForLocaleAndType(locale, Dictionary.TYPE_EMOJI, context)
+            (DictionaryInfoUtils.getCachedDictForLocaleAndType(locale, Dictionary.TYPE_EMOJI, context)
+                ?: extractBuiltInEmojiDict(context, locale))
                 ?.let { getDictionary(it, locale) }
         }
         return if (dicts.isEmpty()) null
         else DictionaryCollection(Dictionary.TYPE_EMOJI, locale, dicts, FloatArray(dicts.size) { 1f })
+    }
+
+    /** Droneboard bundles emoji dictionaries in assets; extract the best match for [locale] on demand. */
+    fun extractBuiltInEmojiDict(context: Context, locale: Locale): File? {
+        val candidates = DictionaryInfoUtils.getAssetsDictionaryList(context).orEmpty()
+            .filter { it.startsWith(Dictionary.TYPE_EMOJI + "_") }
+        val best = LocaleUtils.getBestMatch(locale, candidates) {
+            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(it)
+        } ?: return null
+        return DictionaryInfoUtils.extractAssetsDictionary(best, locale, context)
     }
 
     fun getMainDictsForLocale(context: Context, locale: Locale, useEmojiDict: Boolean): List<Dictionary> {
@@ -58,7 +69,7 @@ object DictionaryFactory {
 
     fun getAvailableDictsForLocale(locale: Locale, context: Context, useEmojiDict: Boolean): Pair<Array<out File>, List<String>> {
         var cachedDicts = DictionaryInfoUtils.getCachedDictsForLocale(locale, context)
-        if (!useEmojiDict) cachedDicts = cachedDicts.filter { it.name.substringBefore("_") != Dictionary.TYPE_EMOJI }.toTypedArray()
+        if (!useEmojiDict) cachedDicts = cachedDicts.filter { it.name.substringBefore("_").substringBefore(".") != Dictionary.TYPE_EMOJI }.toTypedArray()
 
         val nonExtractedDicts = mutableListOf<String>()
         DictionaryInfoUtils.getAssetsDictionaryList(context)
