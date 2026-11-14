@@ -140,6 +140,16 @@ public interface DictionaryFacilitator {
         return java.util.Collections.emptyMap();
     }
 
+    /** Droneboard: the locales of all dictionary groups, main locale first */
+    @NonNull default List<Locale> getLocales() {
+        return java.util.Collections.singletonList(getMainLocale());
+    }
+
+    /** Droneboard: whether the word (exact case) is in the main dictionary of the group for the locale */
+    default boolean isInMainDictionary(@NonNull final String word, @NonNull final Locale locale) {
+        return false;
+    }
+
     void clearUserHistoryDictionary(final Context context);
 
     @NonNull List<DictionaryStats> getDictionaryStats(final Context context);

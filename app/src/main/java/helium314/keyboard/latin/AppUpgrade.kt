@@ -29,6 +29,8 @@ import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.LayoutType.Companion.folder
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.POPUP_KEYS_ORDER_DEFAULT
+import helium314.keyboard.latin.utils.POPUP_KEYS_ORDER_OLD_DEFAULT
 import helium314.keyboard.latin.utils.ScriptUtils.SCRIPT_LATIN
 import helium314.keyboard.latin.utils.ScriptUtils.script
 import helium314.keyboard.latin.utils.SubtypeSettings
@@ -739,6 +741,9 @@ private fun droneboardUpgrade(context: Context) {
     val oldVersion = prefs.getInt(Settings.PREF_VERSION_CODE, 0)
     // 0.1.2: the word that space enters sits in the middle of the strip, like Gboard
     if (oldVersion in 1..5001) prefs.edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, true) }
+    // 0.1.11: long press selects the hint symbol, so the popup order follows the hint order;
+    // only a value equal to the old default is rewritten, an order the user picked stays
+    if (oldVersion in 1..5010) migratePopupOrderDefault(context)
     // the mic is pinned at the right end and emoji has its own key in the bottom row,
     // so neither belongs in the expandable toolbar
     val toolbar = prefs.getString(Settings.PREF_TOOLBAR_KEYS, null) ?: return
@@ -759,4 +764,24 @@ private fun droneboardUpgrade(context: Context) {
     }
     val updated = entries.joinToString(Separators.ENTRY)
     if (updated != toolbar) prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, updated) }
+}
+
+/** Replaces the old default popup key order (accents first) with the new default (hint first), globally and in subtypes. */
+private fun migratePopupOrderDefault(context: Context) {
+    val prefs = context.prefs()
+    if (prefs.getString(Settings.PREF_POPUP_KEYS_ORDER, null) == POPUP_KEYS_ORDER_OLD_DEFAULT)
+        prefs.edit { putString(Settings.PREF_POPUP_KEYS_ORDER, POPUP_KEYS_ORDER_DEFAULT) }
+    // per-subtype order, stored as "PopupOrder=<order>" in the subtype extra values; a longer custom order would continue with ENTRY
+    val oldExtra = Regex(Regex.escape(ExtraValue.POPUP_ORDER + "=" + POPUP_KEYS_ORDER_OLD_DEFAULT) + "(?!" + Regex.escape(Separators.ENTRY) + ")")
+    val newExtra = ExtraValue.POPUP_ORDER + "=" + POPUP_KEYS_ORDER_DEFAULT
+    var changed = false
+    listOf(Settings.PREF_ENABLED_SUBTYPES, Settings.PREF_SELECTED_SUBTYPE, Settings.PREF_ADDITIONAL_SUBTYPES).forEach { key ->
+        val value = prefs.getString(key, null) ?: return@forEach
+        val updated = oldExtra.replace(value, Regex.escapeReplacement(newExtra))
+        if (updated != value) {
+            prefs.edit { putString(key, updated) }
+            changed = true
+        }
+    }
+    if (changed) SubtypeSettings.reloadEnabledSubtypes(context)
 }

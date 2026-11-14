@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="capitalize_english_i">Velké anglické „I“</string>
+    <string name="capitalize_english_i_summary">Z „i think“ bude „I think“, stejně tak i’m, i’ll, i’d a i’ve. Jen když je okolní text anglický. Backspace hned potom změnu vrátí</string>
+</resources>

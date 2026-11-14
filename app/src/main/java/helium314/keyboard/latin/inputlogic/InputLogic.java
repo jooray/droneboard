@@ -43,6 +43,7 @@ import helium314.keyboard.latin.dictionary.Dictionary;
 import helium314.keyboard.latin.DictionaryFacilitator;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
+import helium314.keyboard.latin.InputAttributes;
 import helium314.keyboard.latin.NgramContext;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
@@ -111,6 +112,8 @@ public final class InputLogic {
     }
 
     public LastComposedWord mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
+    // Droneboard: the commit that capitalized an English "i"; backspace right after it reverts like an autocorrection
+    private LastComposedWord mEnglishICapitalizationCommit = null;
     // This has package visibility so it can be accessed from InputLogicHandler.
     /* package */ final WordComposer mWordComposer;
     public final RichInputConnection mConnection;
@@ -343,6 +346,11 @@ public final class InputLogic {
             return inputTransaction;
         }
 
+        // Droneboard: picking the typed "i" from the strip capitalizes it like committing it with space does
+        if (mWordComposer.isComposingWord() && !mWordComposer.isBatchMode() && suggestion.equals(mWordComposer.getTypedWord())) {
+            final String capitalized = getEnglishICapitalization(settingsValues, suggestion);
+            if (capitalized != null) suggestion = capitalized;
+        }
         commitChosenWord(settingsValues, suggestion, suggestionInfo, LastComposedWord.COMMIT_TYPE_MANUAL_PICK, LastComposedWord.NOT_A_SEPARATOR);
         mConnection.endBatchEdit();
         // Don't allow cancellation of manual pick
@@ -1152,7 +1160,7 @@ public final class InputLogic {
                         : StringUtils.newSingleCodePointString(codePoint);
                 commitCurrentAutoCorrection(settingsValues, separator, handler);
                 inputTransaction.setDidAutoCorrect();
-            } else {
+            } else if (!commitWithEnglishICapitalization(settingsValues, StringUtils.newSingleCodePointString(codePoint))) {
                 commitTyped(settingsValues, StringUtils.newSingleCodePointString(codePoint));
             }
         }
@@ -1309,7 +1317,8 @@ public final class InputLogic {
             inputTransaction.setRequiresUpdateSuggestions();
             return;
         }
-        if (mLastComposedWord.canRevertCommit() && sv.mBackspaceRevertsAutocorrect) {
+        if (mLastComposedWord.canRevertCommit()
+                && (sv.mBackspaceRevertsAutocorrect || mLastComposedWord == mEnglishICapitalizationCommit)) {
             String lastComposedWord = mLastComposedWord.mTypedWord;
             revertCommit(inputTransaction);
             StatsUtils.onRevertAutoCorrect();
@@ -2316,6 +2325,36 @@ public final class InputLogic {
     }
 
     /**
+     * Droneboard: the capitalized form of a standalone English "i" (or i'm, i'll, i'd, i've) in [typedWord] if the
+     * setting is on, the field is normal text with suggestions, and the context is English; otherwise null.
+     */
+    @Nullable
+    private String getEnglishICapitalization(final SettingsValues settingsValues, final String typedWord) {
+        if (!settingsValues.mCapitalizeEnglishI || EnglishICapitalizer.capitalizedForm(typedWord) == null)
+            return null;
+        final InputAttributes inputAttributes = settingsValues.mInputAttributes;
+        if (inputAttributes.mIsPasswordField || !inputAttributes.mIsGeneralTextInput || !inputAttributes.mShouldShowSuggestions)
+            return null;
+        if (mDictionaryFacilitator == null) return null;
+        // the word being committed is still composing, so its previous words start at the 2nd previous word
+        final NgramContext ngramContext = mConnection.getNgramContextFromNthPreviousWord(
+                settingsValues.mSpacingAndPunctuations, mWordComposer.isComposingWord() ? 2 : 1);
+        return EnglishICapitalizer.capitalize(typedWord, ngramContext, mDictionaryFacilitator);
+    }
+
+    /** commits the composing word capitalized if it is an English "i"; returns false (and commits nothing) otherwise */
+    private boolean commitWithEnglishICapitalization(final SettingsValues settingsValues, final String separator) {
+        if (!mWordComposer.isComposingWord() || mWordComposer.isBatchMode()) return false;
+        final String typedWord = mWordComposer.getTypedWord();
+        final String capitalized = getEnglishICapitalization(settingsValues, typedWord);
+        if (capitalized == null) return false;
+        commitChosenWord(settingsValues, capitalized, null, LastComposedWord.COMMIT_TYPE_DECIDED_WORD, separator);
+        mEnglishICapitalizationCommit = mLastComposedWord;
+        StatsUtils.onWordCommitUserTyped(capitalized, false);
+        return true;
+    }
+
+    /**
      * Commit the current auto-correction.
      * <p>
      * This will commit the best guess of the keyboard regarding what the user meant by typing
@@ -2346,6 +2385,8 @@ public final class InputLogic {
             performUpdateSuggestionStripSync(settingsValues, InputStyle.TYPING);
         }
         SuggestedWordInfo autoCorrectionOrNull = mWordComposer.getAutoCorrectionOrNull();
+        if (autoCorrectionOrNull == null && commitWithEnglishICapitalization(settingsValues, separator))
+            return;
         String typedWord = mWordComposer.getTypedWord();
         String stringToCommit = (autoCorrectionOrNull != null) ? autoCorrectionOrNull.getWord() : typedWord;
         boolean isBatchMode = mWordComposer.isBatchMode();

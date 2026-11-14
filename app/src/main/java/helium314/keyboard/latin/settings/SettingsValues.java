@@ -113,6 +113,7 @@ public class SettingsValues {
     public final boolean mBigramPredictionEnabled;// Use bigrams to predict the next word when there is no input for it yet
     public final boolean mSuggestPunctuation;
     public final boolean mCenterSuggestionTextToEnter;
+    public final boolean mCapitalizeEnglishI;
     public final boolean mGestureInputEnabled;
     public final boolean mGestureTrailEnabled;
     public final boolean mGestureFloatingPreviewTextEnabled;
@@ -234,6 +235,7 @@ public class SettingsValues {
         mAutoCorrectEnabled = mAutoCorrectionEnabledPerUserSettings
                 && (mInputAttributes.mInputTypeShouldAutoCorrect || prefs.getBoolean(Settings.PREF_MORE_AUTO_CORRECTION, Defaults.PREF_MORE_AUTO_CORRECTION))
                 && (mUrlDetectionEnabled || !InputTypeUtils.isUriOrEmailType(mInputAttributes.mInputType));
+        mCapitalizeEnglishI = prefs.getBoolean(Settings.PREF_CAPITALIZE_ENGLISH_I, Defaults.PREF_CAPITALIZE_ENGLISH_I);
         mCenterSuggestionTextToEnter = prefs.getBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, Defaults.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER);
         float autoCorrectConfidence = prefs.getFloat(Settings.PREF_AUTO_CORRECT_CONFIDENCE, Defaults.PREF_AUTO_CORRECT_CONFIDENCE);
         // confidence -> threshold and score limit are just some formulas that give something similar to the old values, so that confidence can be in a nice 0-1 range

@@ -116,6 +116,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         return currentlyPreferredDictionaryGroup.locale
     }
 
+    override fun getLocales(): List<Locale> = dictionaryGroups.map { it.locale }
+
+    override fun isInMainDictionary(word: String, locale: Locale): Boolean {
+        val group = findDictionaryGroupWithLocale(dictionaryGroups, locale) ?: return false
+        return isValidWord(word, arrayOf(Dictionary.TYPE_MAIN), group)
+    }
+
     override fun usesSameSettings(locales: List<Locale>, contacts: Boolean, apps: Boolean, personalization: Boolean): Boolean {
         val dictGroup = dictionaryGroups[0] // settings are the same for all groups
         return contacts == dictGroup.hasDict(Dictionary.TYPE_CONTACTS)
