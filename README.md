@@ -10,7 +10,7 @@ The name comes from drone ambient music. A swipe across the keys feels like some
 
 ## What works today
 
-- **Swipe typing in several languages at once,** e.g. Slovak and English without switching. It runs on the [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) encoder with our own decoding:
+- **Swipe typing in several languages at once,** e.g. Slovak, Czech and English without switching. It runs on the [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) encoder with our own decoding:
   - the dictionary is searched by base letters and the accents are added afterwards;
   - the previous word re-ranks the candidates;
   - a live preview runs while you swipe.
@@ -23,7 +23,7 @@ The name comes from drone ambient music. A swipe across the keys feels like some
   - a number row in password fields;
   - the word you typed in the middle of the strip;
   - suggestions without silent autocorrection.
-- **Next-word prediction with a small neural network on the phone,** for Slovak and English. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
+- **Next-word prediction with a small neural network on the phone,** for Slovak, Czech and English. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
 - **Emoji:** search the emoji panel by any part of a word in English, Slovak or Czech ("ocket" finds 🚀). A matching emoji also appears in the strip while you type.
 - **Space bar long-press** moves the cursor like a trackpad, or switches the language if you prefer.
 - **Clipboard history, split and one-handed layouts, themes, custom layouts and a physical keyboard,** all inherited from HeliBoard.
@@ -34,14 +34,14 @@ The name comes from drone ambient music. A swipe across the keys feels like some
 | Test | Top-1 | Top-3 |
 |---|---|---|
 | Czech gestures, Google gesture library (as in HeliBoard) | 82.4 % | 96.3 % |
-| Czech gestures, Droneboard | 81.8 % | 95.8 % |
+| Czech gestures, Droneboard with its own Czech dictionary | 78.2 % | 92.0 % |
 | Real phone, 106 prompted Slovak and English words | 82.1 % | 92.5 % |
 
-These numbers come from the offline gesture set "sink-or-swipe" and from one person's recordings. Treat them as a direction, not a promise.
+These numbers come from the offline gesture set "sink-or-swipe" (1,872 Czech gestures, QWERTZ and QWERTY) and from one person's recordings. The gesture words were drawn from the dictionary the Google row uses; 2.3 % of them are rare words that Droneboard's open-data Czech list lacks. On the words it knows, Droneboard gets 79.8 % / 94.0 %. None of these gestures has sentence context, which is where the trigrams help most. Treat the numbers as a direction, not a promise.
 
 ## Planned
 
-- Czech, then Spanish and German, with the same swipe dictionaries and neural prediction.
+- Spanish and German, with the same swipe dictionaries and neural prediction.
 - Resizing and moving the keyboard with handles, and a floating keyboard on tablets in landscape.
 - A clipboard chip for fresh links, e-mails and one-time codes, like Gboard's.
 - Hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo.
@@ -59,7 +59,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"  
 ./gradlew assembleDebug
 ```
 
-You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Slovak dictionaries are rebuilt from open data with the scripts in `tools/dicts`.
+You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Slovak and Czech dictionaries are rebuilt from open data with the scripts in `tools/dicts`.
 
 ## Privacy
 
@@ -77,7 +77,7 @@ Droneboard is built with AI assistance, and AI-assisted contributions are welcom
 - Droneboard started as a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard), which is based on [OpenBoard](https://github.com/openboard-team/openboard) and AOSP LatinIME. Thank you to everyone who built them.
 - Swipe typing is powered by FUTO Swipe ([swipe-library](https://gitlab.futo.org/keyboard/swipe-library), GPL-3.0). The model weights are under the FUTO Model Weights License.
 - The Bluetooth and LE Audio recording comes from [Third Ear](https://github.com/jooray/third-ear) ([website](https://jooray.github.io/third-ear/), [Zapstore](https://zapstore.dev/apps/app.thirdear)) by the same author, relicensed under GPL-3.0 for Droneboard.
-- The word lists come from [FineWeb-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) (ODC-By), filtered through Hunspell dictionaries.
+- The word lists come from [FineWeb-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-2) (ODC-By), and for Czech also from [Wikipedia](https://huggingface.co/datasets/wikimedia/wikipedia) (CC BY-SA), filtered through Hunspell dictionaries.
 - The emoji dictionaries come from [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries). They are built from Unicode CLDR annotations (Unicode License v3) and Signal's emoji search data (AGPL-3.0).
 
 ## License
