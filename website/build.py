@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PLATE = ROOT.parent / "assets" / "plates" / "fog-photo.png"
-SITE = "https://jooray.github.io/droneboard/"
+SITE = "https://cypherpunk.today/droneboard/"
 NPUB = "npub13twdjamspmt5gzm3kczydmntnw5mxp8dr788ucxnqy40gvl3gm2qxwypc9"
 # nprofile with relay hints wss://nostr.cypherpunk.today and wss://relay.primal.net (nak encode nprofile)
 NPROFILE = "nprofile1qqsg4hxewacqa46ypdcmvpzxae4eh2dnqnk3lrn7vrfsz2h5x0c5d4qpr3mhxue69uhkummnw3ezucmewp5x2unsw4hxktn5dajxz7gpzemhxue69uhhyetvv9ujuurjd9kkzmpwdejhgu62ll5"
