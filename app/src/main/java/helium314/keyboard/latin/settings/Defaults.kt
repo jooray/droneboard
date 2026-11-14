@@ -72,6 +72,7 @@ object Defaults {
     const val PREF_AUTOCORRECT_SHORTCUTS = true
     const val PREF_BACKSPACE_REVERTS_AUTOCORRECT = true
     const val PREF_AUTOCORRECT_CAPITALIZED_SUGGESTION = true
+    const val PREF_CAPITALIZE_ENGLISH_I = true // Droneboard: "i think" -> "I think" when the context is English, also without autocorrect
     const val PREF_CENTER_SUGGESTION_TEXT_TO_ENTER = true // Droneboard: like Gboard, the word that space will enter sits in the middle
     const val PREF_SHOW_SUGGESTIONS = true
     const val PREF_ALWAYS_SHOW_SUGGESTIONS = false

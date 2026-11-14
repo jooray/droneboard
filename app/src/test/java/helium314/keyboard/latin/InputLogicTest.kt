@@ -721,7 +721,74 @@ class InputLogicTest {
         assertEquals(5, cursor)
     }
 
+    @Test fun `standalone English i is capitalized on space`() {
+        chainInput("i")
+        inputChangingText(' ')
+        chainInput("think")
+        assertEquals("I think", text)
+    }
+
+    @Test fun `English i is capitalized before punctuation and in contractions`() {
+        chainInput("so do i")
+        inputChangingText('.')
+        assertEquals("so do I.", text)
+
+        reset()
+        chainInput("i'm")
+        inputChangingText(' ')
+        assertEquals("I'm ", text)
+    }
+
+    @Test fun `backspace right after capitalizing i restores it`() {
+        chainInput("i")
+        inputChangingText(' ')
+        assertEquals("I ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("i", text)
+
+        // also when backspace reverting autocorrect is disabled
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, false) }
+        chainInput("i")
+        inputChangingText(' ')
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("i", text)
+    }
+
+    @Test fun `i is not capitalized inside words, when disabled, or in URL fields`() {
+        chainInput("hi in ")
+        assertEquals("hi in ", text)
+
+        reset()
+        latinIME.prefs().edit { putBoolean(Settings.PREF_CAPITALIZE_ENGLISH_I, false) }
+        chainInput("i ")
+        assertEquals("i ", text)
+
+        reset()
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+        chainInput("i ")
+        assertEquals("i ", text)
+
+        reset()
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
+        chainInput("i ")
+        assertEquals("i ", text)
+    }
+
+    @Test fun `picking the typed i capitalizes it`() {
+        chainInput("i")
+        pickSuggestion("i")
+        assertEquals("I", text)
+    }
+
     // ------- helper functions ---------
+
+    // input that is expected to change the text before it (the consistency check in input() would fail)
+    private fun inputChangingText(char: Char) {
+        latinIME.onEvent(Event.createEventForCodePointFromUnknownSource(char.code))
+        handleMessages()
+        checkConnectionConsistency()
+    }
 
     // should be called before every test, so the same state is guaranteed
     @BeforeTest
