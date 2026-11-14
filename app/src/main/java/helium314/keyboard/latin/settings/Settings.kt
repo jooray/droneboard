@@ -4,8 +4,10 @@ package helium314.keyboard.latin.settings
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.provider.Settings.Global
 import androidx.core.content.edit
+import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.serialization.json.Json
 
@@ -33,8 +35,22 @@ fun createPrefKeyForBooleanSettings(prefix: String, index: Int, number: Int): St
 fun getTransitionAnimationScale(context: Context) =
     Global.getFloat(context.contentResolver, Global.TRANSITION_ANIMATION_SCALE, 1f)
 
-fun isFloatingKeyboardEnabled(context: Context) =
-    context.prefs().getBoolean(Settings.PREF_FLOATING_ENABLED_PREFIX + context.resources.displayMetrics.widthPixels, false)
+/**
+ * Floating is stored per screen width (so per orientation and fold state). When the user never chose for this
+ * width, a large screen in landscape floats by default (Gboard's "auto float keyboard in landscape mode").
+ */
+fun isFloatingKeyboardEnabled(context: Context): Boolean {
+    val key = Settings.PREF_FLOATING_ENABLED_PREFIX + context.resources.displayMetrics.widthPixels
+    val prefs = context.prefs()
+    return if (prefs.contains(key)) prefs.getBoolean(key, false) else autoFloats(context)
+}
+
+/** Large screen (smallest width >= 600dp) in landscape with the auto-float setting on. */
+fun autoFloats(context: Context): Boolean {
+    val config = context.resources.configuration
+    return config.orientation == Configuration.ORIENTATION_LANDSCAPE && config.smallestScreenWidthDp >= 600
+            && context.prefs().getBoolean(Settings.PREF_AUTO_FLOAT_LANDSCAPE, Defaults.PREF_AUTO_FLOAT_LANDSCAPE)
+}
 
 fun setFloatingKeyboardEnabled(context: Context, enabled: Boolean) =
     context.prefs().edit { putBoolean(Settings.PREF_FLOATING_ENABLED_PREFIX + context.resources.displayMetrics.widthPixels, enabled) }
@@ -42,13 +58,40 @@ fun setFloatingKeyboardEnabled(context: Context, enabled: Boolean) =
 fun readFloatingHeight(context: Context): Int {
     val screenWidth = context.resources.displayMetrics.widthPixels
     val key = Settings.PREF_FLOATING_HEIGHT_PREFIX + screenWidth
-    return context.prefs().getInt(key, context.resources.displayMetrics.heightPixels / 3)
+    return context.prefs().getInt(key, defaultFloatingHeight(context))
 }
 
 fun readFloatingWidth(context: Context): Int {
     val screenWidth = context.resources.displayMetrics.widthPixels
     val key = Settings.PREF_FLOATING_WIDTH_PREFIX + screenWidth
-    return context.prefs().getInt(key, screenWidth / 2)
+    return context.prefs().getInt(key, defaultFloatingWidth(context))
+}
+
+/** About 45 % of the width on a landscape tablet (thumb-sized, Gboard-like), half the width elsewhere. */
+fun defaultFloatingWidth(context: Context): Int {
+    val dm = context.resources.displayMetrics
+    val config = context.resources.configuration
+    val large = config.orientation == Configuration.ORIENTATION_LANDSCAPE && config.smallestScreenWidthDp >= 600
+    return (dm.widthPixels * (if (large) 0.45f else 0.5f)).toInt()
+}
+
+/** Keep the phone-like key aspect: the default keyboard height scaled down with the width, at most a third of the screen. */
+fun defaultFloatingHeight(context: Context): Int {
+    val dm = context.resources.displayMetrics
+    val docked = ResourceUtils.getDefaultKeyboardHeight(context.resources, false)
+    val ratio = defaultFloatingWidth(context).toFloat() / dm.widthPixels
+    return (docked * (ratio * 1.6f).coerceIn(0.6f, 1f)).toInt().coerceAtMost(dm.heightPixels / 3)
+}
+
+/** Forget the floating size and position for the current screen width. */
+fun resetFloatingSize(context: Context) {
+    val screenWidth = context.resources.displayMetrics.widthPixels
+    context.prefs().edit {
+        remove(Settings.PREF_FLOATING_WIDTH_PREFIX + screenWidth)
+        remove(Settings.PREF_FLOATING_HEIGHT_PREFIX + screenWidth)
+        remove(Settings.PREF_FLOATING_POS_X_PREFIX + screenWidth)
+        remove(Settings.PREF_FLOATING_POS_Y_PREFIX + screenWidth)
+    }
 }
 
 fun setFloatingSize(context: Context, width: Int, height: Int) {

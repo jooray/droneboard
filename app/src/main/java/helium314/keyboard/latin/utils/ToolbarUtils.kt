@@ -94,6 +94,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     PAGE_END -> KeyCode.MOVE_END_OF_PAGE
     SPLIT -> KeyCode.SPLIT_LAYOUT
     FLOATING -> KeyCode.TOGGLE_FLOATING_WINDOW
+    SIZE_POSITION -> KeyCode.TOGGLE_RESIZE_MODE
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING
 }
 
@@ -121,7 +122,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, NUMPAD, DPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, FLOATING, SPLIT,
     INCOGNITO, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING, SIZE_POSITION
 }
 
 enum class ToolbarMode {
@@ -132,7 +133,8 @@ val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java))
 
 val defaultToolbarPref by lazy {
     // Gboard-like order: clipboard and text editing first, settings last (the mic is pinned, see below)
-    val default = listOf(CLIPBOARD, DPAD, SPLIT, ONE_HANDED, UNDO, REDO, SELECT_ALL, COPY, PASTE, SETTINGS)
+    // one "Size & position" key replaces the separate split, one-handed and floating keys
+    val default = listOf(CLIPBOARD, DPAD, SIZE_POSITION, UNDO, REDO, SELECT_ALL, COPY, PASTE, SETTINGS)
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }

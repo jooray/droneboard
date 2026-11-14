@@ -291,7 +291,35 @@ class KeyboardSwitcher private constructor() {
     }
 
     fun onHideWindow() {
+        inputView?.resizeOverlay?.hide()
         inputView?.keyboardView?.onHideWindow()
+    }
+
+    /** Droneboard "Size & position": show or hide the resize overlay over the keyboard. */
+    fun toggleResizeOverlay() {
+        val overlay = inputView?.resizeOverlay ?: return
+        if (overlay.isShowing) overlay.hide() else overlay.show()
+    }
+
+    /** Switch between floating and docked, then rebuild the keyboard for the new size. */
+    fun setFloatingKeyboard(enabled: Boolean) {
+        val inputView = inputView ?: return
+        if (enabled != Settings.getValues().mIsFloatingKeyboard)
+            setFloatingKeyboardEnabled(themeContext, enabled)
+        if (enabled) FloatingKeyboardUtils.setFloating(inputView.root)
+        else FloatingKeyboardUtils.disableFloating(inputView.root)
+        setBackgroundGatheringIndicatorPosition()
+        reloadKeyboard()
+        inputView.resizeOverlay.refresh()
+    }
+
+    /** The floating window view (position and size), for the resize overlay. */
+    val floatingRoot: View? get() = inputView?.root
+
+    /** Re-place the floating keyboard after its size or position changed. */
+    fun updateFloatingPlacement() {
+        val root = inputView?.root ?: return
+        if (Settings.getValues().mIsFloatingKeyboard) FloatingKeyboardUtils.setFloating(root)
     }
 
     fun onWindowShown() {
@@ -707,6 +735,7 @@ class KeyboardSwitcher private constructor() {
             settingsValues.mHasHardwareKeyboard && toggleState == KeyboardSwitchState.HIDDEN
 
         private val InputViewBinding.wrapperView get() = mainKeyboardFrame.keyboardViewWrapper
+        private val InputViewBinding.resizeOverlay get() = mainKeyboardFrame.resizeOverlay
         private val InputViewBinding.keyboardFrame get() = mainKeyboardFrame.root
         private val InputViewBinding.keyboardView get() = mainKeyboardFrame.keyboardView
         private val InputViewBinding.emojiTabStrip get() = mainKeyboardFrame.stripContainer.emojiTabStrip

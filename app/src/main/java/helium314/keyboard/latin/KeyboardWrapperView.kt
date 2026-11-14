@@ -162,5 +162,8 @@ class KeyboardWrapperView @JvmOverloads constructor(
         stopOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.2f).toInt())
         switchOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.5f).toInt())
         resizeOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.8f).toInt())
+        // the "Size & position" overlay covers the whole wrapper; it places its handles on the keyboard itself
+        findViewById<View>(R.id.resize_overlay)?.takeIf { it.visibility != GONE }
+            ?.let { it.layout(0, 0, width, it.measuredHeight) }
     }
 }

@@ -742,9 +742,21 @@ private fun droneboardUpgrade(context: Context) {
     // the mic is pinned at the right end and emoji has its own key in the bottom row,
     // so neither belongs in the expandable toolbar
     val toolbar = prefs.getString(Settings.PREF_TOOLBAR_KEYS, null) ?: return
-    val updated = toolbar.split(Separators.ENTRY).joinToString(Separators.ENTRY) {
+    var entries = toolbar.split(Separators.ENTRY).map {
         val name = it.substringBefore(Separators.KV)
         if (name == "EMOJI" || name == "VOICE") name + Separators.KV + false else it
     }
+    // 0.1.8: one "Size & position" key replaces split, one-handed and floating, at the place of the first of them
+    if (oldVersion in 1..5007) {
+        val replaced = setOf("SPLIT", "ONE_HANDED", "FLOATING")
+        val list = entries.filterNot { it.substringBefore(Separators.KV) == "SIZE_POSITION" }.toMutableList()
+        val first = list.indexOfFirst { it.substringBefore(Separators.KV) in replaced && it.endsWith(Separators.KV + true) }
+        entries = if (first < 0) list + ("SIZE_POSITION" + Separators.KV + false)
+        else list.mapIndexed { i, e ->
+            val name = e.substringBefore(Separators.KV)
+            if (name in replaced) name + Separators.KV + false else e
+        }.toMutableList().apply { add(first, "SIZE_POSITION" + Separators.KV + true) }
+    }
+    val updated = entries.joinToString(Separators.ENTRY)
     if (updated != toolbar) prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, updated) }
 }

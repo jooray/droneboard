@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
+    <string name="size_position" tools:keep="@string/size_position">Size &amp; position</string>
+    <string name="resize_mode_docked">Docked</string>
+    <string name="resize_mode_one_handed">One-handed</string>
+    <string name="resize_mode_floating">Floating</string>
+    <string name="resize_mode_split">Split</string>
+    <string name="resize_reset">Reset</string>
+    <string name="resize_done">Done</string>
+    <!-- shown while resizing: width and height in percent of the default size -->
+    <string name="resize_size_label">Width %1$d %% · Height %2$d %%</string>
+    <string name="resize_hint">Drag the edges or corners</string>
+    <string name="resize_handle_top">Resize keyboard on the top edge</string>
+    <string name="resize_handle_bottom">Resize keyboard on the bottom edge</string>
+    <string name="resize_handle_left">Resize keyboard on the left edge</string>
+    <string name="resize_handle_right">Resize keyboard on the right edge</string>
+    <string name="resize_handle_top_left">Resize keyboard on the top left corner</string>
+    <string name="resize_handle_top_right">Resize keyboard on the top right corner</string>
+    <string name="resize_handle_bottom_left">Resize keyboard on the bottom left corner</string>
+    <string name="resize_handle_bottom_right">Resize keyboard on the bottom right corner</string>
+    <string name="floating_drag_handle">Move the floating keyboard</string>
+    <string name="floating_release_to_dock">Release to dock</string>
+    <string name="auto_float_landscape">Float in landscape on tablets</string>
+    <string name="auto_float_landscape_summary">On large screens the keyboard floats when the device is in landscape. Move it with the handle under the space bar, drag it to the bottom edge to dock it.</string>
+</resources>

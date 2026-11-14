@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="size_position">Veľkosť a poloha</string>
+    <string name="resize_mode_docked">Dole</string>
+    <string name="resize_mode_one_handed">Jedna ruka</string>
+    <string name="resize_mode_floating">Plávajúca</string>
+    <string name="resize_mode_split">Rozdelená</string>
+    <string name="resize_reset">Pôvodná</string>
+    <string name="resize_done">Hotovo</string>
+    <string name="resize_size_label">Šírka %1$d %% · Výška %2$d %%</string>
+    <string name="resize_hint">Ťahaj za okraje alebo rohy</string>
+    <string name="resize_handle_top">Zmeniť veľkosť klávesnice za horný okraj</string>
+    <string name="resize_handle_bottom">Zmeniť veľkosť klávesnice za dolný okraj</string>
+    <string name="resize_handle_left">Zmeniť veľkosť klávesnice za ľavý okraj</string>
+    <string name="resize_handle_right">Zmeniť veľkosť klávesnice za pravý okraj</string>
+    <string name="resize_handle_top_left">Zmeniť veľkosť klávesnice za ľavý horný roh</string>
+    <string name="resize_handle_top_right">Zmeniť veľkosť klávesnice za pravý horný roh</string>
+    <string name="resize_handle_bottom_left">Zmeniť veľkosť klávesnice za ľavý dolný roh</string>
+    <string name="resize_handle_bottom_right">Zmeniť veľkosť klávesnice za pravý dolný roh</string>
+    <string name="floating_drag_handle">Presunúť plávajúcu klávesnicu</string>
+    <string name="floating_release_to_dock">Pusti a klávesnica sa prichytí dole</string>
+    <string name="auto_float_landscape">Plávajúca na šírku na tabletoch</string>
+    <string name="auto_float_landscape_summary">Na veľkej obrazovke sa klávesnica na šírku odpojí od okraja. Presunieš ju úchytom pod medzerníkom, potiahnutím k spodnému okraju ju znova prichytíš.</string>
+</resources>

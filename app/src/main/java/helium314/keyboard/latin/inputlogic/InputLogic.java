@@ -844,6 +844,9 @@ public final class InputLogic {
             case KeyCode.SPLIT_LAYOUT:
                 KeyboardSwitcher.getInstance().toggleSplitKeyboardMode();
                 break;
+            case KeyCode.TOGGLE_RESIZE_MODE:
+                KeyboardSwitcher.getInstance().toggleResizeOverlay();
+                break;
             case KeyCode.TIMESTAMP:
                 mLatinIME.onTextInput(TimestampKt.getTimestamp(mLatinIME));
                 break;

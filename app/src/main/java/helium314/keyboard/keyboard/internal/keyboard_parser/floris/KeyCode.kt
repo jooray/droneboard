@@ -60,7 +60,7 @@ object KeyCode {
     //const val COMPACT_LAYOUT_TO_RIGHT =     -112
     const val SPLIT_LAYOUT =                -113
     //const val MERGE_LAYOUT =                -114
-    //const val TOGGLE_RESIZE_MODE =          -115
+    const val TOGGLE_RESIZE_MODE =          -115 // Droneboard: "Size & position" overlay
 
     const val UNDO =                        -131
     const val REDO =                        -132
@@ -211,7 +211,7 @@ object KeyCode {
         MEDIA_PREVIOUS, VOL_UP, VOL_DOWN, MUTE, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, BACK,
         TIMESTAMP, CTRL_LEFT, CTRL_RIGHT, ALT_LEFT, ALT_RIGHT, META_LEFT, META_RIGHT, SEND_INTENT_ONE, SEND_INTENT_TWO,
         SEND_INTENT_THREE, EMOJI_SEARCH, INLINE_EMOJI_SEARCH_DONE, META_LOCK,
-        BACKGROUND_GATHERING, BACKGROUND_GATHERING_TEMP_OFF, DPAD,
+        BACKGROUND_GATHERING, BACKGROUND_GATHERING_TEMP_OFF, DPAD, TOGGLE_RESIZE_MODE,
         -> this
 
         KEY_REPEAT if (longPress) -> this
@@ -341,7 +341,7 @@ object KeyCode {
     }
 
     @JvmStatic fun isIsBlockedWhenLocked(keyCode: Int) = when (keyCode) {
-        SETTINGS, TOGGLE_FLOATING_WINDOW, CLIPBOARD, CLIPBOARD_PASTE -> true
+        SETTINGS, TOGGLE_FLOATING_WINDOW, TOGGLE_RESIZE_MODE, CLIPBOARD, CLIPBOARD_PASTE -> true
         else -> false
     }
 }
