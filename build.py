@@ -650,7 +650,7 @@ def page(code):
 <section class="panel" id="nostr" aria-labelledby="nostr-h">
   <h2 id="nostr-h">{e(t['news_h'])}</h2>
   <p class="lede">{t['news_p']}</p>
-  <div class="nostr-feed" data-nostr-live data-nprofile="{NPROFILE}" data-limit="4" data-lang="{code}" data-layout="list"></div>
+  <div class="nostr-feed" data-nostr-live data-nprofile="{NPROFILE}" data-limit="4" data-lang="{code}" data-layout="list" data-relays="wss://nostr.cypherpunk.today,wss://relay.primal.net"></div>
   <ul class="nostr-links">
     <li><a href="https://njump.me/{NPROFILE}">{e(t['n_profile'])}</a></li>
     <li>droneboard@cypherpunk.today</li>
@@ -670,7 +670,7 @@ def page(code):
 </footer>
 
 <script src="{base}drone.js" defer></script>
-<script src="{base}nostr-live.js" defer></script>
+<script src="{base}nostr-live.js?v=1.0.1" defer></script>
 </body>
 </html>
 """
