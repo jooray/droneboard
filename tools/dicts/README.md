@@ -2,7 +2,7 @@
 
 Droneboard builds its word lists from open data, so anyone can rebuild them:
 
-- **Text:** FineWeb-2 for Slovak and Czech, and the FineWeb sample-10BT for English. Both are under ODC-By.
+- **Text:** FineWeb-2 for Slovak and Czech, and the FineWeb sample-10BT for English. Both are under ODC-By. Czech also uses Czech Wikipedia (CC BY-SA).
 - **Spelling filter:** Hunspell dictionaries from LibreOffice. They only filter words and are not shipped.
 
 Never use the Slovak or Czech national corpora (SNK, ČNK). Their licenses do not allow redistribution.
@@ -38,6 +38,34 @@ done
 DRONEBOARD_COMBINED=work/out/sk.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/main_sk.dict \
   ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool
 ```
+
+### Czech
+
+The Czech FineWeb-2 shard is full of porn and dating spam ("sex" was the 27th most frequent word), so
+spam documents are dropped first. Czech Wikipedia (CC BY-SA, normalized and lowercased) adds rarer
+words; `clean_wiki.py` turns `<num>` into a sentence break and drops table markup. Czech is heavily
+inflected, so its list keeps up to 500,000 forms.
+
+```sh
+.venv/bin/python -I tools/dicts/fetch_corpus.py ces_Latn 280 work/corpus-cs
+python3 -I tools/dicts/filter_spam.py cs work/corpus-cs/clean.txt work/corpus-cs/corpus.txt
+python3 -I tools/dicts/clean_wiki.py work/cs.wiki.txt work/cs.wiki.clean.txt
+# Hunspell: cs_CZ.{dic,aff} from github.com/LibreOffice/dictionaries
+python3 -I tools/dicts/build_dicts.py cs work/out work/hunspell/cs_CZ work/corpus-cs/clean.txt work/cs.wiki.clean.txt
+.venv/bin/python -I tools/dicts/personal_vocab.py cs work/out/cs.words.tsv personal/cs.txt work/hunspell/cs_CZ \
+  tools/dicts/vocab/tech-allowlist.txt work/out/en.words.tsv work/vocab --weight 8
+.venv/bin/python -I tools/dicts/count_ngrams.py cs work/vocab/cs.words.tsv work/ngrams --corpus work/corpus-cs/clean.txt \
+  --corpus work/cs.wiki.clean.txt --personal work/vocab/cs.personal.txt --personal-weight 8 --exclude eval-cs.jsonl --min-trigram 2
+python3 -I tools/dicts/pack_swipe_dict.py work/ngrams/cs.words.tsv work/ngrams/cs.bigrams.tsv app/src/main/assets/swipe/cs.kpd \
+  --min-bigram=5 --trigrams=work/ngrams/cs.trigrams.tsv --min-trigram=2 --trigram-bytes=8000000
+DRONEBOARD_COMBINED=work/vocab/cs.vocab.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/vocab_cs.dict \
+  ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool --rerun
+DRONEBOARD_COMBINED=work/out/cs.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/main_cs.dict \
+  ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool --rerun
+```
+
+The Czech `.kpd` keeps more n-grams than the Slovak one (19 MB): on synthetic Czech swipes with
+sentence context, top-1 goes from 85.5 % (Slovak thresholds, 5.8 MB) to 87.6 %.
 
 The script produces three outputs:
 
