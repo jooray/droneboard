@@ -254,7 +254,8 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         if (mode != Mode.FLOATING && Settings.getValues().mIsFloatingKeyboard) switcher.setFloatingKeyboard(false)
         if (mode != Mode.SPLIT && Settings.getValues().mIsSplitKeyboardEnabled) switcher.toggleSplitKeyboardMode()
-        if (mode != Mode.COMPACT && Settings.getValues().mCompactEnabled) switcher.setCompactKeyboard(false)
+        // floating and split override compact; keep it, so docking or leaving split returns to the compact keyboard
+        if ((mode == Mode.FULL || mode == Mode.ONE_HANDED) && Settings.getValues().mCompactEnabled) switcher.setCompactKeyboard(false)
         if (mode != Mode.ONE_HANDED && Settings.getValues().mOneHandedModeEnabled) switcher.setOneHandedModeEnabled(false, true)
         when (mode) {
             Mode.FULL -> {}
