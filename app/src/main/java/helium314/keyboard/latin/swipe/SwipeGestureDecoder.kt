@@ -36,7 +36,7 @@ object SwipeGestureDecoder {
     private const val ENCODER_METADATA = "honorable_sturgeon/metadata.json"
 
     /** beam width for the final result, and for the live preview while the finger still moves */
-    private const val BEAM_FINAL = 100
+    private const val BEAM_FINAL = 200
     private const val BEAM_PREVIEW = 32
     private const val MAX_RESULTS = 18
     /** No fixed bonus for the keyboard's main language: an EN keyboard with SK as second language
