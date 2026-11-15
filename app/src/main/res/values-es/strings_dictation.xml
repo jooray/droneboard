@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="voice_starting">Activando el micrófono…</string>
+    <string name="voice_waiting_bluetooth">Esperando el micrófono de los auriculares…</string>
+    <string name="voice_speak_now">Habla ahora</string>
+    <string name="voice_silent">El micrófono no capta nada. ¿Está silenciado?</string>
+    <string name="voice_transcribing">Transcribiendo…</string>
+    <string name="voice_stop">Detener dictado</string>
+    <string name="voice_cancel">Cancelar dictado</string>
+    <string name="voice_mic_phone">Micrófono del teléfono</string>
+    <string name="voice_mic_phone_fallback">Micrófono del teléfono (los auriculares no respondieron)</string>
+    <string name="voice_mic_headset">Micrófono: %s</string>
+    <string name="voice_mic_bluetooth">Auriculares Bluetooth</string>
+    <string name="voice_mic_failed">No se pudo activar el micrófono</string>
+    <string name="voice_transcription_failed">Error al transcribir</string>
+    <string name="voice_ostt_missing">El dictado necesita Offline Speech to Text</string>
+    <string name="voice_ostt_missing_detail">Una aplicación gratuita que transcribe en tu teléfono, sin conexión a internet.</string>
+    <string name="voice_install_ostt">Obtener en Zapstore</string>
+</resources>

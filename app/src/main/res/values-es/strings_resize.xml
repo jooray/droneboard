@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
+    <string name="size_position" tools:keep="@string/size_position">Tamaño y posición</string>
+    <string name="resize_mode_one_handed">Una mano</string>
+    <string name="resize_mode_floating">Flotante</string>
+    <string name="resize_mode_split">Dividido</string>
+    <string name="resize_reset">Restablecer</string>
+    <string name="resize_done">Listo</string>
+    <!-- shown while resizing: width and height in percent of the default size -->
+    <string name="resize_size_label">Ancho %1$d %% · Alto %2$d %%</string>
+    <string name="resize_hint">Arrastra los bordes o las esquinas</string>
+    <string name="resize_handle_top">Cambiar el tamaño del teclado desde el borde superior</string>
+    <string name="resize_handle_bottom">Cambiar el tamaño del teclado desde el borde inferior</string>
+    <string name="resize_handle_left">Cambiar el tamaño del teclado desde el borde izquierdo</string>
+    <string name="resize_handle_right">Cambiar el tamaño del teclado desde el borde derecho</string>
+    <string name="resize_handle_top_left">Cambiar el tamaño del teclado desde la esquina superior izquierda</string>
+    <string name="resize_handle_top_right">Cambiar el tamaño del teclado desde la esquina superior derecha</string>
+    <string name="resize_handle_bottom_left">Cambiar el tamaño del teclado desde la esquina inferior izquierda</string>
+    <string name="resize_handle_bottom_right">Cambiar el tamaño del teclado desde la esquina inferior derecha</string>
+    <string name="floating_drag_handle">Mover el teclado flotante</string>
+    <string name="floating_release_to_dock">Suelta para acoplar</string>
+    <string name="resize_mode_full">Ancho completo</string>
+    <string name="resize_mode_compact">Compacto</string>
+    <string name="resize_position_left">Izquierda</string>
+    <string name="resize_position_center">Centro</string>
+    <string name="resize_position_right">Derecha</string>
+    <string name="compact_large_screens">Teclado compacto en pantallas grandes</string>
+    <string name="compact_large_screens_summary">En tabletas y plegables abiertos, el teclado tiene casi el ancho que en un teléfono y se coloca abajo a la derecha, al alcance del pulgar. Cambia su tamaño y lado con la tecla Tamaño y posición.</string>
+</resources>

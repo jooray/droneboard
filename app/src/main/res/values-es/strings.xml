@@ -550,4 +550,12 @@
     <string name="recent_emojis_cleared">Borrados los emojis recientes</string>
     <string name="prefs_enable_hardware_keyboard">Compatibilidad con teclado físico</string>
     <string name="accent_shifted_icon">Icono de mayúsculas resaltado</string>
+    <string name="delete_swipe_letters">Letras</string>
+    <string name="delete_swipe_words">Palabras</string>
+    <string name="number_row_for_passwords">Fila de números para contraseñas</string>
+    <string name="number_row_for_passwords_summary">Mostrar la fila de números al escribir una contraseña</string>
+    <string name="space_long_press">Mantener pulsada la barra espaciadora</string>
+    <string name="space_long_press_trackpad">Panel táctil</string>
+    <string name="space_long_press_language">Cambiar de idioma o de teclado</string>
+    <string name="gesture_data_single_instance_per_word">Mostrar solo una entrada por palabra</string>
 </resources>

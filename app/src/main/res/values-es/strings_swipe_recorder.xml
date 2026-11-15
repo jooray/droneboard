@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Grabar gestos para ajustar el teclado</string>
+    <string name="swipe_recorder_summary">Desliza las palabras o frases que se te indican; los gestos se guardan solo en este teléfono</string>
+    <string name="swipe_recorder_intro">Desliza en el campo lo que aparece abajo, como lo haces normalmente. Los gestos se guardan solo en este teléfono, en la carpeta indicada al final, y nunca se suben a ningún sitio. Nada de lo que escribas fuera de esta pantalla se graba.</string>
+    <string name="swipe_recorder_progress">Palabra %1$d de %2$d</string>
+    <string name="swipe_recorder_last">Último gesto: %1$s</string>
+    <string name="swipe_recorder_skip">Omitir palabra</string>
+    <string name="swipe_recorder_done">Listo, ¡gracias!</string>
+    <string name="swipe_recorder_file">Archivo actual: %1$s</string>
+    <string name="swipe_recorder_no_storage">No se puede crear el archivo de grabación.</string>
+    <string name="swipe_recorder_mode_words">Palabras</string>
+    <string name="swipe_recorder_mode_sentences">Frases</string>
+    <string name="swipe_recorder_style_normal">Normal</string>
+    <string name="swipe_recorder_style_sloppy">Rápido y descuidado</string>
+    <string name="swipe_recorder_style_hint_normal">Desliza a tu ritmo habitual.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Desliza lo más rápido que puedas, sin apuntar con cuidado.</string>
+    <string name="swipe_recorder_sentence_hint">Desliza la frase palabra por palabra. Corrige una palabra errónea como lo harías normalmente (con la barra de sugerencias o con un nuevo gesto) y pulsa Intro o Siguiente frase.</string>
+    <string name="swipe_recorder_sentence_progress">Frase %1$d de %2$d · palabra %3$d de %4$d</string>
+    <string name="swipe_recorder_next_sentence">Siguiente frase</string>
+    <string name="swipe_recorder_skip_sentence">Omitir</string>
+    <string name="swipe_recorder_languages">Idiomas de las frases</string>
+    <string name="swipe_recorder_counter">%1$d grabados en esta sesión · %2$d en total</string>
+    <string name="swipe_recorder_export_title">Cómo obtener las grabaciones</string>
+    <string name="swipe_recorder_export_text">Los archivos permanecen en esta carpeta del teléfono (la aplicación no tiene acceso a internet). Cópialos a un ordenador con:</string>
+    <string name="swipe_recorder_copy">Copiar comando</string>
+</resources>
