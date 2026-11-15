@@ -178,7 +178,9 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetLayout(JNIEnv* env, jclas
         SwipeEngine::Config cfg;
         cfg.encoder_path = s->encoder_path;
         cfg.layout = layout;
-        cfg.beam_width = 100;
+        // the largest beam recognize() may ask for (a wider request is cut to this); the final decode
+        // uses the user's "swipe search width" (50-400), the live preview 32
+        cfg.beam_width = 400;
         cfg.top_k = 32;
         cfg.num_threads = 2;
         cfg.dictionaries = tries;

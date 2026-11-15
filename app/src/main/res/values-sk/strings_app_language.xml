@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="app_language_title">Jazyk aplikácie</string>
+    <string name="app_language_system">Podľa systému</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Language of the app's own screens (settings); the keyboard's typing languages are separate -->
+    <string name="app_language_title">App language</string>
+    <string name="app_language_system">System default</string>
+    <!-- each language in its own name; not translated -->
+    <string name="app_language_name_en" translatable="false">English</string>
+    <string name="app_language_name_sk" translatable="false">Slovenčina</string>
+    <string name="app_language_name_cs" translatable="false">Čeština</string>
+    <string name="app_language_name_de" translatable="false">Deutsch</string>
+    <string name="app_language_name_es" translatable="false">Español</string>
+    <string name="app_language_name_nl" translatable="false">Nederlands</string>
+</resources>

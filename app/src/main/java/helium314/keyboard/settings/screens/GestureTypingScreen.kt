@@ -30,6 +30,8 @@ import helium314.keyboard.latin.utils.NextScreenIcon
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.SettingsWithoutKey
 import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.ListPreference
+import helium314.keyboard.settings.dialogs.InfoButton
 
 @Composable
 fun GestureTypingScreen(
@@ -56,6 +58,7 @@ fun GestureTypingScreen(
         if (gestureEnabled &&
             (prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL, Defaults.PREF_GESTURE_PREVIEW_TRAIL) || gestureFloatingPreviewEnabled))
             Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION else null,
+        if (gestureEnabled && FutoSwipe.isAvailable) Settings.PREF_SWIPE_BEAM_WIDTH else null,
         if (gestureEnabled && FutoSwipe.isAvailable) SettingsWithoutKey.SWIPE_RECORDER else null,
         )
     SearchSettingsScreen(
@@ -116,6 +119,24 @@ fun createGestureTypingSettings(context: Context) = listOf(
             stepSize = 10,
         ) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
+    Setting(context, Settings.PREF_SWIPE_BEAM_WIDTH, R.string.swipe_beam_width_title) { def ->
+        val items = SWIPE_BEAM_WIDTHS.map { width ->
+            when (width) {
+                Defaults.PREF_SWIPE_BEAM_WIDTH -> stringResource(R.string.swipe_beam_width_recommended, width)
+                100 -> stringResource(R.string.swipe_beam_width_previous_default, width)
+                else -> width.toString()
+            } to width
+        }
+        ListPreference(
+            def, items, Defaults.PREF_SWIPE_BEAM_WIDTH,
+            value = {
+                InfoButton(
+                    stringResource(R.string.swipe_beam_width_help),
+                    stringResource(R.string.swipe_beam_width_help_button)
+                )
+            }
+        )
+    },
     Setting(context, SettingsWithoutKey.SWIPE_RECORDER, R.string.swipe_recorder_title, R.string.swipe_recorder_summary) {
         Preference(
             name = it.title,
@@ -124,6 +145,9 @@ fun createGestureTypingSettings(context: Context) = listOf(
         ) { NextScreenIcon() }
     },
 )
+
+/** choices of the final swipe decode's beam width (the native engine accepts up to 400) */
+private val SWIPE_BEAM_WIDTHS = listOf(50, 100, 200, 300, 400)
 
 @Preview
 @Composable

@@ -1,6 +1,7 @@
 package helium314.keyboard.settings.preferences
 
 import android.content.SharedPreferences
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +22,8 @@ fun <T: Any> ListPreference(
     default: T,
     onDefault: (() -> Unit)? = null,
     description: String? = null,
+    /** shown at the end of the row, e.g. an [helium314.keyboard.settings.dialogs.InfoButton] */
+    value: @Composable (RowScope.() -> Unit)? = null,
     onChanged: (T) -> Unit = { }
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
@@ -29,7 +32,8 @@ fun <T: Any> ListPreference(
     Preference(
         name = setting.title,
         description = selected?.first,
-        onClick = { showDialog = true }
+        onClick = { showDialog = true },
+        value = value,
     )
     if (showDialog) {
         ListPickerDialog(

@@ -16,7 +16,15 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.AppLanguage
 import helium314.keyboard.latin.utils.Log
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import helium314.keyboard.settings.dialogs.ListPickerDialog
+import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.locale
@@ -43,6 +51,7 @@ fun PreferencesScreen(
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
     val clipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY)
     val items = listOf(
+        Settings.PREF_APP_LANGUAGE,
         R.string.settings_category_input,
         Settings.PREF_SHOW_HINTS,
         if (prefs.getBoolean(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS))
@@ -94,6 +103,29 @@ fun PreferencesScreen(
 }
 
 fun createPreferencesSettings(context: Context) = listOf(
+    Setting(context, Settings.PREF_APP_LANGUAGE, R.string.app_language_title) { def ->
+        val ctx = LocalContext.current
+        val activity = ctx.getActivity()
+        var showDialog by rememberSaveable { mutableStateOf(false) }
+        val current = AppLanguage.get(ctx)
+        val selected = AppLanguage.LANGUAGES.firstOrNull { it == current }
+        Preference(
+            name = def.title,
+            // a language set elsewhere (e.g. by an older version in Android's settings) is shown by its own name
+            description = if (selected != null) stringResource(AppLanguage.displayNameRes(selected))
+                else java.util.Locale.forLanguageTag(current).let { it.getDisplayName(it) },
+            onClick = { showDialog = true }
+        )
+        if (showDialog)
+            ListPickerDialog(
+                onDismissRequest = { showDialog = false },
+                items = AppLanguage.LANGUAGES,
+                onItemSelected = { if (it != current && activity != null) AppLanguage.set(activity, it) },
+                selectedItem = selected,
+                title = { Text(def.title) },
+                getItemName = { stringResource(AppLanguage.displayNameRes(it)) },
+            )
+    },
     Setting(context, Settings.PREF_SAVE_SUBTYPE_PER_APP, R.string.save_subtype_per_app) {
         SwitchPreference(it, Defaults.PREF_SAVE_SUBTYPE_PER_APP)
     },

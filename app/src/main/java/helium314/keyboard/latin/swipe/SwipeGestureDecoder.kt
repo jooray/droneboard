@@ -12,6 +12,8 @@ import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo
 import helium314.keyboard.latin.suggestions.SuggestionResults
 import helium314.keyboard.latin.lm.NeuralLanguageModel
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
@@ -35,8 +37,8 @@ object SwipeGestureDecoder {
     private const val ENCODER = "honorable_sturgeon/model_int8.pte"
     private const val ENCODER_METADATA = "honorable_sturgeon/metadata.json"
 
-    /** beam width for the final result, and for the live preview while the finger still moves */
-    private const val BEAM_FINAL = 200
+    /** beam width for the live preview while the finger still moves; the final result uses the
+     *  "swipe search width" setting (default 200, see [Defaults.PREF_SWIPE_BEAM_WIDTH]) */
     private const val BEAM_PREVIEW = 32
     private const val MAX_RESULTS = 18
     /** No fixed bonus for the keyboard's main language: an EN keyboard with SK as second language
@@ -391,7 +393,7 @@ object SwipeGestureDecoder {
         val dicts = IntArray(MAX_RESULTS)
         val words = FutoSwipe.nativeRecognize(
             session, x, y, t, contextWords.toTypedArray(), null, LANGUAGE_KAPPA, LANGUAGE_CAP,
-            if (isFinal) BEAM_FINAL else BEAM_PREVIEW, MAX_RESULTS, scores, dicts
+            if (isFinal) (Settings.getValues()?.mSwipeBeamWidth ?: Defaults.PREF_SWIPE_BEAM_WIDTH) else BEAM_PREVIEW, MAX_RESULTS, scores, dicts
         )
         lastMillis = FutoSwipe.nativeLastMillis(session)
         val results = SuggestionResults(MAX_RESULTS, ngramContext, false)

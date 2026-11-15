@@ -39,6 +39,7 @@ import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dictionary.cleanUnusedMainDicts
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.AppLanguage
 import helium314.keyboard.latin.utils.BackButton
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.GestureDataGatheringSettings
@@ -71,6 +72,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     private val cachedDictionaryFile by lazy { File(this.cacheDir.path + File.separator + "temp_dict") }
     private val crashReportFiles = MutableStateFlow<List<File>>(emptyList())
     private var paused = true
+
+    // the app language chosen in the settings, before Android 13 (newer versions apply it themselves)
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
