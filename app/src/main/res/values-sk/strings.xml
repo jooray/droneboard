@@ -98,8 +98,8 @@
     <string name="enable_clipboard_history">Povoliť históriu schránky</string>
     <string name="prefs_force_incognito_mode_summary">Vypnúť učenie nových slov</string>
     <string name="more_keys_strip_description">Viac kláves</string>
-    <string name="spell_checker_service_name">Kontrola pravopisu v Droneboard</string>
-    <string name="android_spell_checker_settings">Nastavenia kontroly pravopisu v Droneboard</string>
+    <string name="spell_checker_service_name">Kontrola pravopisu Droneboardu</string>
+    <string name="android_spell_checker_settings">Nastavenia kontroly pravopisu Droneboardu</string>
     <string name="show_emoji_key">Emoji klávesa</string>
     <string name="incognito">Vynútiť režim inkognito</string>
     <string name="settings_category_input">Vstup</string>
@@ -553,6 +553,9 @@
     <string name="space_long_press">Podržanie medzerníka</string>
     <string name="space_long_press_trackpad">Trackpad</string>
     <string name="space_long_press_language">Prepnúť jazyk alebo klávesnicu</string>
-    <string name="number_row_for_passwords">Rad čísel pre heslá</string>
-    <string name="number_row_for_passwords_summary">Zobraziť rad čísel pri písaní hesla</string>
+    <string name="number_row_for_passwords">Číselný riadok pre heslá</string>
+    <string name="number_row_for_passwords_summary">Zobraziť číselný riadok pri písaní hesla</string>
+    <string name="delete_swipe_letters">Písmená</string>
+    <string name="delete_swipe_words">Slová</string>
+    <string name="gesture_data_single_instance_per_word">Zobraziť len jeden záznam na slovo</string>
 </resources>

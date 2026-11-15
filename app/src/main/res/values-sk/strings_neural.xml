@@ -2,5 +2,5 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
     <string name="neural_predictions">Neurónové návrhy</string>
-    <string name="neural_predictions_summary">Ďalšie slovo predpovedá malý neurónový model priamo v telefóne, v zapnutých jazykoch. Vypnuté: iba štatistika trojíc slov.</string>
+    <string name="neural_predictions_summary">Ďalšie slovo predpovedá malý neurónový model priamo v telefóne, v zapnutých jazykoch. Keď je vypnuté, používa sa len štatistika trojíc slov.</string>
 </resources>

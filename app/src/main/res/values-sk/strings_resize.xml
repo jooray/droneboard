@@ -2,13 +2,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
     <string name="size_position">Veľkosť a poloha</string>
-    <string name="resize_mode_one_handed">Jedna ruka</string>
+    <string name="resize_mode_one_handed">Jednou rukou</string>
     <string name="resize_mode_floating">Plávajúca</string>
     <string name="resize_mode_split">Rozdelená</string>
-    <string name="resize_reset">Pôvodná</string>
+    <string name="resize_reset">Obnoviť</string>
     <string name="resize_done">Hotovo</string>
     <string name="resize_size_label">Šírka %1$d %% · Výška %2$d %%</string>
-    <string name="resize_hint">Ťahaj za okraje alebo rohy</string>
+    <string name="resize_hint">Ťahajte za okraje alebo rohy</string>
     <string name="resize_handle_top">Zmeniť veľkosť klávesnice za horný okraj</string>
     <string name="resize_handle_bottom">Zmeniť veľkosť klávesnice za dolný okraj</string>
     <string name="resize_handle_left">Zmeniť veľkosť klávesnice za ľavý okraj</string>
@@ -18,12 +18,12 @@
     <string name="resize_handle_bottom_left">Zmeniť veľkosť klávesnice za ľavý dolný roh</string>
     <string name="resize_handle_bottom_right">Zmeniť veľkosť klávesnice za pravý dolný roh</string>
     <string name="floating_drag_handle">Presunúť plávajúcu klávesnicu</string>
-    <string name="floating_release_to_dock">Pusti a klávesnica sa prichytí dole</string>
+    <string name="floating_release_to_dock">Pustením klávesnicu ukotvíte dole</string>
     <string name="resize_mode_full">Celá šírka</string>
     <string name="resize_mode_compact">Kompaktná</string>
     <string name="resize_position_left">Vľavo</string>
     <string name="resize_position_center">V strede</string>
     <string name="resize_position_right">Vpravo</string>
     <string name="compact_large_screens">Kompaktná klávesnica na veľkých obrazovkách</string>
-    <string name="compact_large_screens_summary">Na tabletoch a rozložených skladačkách má klávesnica približne šírku ako na telefóne a je vpravo dole, pod palcom. Veľkosť a stranu zmeníš klávesom Veľkosť a poloha.</string>
+    <string name="compact_large_screens_summary">Na tabletoch a rozložených skladacích telefónoch je klávesnica asi taká široká ako na telefóne a sedí vpravo dole, pod palcom. Veľkosť a stranu zmeníte klávesom Veľkosť a poloha.</string>
 </resources>
