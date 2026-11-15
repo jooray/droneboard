@@ -1,12 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="swipe_recorder_title">Record swipes for tuning</string>
-    <string name="swipe_recorder_summary">Swipe prompted words; the gestures are saved on this phone only</string>
-    <string name="swipe_recorder_intro">Swipe the word shown below into the field, the way you normally swipe. Every swipe moves on to the next word. The gestures are saved only on this phone, in the file shown at the bottom, and are never uploaded. Nothing you type outside this screen is recorded.</string>
-    <string name="swipe_recorder_progress">Word %1$d of %2$d · %3$d recorded</string>
+    <string name="swipe_recorder_summary">Swipe prompted words or sentences; the gestures are saved on this phone only</string>
+    <string name="swipe_recorder_intro">Swipe what is shown below into the field, the way you normally swipe. The gestures are saved only on this phone, in the folder shown at the bottom, and are never uploaded. Nothing you type outside this screen is recorded.</string>
+    <string name="swipe_recorder_progress">Word %1$d of %2$d</string>
     <string name="swipe_recorder_last">Last swipe: %1$s</string>
     <string name="swipe_recorder_skip">Skip word</string>
     <string name="swipe_recorder_done">Done, thank you!</string>
-    <string name="swipe_recorder_file">Saved to %1$s</string>
+    <string name="swipe_recorder_file">Current file: %1$s</string>
     <string name="swipe_recorder_no_storage">Cannot create the recording file.</string>
+    <string name="swipe_recorder_mode_words">Words</string>
+    <string name="swipe_recorder_mode_sentences">Sentences</string>
+    <string name="swipe_recorder_style_normal">Normal</string>
+    <string name="swipe_recorder_style_sloppy">Fast &amp; sloppy</string>
+    <string name="swipe_recorder_style_hint_normal">Swipe at your usual pace.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Swipe as fast as you can, without aiming carefully.</string>
+    <string name="swipe_recorder_sentence_hint">Swipe the sentence word by word. Fix a wrong word the way you normally would (suggestion strip or a new swipe), then press Enter or Next sentence.</string>
+    <string name="swipe_recorder_sentence_progress">Sentence %1$d of %2$d · word %3$d of %4$d</string>
+    <string name="swipe_recorder_next_sentence">Next sentence</string>
+    <string name="swipe_recorder_skip_sentence">Skip</string>
+    <string name="swipe_recorder_languages">Sentence languages</string>
+    <string name="swipe_recorder_counter">%1$d recorded this session · %2$d in all files</string>
+    <string name="swipe_recorder_export_title">Getting the recordings</string>
+    <string name="swipe_recorder_export_text">The files stay in this folder on the phone (the app has no internet access). Copy them to a computer with:</string>
+    <string name="swipe_recorder_copy">Copy command</string>
 </resources>

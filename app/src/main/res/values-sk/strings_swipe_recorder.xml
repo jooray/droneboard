@@ -1,12 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="swipe_recorder_title">Nahrávanie ťahov na ladenie</string>
-    <string name="swipe_recorder_summary">Ťahaj zobrazené slová; ťahy sa uložia len v tomto telefóne</string>
-    <string name="swipe_recorder_intro">Napíš ťahom do poľa slovo zobrazené nižšie, tak ako bežne píšeš. Po každom ťahu príde ďalšie slovo. Ťahy sa ukladajú len v tomto telefóne, do súboru uvedeného dole, a nikam sa neposielajú. Nič, čo píšeš mimo tejto obrazovky, sa nenahráva.</string>
-    <string name="swipe_recorder_progress">Slovo %1$d z %2$d · nahraných %3$d</string>
+    <string name="swipe_recorder_summary">Ťahaj zobrazené slová alebo vety; ťahy sa uložia len v tomto telefóne</string>
+    <string name="swipe_recorder_intro">Napíš ťahom do poľa to, čo je zobrazené nižšie, tak ako bežne píšeš. Ťahy sa ukladajú len v tomto telefóne, do priečinka uvedeného dole, a nikam sa neposielajú. Nič, čo píšeš mimo tejto obrazovky, sa nenahráva.</string>
+    <string name="swipe_recorder_progress">Slovo %1$d z %2$d</string>
     <string name="swipe_recorder_last">Posledný ťah: %1$s</string>
     <string name="swipe_recorder_skip">Preskočiť slovo</string>
     <string name="swipe_recorder_done">Hotovo, ďakujem!</string>
-    <string name="swipe_recorder_file">Uložené v %1$s</string>
+    <string name="swipe_recorder_file">Aktuálny súbor: %1$s</string>
     <string name="swipe_recorder_no_storage">Súbor na nahrávanie sa nedá vytvoriť.</string>
+    <string name="swipe_recorder_mode_words">Slová</string>
+    <string name="swipe_recorder_mode_sentences">Vety</string>
+    <string name="swipe_recorder_style_normal">Normálne</string>
+    <string name="swipe_recorder_style_sloppy">Rýchlo a nedbalo</string>
+    <string name="swipe_recorder_style_hint_normal">Ťahaj svojím bežným tempom.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Ťahaj čo najrýchlejšie a nemier presne.</string>
+    <string name="swipe_recorder_sentence_hint">Napíš vetu ťahom slovo po slove. Zlé slovo oprav tak, ako bežne opravuješ (návrhy alebo nový ťah), potom stlač Enter alebo Ďalšia veta.</string>
+    <string name="swipe_recorder_sentence_progress">Veta %1$d z %2$d · slovo %3$d z %4$d</string>
+    <string name="swipe_recorder_next_sentence">Ďalšia veta</string>
+    <string name="swipe_recorder_skip_sentence">Preskočiť</string>
+    <string name="swipe_recorder_languages">Jazyky viet</string>
+    <string name="swipe_recorder_counter">%1$d nahraných v tejto relácii · %2$d vo všetkých súboroch</string>
+    <string name="swipe_recorder_export_title">Ako dostať nahrávky</string>
+    <string name="swipe_recorder_export_text">Súbory zostávajú v tomto priečinku v telefóne (aplikácia nemá prístup na internet). Do počítača ich skopíruješ príkazom:</string>
+    <string name="swipe_recorder_copy">Kopírovať príkaz</string>
 </resources>

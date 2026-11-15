@@ -43,6 +43,7 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.settings.EngineBadges
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
@@ -109,6 +110,7 @@ private fun SubtypeRow(subtype: InputMethodSubtype, isEnabled: Boolean) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            EngineBadges(subtype.locale())
         }
         Switch(
             checked = isEnabled,

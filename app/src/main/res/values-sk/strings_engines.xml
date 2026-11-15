@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="engine_neural">neurónová</string>
+    <string name="engine_ngrams">n-gramy</string>
+    <string name="engine_swipe">ťahy</string>
+</resources>

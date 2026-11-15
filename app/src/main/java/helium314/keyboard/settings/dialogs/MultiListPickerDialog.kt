@@ -3,6 +3,7 @@ package helium314.keyboard.settings.dialogs
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,7 @@ fun <T: Any> MultiListPickerDialog(
     title: (@Composable () -> Unit)? = null,
     initialSelection: List<T> = emptyList(),
     getItemName: (@Composable (T) -> String) = { it.toString() },
+    itemExtra: (@Composable (T) -> Unit)? = null,
 ) {
     var selected by remember { mutableStateOf(initialSelection.toSet()) }
     val state = rememberLazyListState()
@@ -63,10 +65,10 @@ fun <T: Any> MultiListPickerDialog(
                                 .padding(horizontal = 16.dp)
                                 .heightIn(min = 40.dp)
                         ) {
-                            Text(
-                                text = getItemName(item),
-                                modifier = Modifier.weight(1f),
-                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(text = getItemName(item))
+                                itemExtra?.invoke(item)
+                            }
                             Switch(
                                 checked = item in selected,
                                 onCheckedChange = {

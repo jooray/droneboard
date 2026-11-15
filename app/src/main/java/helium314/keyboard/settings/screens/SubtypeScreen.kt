@@ -81,6 +81,7 @@ import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.LayoutEditDialog
 import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.MultiListPickerDialog
+import helium314.keyboard.settings.EngineBadges
 import helium314.keyboard.settings.dialogs.ReorderDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.layoutFilePicker
@@ -299,7 +300,8 @@ fun SubtypeScreen(
                 items = availableLocalesForScript,
                 initialSelection = currentSubtype.getExtraValueOf(ExtraValue.SECONDARY_LOCALES)
                     ?.split(Separators.KV)?.map { it.constructLocale() }.orEmpty(),
-                getItemName = { it.localizedDisplayName(ctx.resources) }
+                getItemName = { it.localizedDisplayName(ctx.resources) },
+                itemExtra = { EngineBadges(it) }
             )
         if (showKeyOrderDialog) {
             val setting = currentSubtype.getExtraValueOf(ExtraValue.POPUP_ORDER)

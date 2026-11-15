@@ -1,0 +1,300 @@
+Zítra ráno ti zavolám.
+Nemám dneska čas, promiň.
+Přijdeš večer na večeři?
+Koupila jsem chleba a mléko.
+Venku pořád prší.
+Kdy se vrátíš domů?
+Můžeš mi poslat tu fotku?
+Schůzka se přesouvá na čtvrtek.
+Pravděpodobně přijedu až po obědě.
+Děkuju, moc mi to pomohlo.
+Už jsem na cestě.
+Ještě jsem nevstal.
+Bolí mě hlava, zůstanu doma.
+Nezapomeň koupit rohlíky.
+Máme v lednici něco k jídlu?
+Ten film byl opravdu skvělý.
+Řekni mi, až budeš hotový.
+Dneska je strašné horko.
+Půjdeme v sobotu do kina?
+Telefon se mi zase vybil.
+Napsala mi, že přijde později.
+Kde jsi nechal klíče?
+Objednal jsem stůl v restauraci.
+To zní dobře, beru.
+Přijď prosím co nejdřív.
+Musím ještě dodělat práci.
+Babička se ptala, jak se máš.
+Vlak má zpoždění asi půl hodiny.
+Nevím, jestli to stihnu.
+Co si dáš k pití?
+Děti už spí.
+Zítra budeme nakupovat dárky.
+Počítač mi pořád padá.
+Máš chuť jít na procházku?
+Jsem úplně vyčerpaná.
+Kolik to stálo?
+Tohle je nejlepší kafe ve městě.
+Šéf chce tu zprávu do pátku.
+Doktor říkal, že je to v pořádku.
+Přivezu ti něco z dovolené.
+Kde se sejdeme?
+Sejdeme se před nádražím v deset.
+Uvařím dneska guláš.
+Nechceš jít zítra plavat?
+Moc se těším na víkend.
+Ztratil jsem peněženku.
+Ozvi se, až dorazíš.
+Letadlo přistálo bez problémů.
+Mám pro tebe překvapení.
+Proč mi nebereš telefon?
+Promiň, byl jsem na poradě.
+Zapomněla jsem si deštník.
+Je ti už líp?
+Přines prosím něco sladkého.
+Ten obchod má dneska zavřeno.
+Potřebuju si odpočinout.
+Hrajeme večer karty, přidáš se?
+Sníh napadl přes noc.
+Myslím, že máš pravdu.
+Kolik je hodin?
+Nestihla jsem autobus.
+Pojedeme tam autem nebo vlakem?
+Rodiče přijedou na návštěvu v neděli.
+Hledám novou práci.
+Už jsi viděl ten nový seriál?
+Ještě dnes ti to pošlu.
+Kup cestou domů brambory.
+Na zahradě kvetou růže.
+Pes potřebuje vyvenčit.
+Vezmi si teplou bundu, je zima.
+Dovolená byla úžasná.
+Kdy máš zkoušku?
+Učím se na státnice.
+Nemůžu najít nabíječku.
+Můžeme to probrat zítra?
+Je to dost drahé.
+Ráda bych jela k moři.
+Večeře bude za chvíli.
+Naše kočka zase utekla.
+Slyšel jsi tu novinku?
+Řekl mi to bratr.
+Ať se ti daří.
+Gratuluju k narozeninám.
+Přeju ti hezký den.
+Dobrou noc a sladké sny.
+Tak zatím, měj se.
+Zavolám ti, až skončím.
+Mám hlad jako vlk.
+Uděláme si piknik v parku?
+Kolo potřebuje nové brzdy.
+Běhám každé ráno.
+Dneska jsem uběhl deset kilometrů.
+Posilovna byla úplně plná.
+Chci se naučit vařit.
+Recept mi poslala mamka.
+Polévka je trochu přesolená.
+Objednáme si pizzu?
+Ne, radši něco zdravějšího.
+Ano, klidně to udělám.
+Jasně, žádný problém.
+Pračka zase nefunguje.
+Zavolej opraváře, prosím tě.
+Účet za elektřinu přišel včera.
+Musíme zaplatit nájem.
+Banka mi zablokovala kartu.
+Aplikace se nechce aktualizovat.
+Zkus restartovat telefon.
+Heslo k internetu je na lednici.
+V tiskárně došla barva.
+Koupil jsem si nová sluchátka.
+Baterie vydrží celý den.
+Fotky jsou v počítači.
+Pošli mi adresu zprávou.
+Navigace nás vedla špatně.
+Zabloudili jsme v lese.
+Na horách je krásně.
+Zítra vyrážíme brzy ráno.
+Sbalila sis už kufr?
+Pas mám v batohu.
+Ubytování jsme zarezervovali přes internet.
+Hotel je hned u pláže.
+Moře je dnes hodně studené.
+Opálil jsem se na zádech.
+Vrátíme se v úterý večer.
+Kdo vyzvedne děti ze školky?
+Já to dneska nezvládnu.
+Vyzvednu je, nic se neboj.
+Malá má horečku.
+Byli jsme u doktorky.
+Musí týden brát antibiotika.
+Lékárna je naproti poště.
+Objednala jsem se k zubaři.
+Zub mě bolí už tři dny.
+Necítím se úplně dobře.
+Snad to brzo přejde.
+Drž se, brzy budeš zdravý.
+Spala jsem jen čtyři hodiny.
+Káva mi vůbec nepomáhá.
+Jdu si na chvíli lehnout.
+Probudil mě soused s vrtačkou.
+Sousedé mají novou kočku.
+Vedle nás staví nový dům.
+Stěhujeme se příští měsíc.
+Pomůžeš mi se stěhováním?
+Půjčím si dodávku od kamaráda.
+Ten gauč se do výtahu nevejde.
+Kuchyň je konečně hotová.
+Vymalovali jsme obývák.
+Jakou barvu by sis vybrala?
+Mně se líbí ta zelená.
+Nákupní centrum je plné lidí.
+Ve slevě měli krásné boty.
+Koupila jsem si šaty na svatbu.
+Svatba bude v červnu.
+Kdo všechno přijde?
+Pozvánky jsme rozeslali minulý týden.
+Máš už dárek pro nevěstu?
+Složíme se na něco společně.
+Kolik mám poslat?
+Pošlu ti to na účet.
+Peníze přišly, díky.
+Vrátím ti to zítra.
+Neboj, to vůbec nespěchá.
+Jak dopadl pohovor?
+Vzali mě, začínám v pondělí.
+To je skvělá zpráva.
+Gratuluju, zasloužíš si to.
+Kolegové jsou moc příjemní.
+Kancelář je daleko od centra.
+Dojíždím tramvají asi hodinu.
+Pracuju dneska z domova.
+Porada se protáhla.
+Prezentace dopadla dobře.
+Klient chce ještě nějaké změny.
+Termín odevzdání je bohužel už v neděli.
+Zůstanu dneska v práci déle.
+Nečekej na mě s večeří.
+Nechám ti jídlo v troubě.
+Ohřej si to v mikrovlnce.
+Snědl někdo můj jogurt?
+Kdo dopil mléko?
+Došel nám toaletní papír.
+Napiš to na nákupní seznam.
+Vajíčka a máslo už máme.
+Potřebujeme ještě cibuli a česnek.
+Rajčata jsou letos sladká.
+Na trhu mají čerstvé jahody.
+Upekla jsem jablečný koláč.
+Přijď ochutnat, dokud je teplý.
+Ty buchty jsou výborné.
+Dáš mi recept?
+Pečeš lépe než moje máma.
+Grilujeme u nás na zahradě.
+Přines si plavky, máme bazén.
+Bouřka se blíží od západu.
+Zavři okna, bude pršet.
+Předpověď hlásí na zítra sníh.
+Silnice jsou namrzlé, jeď opatrně.
+Mlha je tak hustá, že nic nevidím.
+Konečně svítí slunce.
+Je krásně, pojďme ven.
+Vítr mi rozfoukal vlasy.
+Celý týden bylo zataženo.
+Na jaře pojedeme na chalupu.
+Dědeček opravuje plot.
+Na chalupě není signál.
+Ozvu se, až budu mít signál.
+Na rybách jsme chytili kapra.
+Hraješ ještě na kytaru?
+Začala jsem chodit na jógu.
+Kniha, kterou jsi mi půjčil, je skvělá.
+Čtu teď detektivku.
+Doporučíš mi nějakou knížku?
+Koncert byl vyprodaný.
+Sehnal jsem dva lístky na koncert.
+Chceš jít se mnou?
+Divadlo začíná v sedm.
+Kde tam zaparkujeme?
+Parkoviště je úplně plné.
+Zaparkuj radši v ulici za rohem.
+Auto neprošlo technickou.
+Musím vyměnit pneumatiky.
+Benzín zase podražil.
+Tramvaj nejezdí kvůli opravě.
+Pojedu radši metrem.
+Vystup na další zastávce.
+Čekám na tebe u vchodu.
+Nevidím tě, kde přesně jsi?
+Stojím u té velké fontány.
+Už tě vidím.
+Jsem tam za pět minut.
+Trochu se opozdím, promiň.
+Zasekla jsem se v zácpě.
+Nic se neděje, počkám.
+Proč jsi včera nepřišel?
+Úplně jsem na to zapomněl.
+Příště mi to připomeň.
+Nastav si budík.
+Zaspal jsem do práce.
+Šéf byl dost naštvaný.
+Nezlob se na mě.
+Mrzí mě, co se stalo.
+Já se vůbec nezlobím.
+Pojďme na to zapomenout.
+Moc mi chybíš.
+Těším se, až tě uvidím.
+Mám tě rád.
+Kdy zase přijedeš?
+Snad na Vánoce.
+Vánoční stromek už stojí.
+Ještě musím zabalit dárky.
+Cukroví je napečené.
+Kam pojedete na Silvestra?
+Zůstaneme letos doma.
+Nový rok oslavíme s přáteli.
+Mám pocit, že na něco zapomínám.
+Přemýšlím o tom celý den.
+Nedokážu se rozhodnout.
+Co bys udělal ty?
+Na tvém místě bych to vzal.
+Zeptej se ještě táty.
+Táta říká, že je to dobrý nápad.
+Mamka posílá pozdrav.
+Pozdravuj všechny doma.
+Sestra čeká miminko.
+Bude to holčička.
+Jak se bude jmenovat?
+To ještě nevědí.
+Synovec začal chodit do školy.
+Učitelka ho chválí.
+Úkoly dělá sám.
+Pomůžeš mi s matematikou?
+Nerozumím té úloze.
+Vysvětlím ti to večer.
+Zkouška byla těžší, než jsem čekal.
+Udělal jsem ji na první pokus.
+Konečně mám prázdniny.
+Kdy ti končí semestr?
+Bydlím teď na koleji.
+Spolubydlící je v pohodě.
+Pořád poslouchá hlasitou hudbu.
+Vypni prosím tu televizi.
+Na co se díváš?
+Dávají dobrý fotbal.
+Kdo vyhrál včerejší zápas?
+Naši prohráli o gól.
+Půjdeme si zahrát tenis?
+Kurt je rezervovaný na šestou.
+Zapomněl jsem raketu doma.
+Půjčím ti svoji.
+Jsem rád, že jsi tady.
+Vypadáš dneska moc hezky.
+Ten účes ti sluší.
+Kde sis koupila ty náušnice?
+Byly v akci na internetu.
+Ozvi se mi, až budeš mít chvilku.
+Přijedu pravděpodobně až zítra odpoledne.
+Nezapomeň, že máme v pátek schůzku.
+Kdy ti můžu zavolat?
+Řekla bych, že to bude v pořádku.
