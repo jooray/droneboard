@@ -8,8 +8,12 @@ into website/img/fog-photo.webp when that file is missing or older.
 """
 import shutil
 import subprocess
+import sys
 from html import escape
 from pathlib import Path
+
+sys.dont_write_bytecode = True  # no __pycache__ in the deployed folder
+import dictation  # noqa: E402  the dictation subpage
 
 ROOT = Path(__file__).resolve().parent
 PLATE = ROOT.parent / "assets" / "plates" / "fog-photo.png"
@@ -25,6 +29,8 @@ REPO = "https://github.com/jooray/droneboard"
 APK = "https://github.com/jooray/droneboard/releases/latest"
 OBTAINIUM = "obtainium://add/https://github.com/jooray/droneboard"
 OBTAINIUM_SITE = "https://obtainium.imranr.dev"
+# index in each language's "feats" of the dictation feature, which links to the dictation page
+DICTATION_FEATURE = 2
 LANGS = [("en", "English"), ("sk", "Slovenčina"), ("cs", "Čeština"), ("de", "Deutsch"), ("es", "Español")]
 
 T = {}
@@ -526,7 +532,8 @@ def page(code):
     nav = t["nav"]
 
     tracks = "".join(
-        f'<li><span class="no">a{i + 1}</span><h3>{title}</h3><p>{text}</p></li>' for i, (title, text) in enumerate(t["feats"])
+        f'<li><span class="no">a{i + 1}</span><h3>{title}</h3><p>{text}{dictation.feature_note(code) if i == DICTATION_FEATURE else ""}</p></li>'
+        for i, (title, text) in enumerate(t["feats"])
     )
     coming = "".join(f'<li><span class="no">b{i + 1}</span><h3>{c}</h3></li>' for i, c in enumerate(t["coming"]))
     shots = "".join(
@@ -695,6 +702,7 @@ def main():
         out.parent.mkdir(exist_ok=True)
         out.write_text(page(code), encoding="utf-8")
         print("wrote", out.relative_to(ROOT))
+    dictation.write_pages(ROOT, T, LANGS, SITE)
 
 
 if __name__ == "__main__":

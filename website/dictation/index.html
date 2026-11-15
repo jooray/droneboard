@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dictation in Droneboard: Offline Speech to Text</title>
+<meta name="description" content="How dictation works in Droneboard: the keyboard records, the free app Offline Speech to Text transcribes on the phone, and nothing goes online. How to set it up, and a tip for people who speak several languages.">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/dictation/">
+<link rel="alternate" hreflang="en" href="https://cypherpunk.today/droneboard/dictation/">
+<link rel="alternate" hreflang="sk" href="https://cypherpunk.today/droneboard/sk/dictation/">
+<link rel="alternate" hreflang="cs" href="https://cypherpunk.today/droneboard/cs/dictation/">
+<link rel="alternate" hreflang="de" href="https://cypherpunk.today/droneboard/de/dictation/">
+<link rel="alternate" hreflang="es" href="https://cypherpunk.today/droneboard/es/dictation/">
+<link rel="alternate" hreflang="x-default" href="https://cypherpunk.today/droneboard/dictation/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Dictation in Droneboard: Offline Speech to Text">
+<meta property="og:description" content="How dictation works in Droneboard: the keyboard records, the free app Offline Speech to Text transcribes on the phone, and nothing goes online. How to set it up, and a tip for people who speak several languages.">
+<meta property="og:url" content="https://cypherpunk.today/droneboard/dictation/">
+<meta property="og:image" content="https://cypherpunk.today/droneboard/img/og.jpg">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../img/icon-512.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="preload" href="../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<a class="skip" href="#how">Skip to content</a>
+
+<header class="sleeve subpage" id="top">
+  <picture><source type="image/webp" srcset="../img/fog-photo.webp"><img class="fog" src="../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="../">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="../#features">features</a></li>
+        <li><a href="../#privacy">privacy</a></li>
+        <li><a href="../#install">install</a></li>
+        <li><a href="../#nostr">nostr</a></li>
+      </ul>
+      <ul class="langs" aria-label="Language"><li><a href="../dictation/" hreflang="en" lang="en" title="English" aria-current="page">en</a></li><li><a href="../sk/dictation/" hreflang="sk" lang="sk" title="Slovenčina">sk</a></li><li><a href="../cs/dictation/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../de/dictation/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="../es/dictation/" hreflang="es" lang="es" title="Español">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>dictation that stays on the phone.</h1>
+    <p class="sub">Droneboard types what you say with the help of Offline Speech to Text, a free app that turns speech into text on your phone. Nothing goes online.</p>
+  </div>
+</header>
+
+<main>
+<section class="panel" id="how" aria-labelledby="ostt-h">
+  <div class="two">
+    <div>
+      <h2 id="ostt-h">offline speech to text</h2>
+      <p class="lede">Offline Speech to Text is a free, open-source Android app. It runs speech recognition models on the phone itself and doesn’t need internet. Droneboard has no speech engine of its own; it hands the audio to this app.</p>
+    </div>
+    <div>
+      <h2 id="how-h">how it works</h2>
+      <ol class="steps"><li><span>Tap the mic at the right end of the suggestion strip and start talking. Tap it again when you’re done.</span></li><li><span>The keyboard records the audio itself. With a Bluetooth headset, LE Audio earbuds or hearing aids connected, it uses their microphone, and if the headset stays silent it switches to the phone’s microphone.</span></li><li><span>Long dictation is split into pieces under a minute each, so you can keep talking past the one-minute mark.</span></li><li><span>Offline Speech to Text transcribes each piece on the phone, and the text appears in the field you were typing in.</span></li></ol>
+      <p class="stays">The audio never leaves the phone. Droneboard has no <code>INTERNET</code> permission, and Offline Speech to Text transcribes on the device.</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="setup" aria-labelledby="setup-h">
+  <h2 id="setup-h">set it up</h2>
+  <div class="two">
+    <ol class="steps"><li><span>Install <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text from Zapstore</a>.</span></li><li><span>Open it once and download a speech model.</span></li><li><span>Switch to Droneboard, tap the mic in the suggestion strip and talk.</span></li></ol>
+    <div class="routes">
+      <a class="primary" href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text on Zapstore</a>
+      <p class="route"><span class="what">Don’t have Droneboard yet? The <a href="../#install">main page</a> shows how to install it.</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="languages" aria-labelledby="tip-h">
+  <div class="tip">
+    <h2 id="tip-h">if you speak several languages</h2>
+    <p>In Offline Speech to Text, choose the model <strong>Cadence V2</strong>, set the language to auto-detect, and in the list of languages you speak, keep only the ones you want to dictate in.</p><p>The default model, Parakeet, also detects the language on its own, but you can’t limit it. It may take Slovak for Czech or Polish and then keep writing in that language. Cadence V2 only picks from the languages you chose.</p>
+  </div>
+  <p class="inst-note"><a href="../">back to the main page</a> · <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text · Zapstore</a></p>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 beta · GPL-3.0 · built with AI assistance; contributions welcome</span>
+  <ul aria-label="Language"><li><a href="../dictation/" hreflang="en" lang="en" aria-current="page">English</a></li><li><a href="../sk/dictation/" hreflang="sk" lang="sk">Slovenčina</a></li><li><a href="../cs/dictation/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../de/dictation/" hreflang="de" lang="de">Deutsch</a></li><li><a href="../es/dictation/" hreflang="es" lang="es">Español</a></li></ul>
+</footer>
+</body>
+</html>

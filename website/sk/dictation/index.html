@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diktovanie v Droneboarde: Offline Speech to Text</title>
+<meta name="description" content="Ako funguje diktovanie v Droneboarde: klávesnica nahráva, bezplatná aplikácia Offline Speech to Text prepisuje priamo v telefóne a nič nejde na internet. Postup inštalácie a tip pre tých, čo hovoria viacerými jazykmi.">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/sk/dictation/">
+<link rel="alternate" hreflang="en" href="https://cypherpunk.today/droneboard/dictation/">
+<link rel="alternate" hreflang="sk" href="https://cypherpunk.today/droneboard/sk/dictation/">
+<link rel="alternate" hreflang="cs" href="https://cypherpunk.today/droneboard/cs/dictation/">
+<link rel="alternate" hreflang="de" href="https://cypherpunk.today/droneboard/de/dictation/">
+<link rel="alternate" hreflang="es" href="https://cypherpunk.today/droneboard/es/dictation/">
+<link rel="alternate" hreflang="x-default" href="https://cypherpunk.today/droneboard/dictation/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Diktovanie v Droneboarde: Offline Speech to Text">
+<meta property="og:description" content="Ako funguje diktovanie v Droneboarde: klávesnica nahráva, bezplatná aplikácia Offline Speech to Text prepisuje priamo v telefóne a nič nejde na internet. Postup inštalácie a tip pre tých, čo hovoria viacerými jazykmi.">
+<meta property="og:url" content="https://cypherpunk.today/droneboard/sk/dictation/">
+<meta property="og:image" content="https://cypherpunk.today/droneboard/img/og.jpg">
+<meta property="og:locale" content="sk_SK">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../../img/icon-512.png">
+<link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+<link rel="preload" href="../../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<a class="skip" href="#how">Preskočiť na obsah</a>
+
+<header class="sleeve subpage" id="top">
+  <picture><source type="image/webp" srcset="../../img/fog-photo.webp"><img class="fog" src="../../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="../../sk/">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="../../sk/#features">funkcie</a></li>
+        <li><a href="../../sk/#privacy">súkromie</a></li>
+        <li><a href="../../sk/#install">inštalácia</a></li>
+        <li><a href="../../sk/#nostr">nostr</a></li>
+      </ul>
+      <ul class="langs" aria-label="Jazyk"><li><a href="../../dictation/" hreflang="en" lang="en" title="English">en</a></li><li><a href="../../sk/dictation/" hreflang="sk" lang="sk" title="Slovenčina" aria-current="page">sk</a></li><li><a href="../../cs/dictation/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../../de/dictation/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="../../es/dictation/" hreflang="es" lang="es" title="Español">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>diktovanie, ktoré ostáva v telefóne.</h1>
+    <p class="sub">Droneboard píše, čo hovoríte, s pomocou Offline Speech to Text. Je to bezplatná aplikácia, ktorá prepisuje reč v telefóne. Na internet nejde nič.</p>
+  </div>
+</header>
+
+<main>
+<section class="panel" id="how" aria-labelledby="ostt-h">
+  <div class="two">
+    <div>
+      <h2 id="ostt-h">offline speech to text</h2>
+      <p class="lede">Offline Speech to Text je bezplatná open-source aplikácia pre Android. Modely na rozpoznávanie reči spúšťa priamo v telefóne a internet nepotrebuje. Droneboard vlastný rečový engine nemá, zvuk odovzdá tejto aplikácii.</p>
+    </div>
+    <div>
+      <h2 id="how-h">ako to funguje</h2>
+      <ol class="steps"><li><span>Ťuknite na mikrofón na pravom konci pruhu s návrhmi a hovorte. Keď skončíte, ťuknite naň znova.</span></li><li><span>Zvuk nahráva samotná klávesnica. Ak máte pripojené Bluetooth slúchadlá, LE Audio slúchadlá alebo načúvacie pomôcky, použije ich mikrofón. Keď zo slúchadiel nič nejde, prepne na mikrofón v telefóne.</span></li><li><span>Dlhé diktovanie rozdelí na kúsky kratšie ako minúta, takže môžete hovoriť aj dlhšie.</span></li><li><span>Offline Speech to Text každý kúsok prepíše v telefóne a text sa objaví v poli, kde ste písali.</span></li></ol>
+      <p class="stays">Zvuk z telefónu neodchádza. Droneboard nemá oprávnenie <code>INTERNET</code> a Offline Speech to Text prepisuje priamo v zariadení.</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="setup" aria-labelledby="setup-h">
+  <h2 id="setup-h">inštalácia</h2>
+  <div class="two">
+    <ol class="steps"><li><span>Nainštalujte si <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text zo Zapstore</a>.</span></li><li><span>Raz ju otvorte a stiahnite si model reči.</span></li><li><span>Prepnite na Droneboard, ťuknite na mikrofón v pruhu s návrhmi a hovorte.</span></li></ol>
+    <div class="routes">
+      <a class="primary" href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text na Zapstore</a>
+      <p class="route"><span class="what">Droneboard ešte nemáte? Návod na inštaláciu je na <a href="../../sk/#install">hlavnej stránke</a>.</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="languages" aria-labelledby="tip-h">
+  <div class="tip">
+    <h2 id="tip-h">ak hovoríte viacerými jazykmi</h2>
+    <p>V Offline Speech to Text si vyberte model <strong>Cadence V2</strong>, jazyk nastavte na automatické rozpoznanie a v zozname jazykov, ktorými hovoríte, nechajte len tie, v ktorých chcete diktovať.</p><p>Predvolený model Parakeet tiež rozpozná jazyk sám, ale obmedziť sa nedá. Slovenčinu si potom môže pomýliť s češtinou alebo poľštinou a v tom jazyku už pokračuje. Cadence V2 vyberá len z jazykov, ktoré ste zvolili.</p>
+  </div>
+  <p class="inst-note"><a href="../../sk/">späť na hlavnú stránku</a> · <a href="https://zapstore.dev/apps/app.offlinespeechtotext">Offline Speech to Text · Zapstore</a></p>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 beta · GPL-3.0 · vyvíjané s pomocou AI, príspevky vítané</span>
+  <ul aria-label="Jazyk"><li><a href="../../dictation/" hreflang="en" lang="en">English</a></li><li><a href="../../sk/dictation/" hreflang="sk" lang="sk" aria-current="page">Slovenčina</a></li><li><a href="../../cs/dictation/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../../de/dictation/" hreflang="de" lang="de">Deutsch</a></li><li><a href="../../es/dictation/" hreflang="es" lang="es">Español</a></li></ul>
+</footer>
+</body>
+</html>

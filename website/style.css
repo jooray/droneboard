@@ -265,3 +265,19 @@ table.stats tr.us th, table.stats tr.us td { color: var(--ink); }
   .credits dd { border-top: 0; padding-top: 0; }
 }
 @media (max-width: 760px) and (max-height: 700px) { .stack { bottom: 3.5rem; } }
+
+/* ───── subpages (dictation): a shorter sleeve, then the same back panels ───── */
+.sleeve.subpage { min-height: clamp(26rem, 62svh, 44rem); }
+.sleeve.subpage .stack { top: auto; bottom: clamp(3rem, 9svh, 6rem); }
+.sleeve.subpage .stack .sub { margin-top: calc(1.6 * var(--u)); }
+.stays { margin: 2rem 0 0; color: var(--ink); max-width: 52ch; }
+.route { margin: 0; }
+.tip { max-width: 46rem; padding: 0.4rem 0 0.4rem clamp(1.1rem, 3vw, 2rem); border-left: 2px solid var(--red-lit); }
+.tip p { margin: 0 0 1rem; max-width: 62ch; }
+.tip p:first-of-type { color: var(--ink); font-size: 1.15rem; line-height: 1.5; }
+.tip p:last-child { margin-bottom: 0; color: var(--fog); }
+.tip strong { font-weight: 700; color: var(--ink); }
+@media (max-width: 760px) {
+  .sleeve.subpage { min-height: 30rem; }
+  .sleeve.subpage .stack { bottom: 2.5rem; }
+}
