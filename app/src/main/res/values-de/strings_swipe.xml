@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
     <!-- About screen: attribution required by the FUTO Model Weights License -->
-    <string name="about_futo_swipe_title">Gestenschreiben mit FUTO Swipe</string>
+    <string name="about_futo_swipe_title">Gesten-Tippen mit FUTO Swipe</string>
     <string name="about_futo_swipe_summary">Die Gestenerkennung nutzt das Modell FUTO Swipe von FUTO Holdings, Inc. unter der FUTO Model Weights License.</string>
     <!-- Gesture typing: width of the final swipe search (beam width) -->
     <string name="swipe_beam_width_title">Suchbreite beim Wischen</string>
