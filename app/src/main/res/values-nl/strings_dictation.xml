@@ -15,6 +15,15 @@
     <string name="voice_mic_failed">De microfoon kon niet starten</string>
     <string name="voice_transcription_failed">Uitschrijven mislukt</string>
     <string name="voice_ostt_missing">Voor dicteren is Offline Speech to Text nodig</string>
-    <string name="voice_ostt_missing_detail">Een gratis app die spraak op je telefoon omzet in tekst, zonder internet.</string>
+    <string name="voice_ostt_missing_detail">Een gratis app die spraak op je telefoon omzet in tekst, zonder internet. Installeer hem, open hem één keer om een spraakmodel te downloaden en tik dan opnieuw op de microfoon.</string>
     <string name="voice_install_ostt">Downloaden via Zapstore</string>
+    <string name="voice_dictation_help">Zo werkt dicteren</string>
+    <string name="voice_open_ostt">App openen</string>
+    <string name="voice_ostt_unavailable">Offline Speech to Text is niet klaar</string>
+    <string name="voice_ostt_unavailable_detail">De app is geïnstalleerd, maar het toetsenbord kan de spraakherkenning niet bereiken. Werk hem bij via Zapstore of controleer of hij niet is uitgeschakeld.</string>
+    <string name="voice_ostt_no_model">Offline Speech to Text heeft nog geen spraakmodel</string>
+    <string name="voice_ostt_no_model_detail">Open de app, download een model en tik dan opnieuw op de microfoon.</string>
+    <string name="voice_ostt_permission">Offline Speech to Text mist een toestemming</string>
+    <string name="voice_ostt_permission_detail">Open de app, geef de toestemming die hij vraagt en tik dan opnieuw op de microfoon.</string>
+    <string name="voice_mic_permission_settings">Sta onder Rechten de microfoon toe voor Droneboard.</string>
 </resources>

@@ -15,6 +15,15 @@
     <string name="voice_mic_failed">Mikrofon se nepodařilo zapnout</string>
     <string name="voice_transcription_failed">Přepis selhal</string>
     <string name="voice_ostt_missing">K diktování je potřeba aplikace Offline Speech to Text</string>
-    <string name="voice_ostt_missing_detail">Bezplatná aplikace, která přepisuje řeč přímo v telefonu a nepotřebuje internet.</string>
+    <string name="voice_ostt_missing_detail">Je zdarma a přepisuje řeč přímo v telefonu, bez internetu. Nainstalujte ji, jednou ji otevřete, aby si stáhla model řeči, a pak znovu klepněte na mikrofon.</string>
     <string name="voice_install_ostt">Stáhnout ze Zapstore</string>
+    <string name="voice_dictation_help">Jak funguje diktování</string>
+    <string name="voice_open_ostt">Otevřít aplikaci</string>
+    <string name="voice_ostt_unavailable">Aplikace Offline Speech to Text není připravená</string>
+    <string name="voice_ostt_unavailable_detail">Je nainstalovaná, ale klávesnice se nedostane k její službě pro přepis řeči. Aktualizujte ji ze Zapstore nebo zkontrolujte, jestli není vypnutá.</string>
+    <string name="voice_ostt_no_model">Offline Speech to Text zatím nemá model řeči</string>
+    <string name="voice_ostt_no_model_detail">Otevřete ji, stáhněte si model a pak znovu klepněte na mikrofon.</string>
+    <string name="voice_ostt_permission">Aplikaci Offline Speech to Text chybí oprávnění</string>
+    <string name="voice_ostt_permission_detail">Otevřete ji, povolte, o co žádá, a pak znovu klepněte na mikrofon.</string>
+    <string name="voice_mic_permission_settings">V části Oprávnění povolte Droneboardu mikrofon.</string>
 </resources>

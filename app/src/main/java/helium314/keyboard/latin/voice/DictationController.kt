@@ -33,6 +33,9 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         const val SAMPLE_RATE = 16_000
         /** Caller audio to a recognizer needs Android 13. */
         val supported get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        private const val HELP_BASE = "https://cypherpunk.today/droneboard/"
+        /** Languages the website has a dictation page in, besides English at the root. */
+        private val HELP_LANGUAGES = setOf("sk", "cs", "de", "es")
     }
 
     private enum class State { IDLE, RECORDING, TRANSCRIBING }
@@ -62,7 +65,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
 
     private fun start() {
         if (OsttTranscriber.component(ime) == null) {
-            showPanel(VoiceInputView.Mode.MISSING_OSTT, ime.getString(R.string.voice_ostt_missing), ime.getString(R.string.voice_ostt_missing_detail))
+            showOsttProblem(if (OsttTranscriber.installed(ime)) OsttTranscriber.Problem.OTHER else OsttTranscriber.Problem.NOT_INSTALLED)
             return
         }
         if (!MicPermissionActivity.hasMic(ime)) {
@@ -177,11 +180,13 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         if (last) finished()
     }
 
-    override fun onTranscriptionError(message: String, busy: Boolean, last: Boolean) {
-        Log.w(TAG, "transcription failed: $message")
+    override fun onTranscriptionError(message: String, busy: Boolean, last: Boolean, problem: OsttTranscriber.Problem) {
+        Log.w(TAG, "transcription failed: $message ($problem)")
         if (!errorShown) {
             errorShown = true
-            showPanel(VoiceInputView.Mode.ERROR, ime.getString(R.string.voice_transcription_failed), message)
+            if (problem == OsttTranscriber.Problem.OTHER)
+                showPanel(VoiceInputView.Mode.ERROR, ime.getString(R.string.voice_transcription_failed), message)
+            else showOsttProblem(problem)
         }
         if (last) {
             transcriber = null
@@ -212,7 +217,32 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private fun wrapper(): ViewGroup? =
         ime.window?.window?.decorView?.findViewById(R.id.keyboard_view_wrapper)
 
-    private fun showPanel(mode: VoiceInputView.Mode, title: String, detail: String?) {
+    /**
+     * What to do when Offline Speech to Text can't take the job: [OsttTranscriber.Problem.OTHER]
+     * here means installed but without a usable recognition service (disabled or too old).
+     */
+    private fun showOsttProblem(problem: OsttTranscriber.Problem) {
+        val help = VoiceInputView.Button.HELP
+        when (problem) {
+            OsttTranscriber.Problem.NOT_INSTALLED -> showPanel(VoiceInputView.Mode.MISSING_OSTT,
+                ime.getString(R.string.voice_ostt_missing), ime.getString(R.string.voice_ostt_missing_detail),
+                VoiceInputView.Button.INSTALL, help)
+            OsttTranscriber.Problem.NO_MODEL -> showPanel(VoiceInputView.Mode.OSTT_NEEDS_SETUP,
+                ime.getString(R.string.voice_ostt_no_model), ime.getString(R.string.voice_ostt_no_model_detail),
+                VoiceInputView.Button.OPEN_OSTT, help)
+            OsttTranscriber.Problem.PERMISSION -> showPanel(VoiceInputView.Mode.OSTT_NEEDS_SETUP,
+                ime.getString(R.string.voice_ostt_permission), ime.getString(R.string.voice_ostt_permission_detail),
+                VoiceInputView.Button.OPEN_OSTT, help)
+            OsttTranscriber.Problem.OTHER -> showPanel(VoiceInputView.Mode.OSTT_UNAVAILABLE,
+                ime.getString(R.string.voice_ostt_unavailable), ime.getString(R.string.voice_ostt_unavailable_detail),
+                VoiceInputView.Button.INSTALL, help)
+        }
+    }
+
+    private fun showPanel(
+        mode: VoiceInputView.Mode, title: String, detail: String?,
+        primary: VoiceInputView.Button? = null, secondary: VoiceInputView.Button? = null,
+    ) {
         var p = panel
         if (p == null || p.parent == null) {
             val w = wrapper() ?: return
@@ -223,7 +253,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             panel = p
         }
         p.visibility = View.VISIBLE
-        p.show(mode, title, detail)
+        p.show(mode, title, detail, primary, secondary)
     }
 
     private fun hidePanel() {
@@ -241,11 +271,33 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
 
     override fun onCancelTapped() = cancel()
 
-    override fun onInstallTapped() {
+    override fun onInstallTapped() = leaveFor(Intent(Intent.ACTION_VIEW, Uri.parse(OsttTranscriber.ZAPSTORE_URL)))
+
+    override fun onHelpTapped() = leaveFor(Intent(Intent.ACTION_VIEW, Uri.parse(helpUrl())))
+
+    override fun onOpenOsttTapped() {
+        val launch = ime.packageManager.getLaunchIntentForPackage(OsttTranscriber.OSTT_PACKAGE)
+        leaveFor(launch ?: Intent(Intent.ACTION_VIEW, Uri.parse(OsttTranscriber.ZAPSTORE_URL)))
+    }
+
+    /**
+     * The website's dictation page in the language the keyboard shows its own text in; English
+     * for languages the site doesn't have.
+     */
+    private fun helpUrl(): String {
+        val language = ime.resources.configuration.locales[0].language
+        return if (language in HELP_LANGUAGES) "$HELP_BASE$language/dictation/" else "${HELP_BASE}dictation/"
+    }
+
+    /**
+     * Opens [intent] (a link opens in Zapstore when it handles it, else the browser; our app
+     * needs no internet for that) and gets the keyboard out of the way.
+     */
+    private fun leaveFor(intent: Intent) {
         hidePanel()
-        runCatching {
-            ime.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(OsttTranscriber.ZAPSTORE_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
+        val started = runCatching { ime.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        if (started.isFailure) Log.w(TAG, "nothing opens $intent", started.exceptionOrNull())
+        else ime.requestHideSelf(0)
     }
 
     private fun tone(type: Int, ms: Int, stream: Int) {

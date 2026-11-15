@@ -15,6 +15,15 @@
     <string name="voice_mic_failed">No se pudo activar el micrófono</string>
     <string name="voice_transcription_failed">Error al transcribir</string>
     <string name="voice_ostt_missing">El dictado necesita Offline Speech to Text</string>
-    <string name="voice_ostt_missing_detail">Una aplicación gratuita que transcribe en tu teléfono, sin conexión a internet.</string>
+    <string name="voice_ostt_missing_detail">Una aplicación gratuita que transcribe en tu teléfono, sin conexión a internet. Instálala, ábrela una vez para que descargue un modelo de voz y vuelve a tocar el micrófono.</string>
     <string name="voice_install_ostt">Obtener en Zapstore</string>
+    <string name="voice_dictation_help">Cómo funciona el dictado</string>
+    <string name="voice_open_ostt">Abrir la aplicación</string>
+    <string name="voice_ostt_unavailable">Offline Speech to Text no está lista</string>
+    <string name="voice_ostt_unavailable_detail">Está instalada, pero el teclado no llega a su servicio de reconocimiento de voz. Actualízala desde Zapstore o comprueba que no esté desactivada.</string>
+    <string name="voice_ostt_no_model">Offline Speech to Text aún no tiene un modelo de voz</string>
+    <string name="voice_ostt_no_model_detail">Ábrela, descarga un modelo y vuelve a tocar el micrófono.</string>
+    <string name="voice_ostt_permission">A Offline Speech to Text le falta un permiso</string>
+    <string name="voice_ostt_permission_detail">Ábrela, concede lo que te pide y vuelve a tocar el micrófono.</string>
+    <string name="voice_mic_permission_settings">En Permisos, permite que Droneboard use el micrófono.</string>
 </resources>

@@ -15,6 +15,15 @@
     <string name="voice_mic_failed">Das Mikrofon konnte nicht gestartet werden</string>
     <string name="voice_transcription_failed">Transkription fehlgeschlagen</string>
     <string name="voice_ostt_missing">Für das Diktat wird Offline Speech to Text benötigt</string>
-    <string name="voice_ostt_missing_detail">Eine kostenlose App, die Sprache direkt auf dem Smartphone in Text umwandelt, ganz ohne Internet.</string>
+    <string name="voice_ostt_missing_detail">Eine kostenlose App, die Sprache direkt auf dem Smartphone in Text umwandelt, ohne Internet. Installieren Sie sie, öffnen Sie sie einmal, damit sie ein Sprachmodell lädt, und tippen Sie dann wieder auf das Mikrofon.</string>
     <string name="voice_install_ostt">Bei Zapstore herunterladen</string>
+    <string name="voice_dictation_help">So funktioniert das Diktat</string>
+    <string name="voice_open_ostt">App öffnen</string>
+    <string name="voice_ostt_unavailable">Offline Speech to Text ist nicht bereit</string>
+    <string name="voice_ostt_unavailable_detail">Die App ist installiert, aber die Tastatur erreicht ihren Spracherkennungsdienst nicht. Aktualisieren Sie sie über Zapstore oder prüfen Sie, ob sie deaktiviert ist.</string>
+    <string name="voice_ostt_no_model">Offline Speech to Text hat noch kein Sprachmodell</string>
+    <string name="voice_ostt_no_model_detail">Öffnen Sie die App, laden Sie ein Modell herunter und tippen Sie dann wieder auf das Mikrofon.</string>
+    <string name="voice_ostt_permission">Offline Speech to Text fehlt eine Berechtigung</string>
+    <string name="voice_ostt_permission_detail">Öffnen Sie die App, erlauben Sie, worum sie bittet, und tippen Sie dann wieder auf das Mikrofon.</string>
+    <string name="voice_mic_permission_settings">Erlauben Sie Droneboard unter „Berechtigungen“ das Mikrofon.</string>
 </resources>

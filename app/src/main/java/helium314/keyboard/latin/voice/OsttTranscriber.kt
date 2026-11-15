@@ -50,13 +50,22 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                 .firstOrNull { it.serviceInfo.exported && it.serviceInfo.enabled }
                 ?.let { ComponentName(it.serviceInfo.packageName, it.serviceInfo.name) }
         }.getOrNull()
+
+        /** Whether the OSTT package is on the phone at all, with or without a usable recognizer. */
+        fun installed(context: Context): Boolean = runCatching {
+            context.packageManager.getPackageInfo(OSTT_PACKAGE, 0)
+            true
+        }.getOrDefault(false)
     }
+
+    /** Why a piece failed, for what the panel tells the user to do. */
+    enum class Problem { NOT_INSTALLED, NO_MODEL, PERMISSION, OTHER }
 
     interface Listener {
         /** Text of one piece, in recording order; empty when the piece held no words. */
         fun onText(text: String, last: Boolean)
         /** Transcription failed for good; [busy] when OSTT kept refusing. */
-        fun onTranscriptionError(message: String, busy: Boolean, last: Boolean)
+        fun onTranscriptionError(message: String, busy: Boolean, last: Boolean, problem: Problem)
     }
 
     private class Job(val pcm: ShortArray, val last: Boolean, var attempt: Int = 0)
@@ -101,7 +110,7 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
     private fun start(job: Job) {
         val c = component(context)
         if (c == null) {
-            fail(job, "Offline Speech to Text is not installed", busy = false)
+            fail(job, "Offline Speech to Text is not installed", busy = false, problem = Problem.NOT_INSTALLED)
             return
         }
         try {
@@ -133,7 +142,7 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                             pump()
                         }
                         error in BUSY && job.attempt < BACKOFF_MS.size -> retry(job)
-                        else -> fail(job, errorName(error), busy = error in BUSY)
+                        else -> fail(job, errorName(error), busy = error in BUSY, problem = problemOf(error))
                     }
                 }
             })
@@ -193,9 +202,9 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         main.postDelayed({ if (running === job && !cancelled) start(job) }, wait)
     }
 
-    private fun fail(job: Job, message: String, busy: Boolean) {
+    private fun fail(job: Job, message: String, busy: Boolean, problem: Problem = Problem.OTHER) {
         done(job)
-        listener.onTranscriptionError(message, busy, job.last)
+        listener.onTranscriptionError(message, busy, job.last, problem)
         pump()
     }
 
@@ -214,6 +223,12 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         recognizer = null
         pipe?.forEach { runCatching { it.close() } }
         pipe = null
+    }
+
+    private fun problemOf(error: Int) = when (error) {
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> Problem.PERMISSION
+        SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE, SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> Problem.NO_MODEL
+        else -> Problem.OTHER
     }
 
     private fun errorName(error: Int) = when (error) {

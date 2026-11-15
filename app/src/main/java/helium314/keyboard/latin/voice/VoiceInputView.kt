@@ -36,9 +36,25 @@ class VoiceInputView(context: Context, private val actions: Actions) : FrameLayo
         fun onMicTapped()
         fun onCancelTapped()
         fun onInstallTapped()
+        fun onHelpTapped()
+        fun onOpenOsttTapped()
     }
 
-    enum class Mode { STARTING, WAITING_BLUETOOTH, LISTENING, TRANSCRIBING, MISSING_OSTT, ERROR }
+    enum class Mode {
+        STARTING, WAITING_BLUETOOTH, LISTENING, TRANSCRIBING, ERROR,
+        /** Offline Speech to Text is not installed. */
+        MISSING_OSTT,
+        /** Installed, but its recognition service is off or too old. */
+        OSTT_UNAVAILABLE,
+        /** It needs a speech model or a permission: the user has to open it once. */
+        OSTT_NEEDS_SETUP;
+
+        /** An explanation with buttons instead of the mic. */
+        val info get() = this == MISSING_OSTT || this == OSTT_UNAVAILABLE || this == OSTT_NEEDS_SETUP
+    }
+
+    /** What the buttons under the explanation do. */
+    enum class Button { INSTALL, OPEN_OSTT, HELP }
 
     private val colors = Settings.getValues().mColors
     private val accent = colors.get(ColorType.ACTION_KEY_BACKGROUND)
@@ -49,7 +65,9 @@ class VoiceInputView(context: Context, private val actions: Actions) : FrameLayo
     private val orb = Orb(context)
     private val title = TextView(context)
     private val detail = TextView(context)
-    private val install = TextView(context)
+    private val primary = TextView(context)
+    private val secondary = TextView(context)
+    private val buttons = LinearLayout(context)
     private val cancel = ImageButton(context)
 
     var mode = Mode.STARTING
@@ -77,15 +95,25 @@ class VoiceInputView(context: Context, private val actions: Actions) : FrameLayo
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
         }
-        install.apply {
-            text = context.getString(R.string.voice_install_ostt)
+        primary.apply {
             setTextColor(onAccent)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            val pad = dp(14)
-            setPadding(pad * 2, pad, pad * 2, pad)
+            styleButton(this)
             background = GradientDrawable().apply { cornerRadius = dp(24).toFloat(); setColor(accent) }
+        }
+        secondary.apply {
+            setTextColor(textColor)
+            styleButton(this)
+            background = GradientDrawable().apply {
+                cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), ColorUtils.setAlphaComponent(textColor, 110))
+            }
+        }
+        buttons.apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
             visibility = GONE
-            setOnClickListener { actions.onInstallTapped() }
+            addView(primary, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
+            addView(secondary, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(6), 0, dp(6), 0) })
         }
         orb.setOnClickListener { actions.onMicTapped() }
         orb.contentDescription = context.getString(R.string.voice_stop)
@@ -94,11 +122,11 @@ class VoiceInputView(context: Context, private val actions: Actions) : FrameLayo
             setMargins(dp(24), dp(16), dp(24), dp(4))
         })
         column.addView(orb, LinearLayout.LayoutParams(dp(120), dp(120)))
-        column.addView(install, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            setMargins(0, dp(8), 0, dp(8))
-        })
         column.addView(detail, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             setMargins(dp(24), dp(4), dp(24), dp(12))
+        })
+        column.addView(buttons, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(18), dp(4), dp(18), dp(12))
         })
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
 
@@ -114,14 +142,48 @@ class VoiceInputView(context: Context, private val actions: Actions) : FrameLayo
         addView(cancel, LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START))
     }
 
-    fun show(mode: Mode, title: CharSequence, detail: CharSequence?) {
+    /**
+     * [primaryButton] and [secondaryButton] show under the detail; in the [Mode.info] modes the
+     * explanation and the buttons replace the mic.
+     */
+    fun show(mode: Mode, title: CharSequence, detail: CharSequence?, primaryButton: Button? = null, secondaryButton: Button? = null) {
         this.mode = mode
         this.title.text = title
         this.detail.text = detail ?: ""
         this.detail.visibility = if (detail.isNullOrEmpty()) INVISIBLE else VISIBLE
-        install.visibility = if (mode == Mode.MISSING_OSTT) VISIBLE else GONE
-        orb.visibility = if (mode == Mode.MISSING_OSTT) GONE else VISIBLE
+        this.detail.maxLines = if (mode.info || primaryButton != null) 4 else 2
+        bind(primary, primaryButton)
+        bind(secondary, secondaryButton)
+        buttons.visibility = if (primaryButton != null || secondaryButton != null) VISIBLE else GONE
+        orb.visibility = if (mode.info) GONE else VISIBLE
         orb.setMode(mode)
+    }
+
+    private fun bind(view: TextView, button: Button?) {
+        view.visibility = if (button == null) GONE else VISIBLE
+        if (button == null) return
+        view.text = context.getString(when (button) {
+            Button.INSTALL -> R.string.voice_install_ostt
+            Button.OPEN_OSTT -> R.string.voice_open_ostt
+            Button.HELP -> R.string.voice_dictation_help
+        })
+        view.setOnClickListener {
+            when (button) {
+                Button.INSTALL -> actions.onInstallTapped()
+                Button.OPEN_OSTT -> actions.onOpenOsttTapped()
+                Button.HELP -> actions.onHelpTapped()
+            }
+        }
+    }
+
+    private fun styleButton(view: TextView) {
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        view.gravity = Gravity.CENTER
+        view.maxLines = 2
+        view.ellipsize = TextUtils.TruncateAt.END
+        view.minHeight = dp(48)
+        val pad = dp(12)
+        view.setPadding(pad, dp(10), pad, dp(10))
     }
 
     /** 0..32767 peak of the last block. */

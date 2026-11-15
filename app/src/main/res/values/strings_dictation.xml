@@ -15,6 +15,15 @@
     <string name="voice_mic_failed">The microphone could not start</string>
     <string name="voice_transcription_failed">Transcription failed</string>
     <string name="voice_ostt_missing">Dictation needs Offline Speech to Text</string>
-    <string name="voice_ostt_missing_detail">A free app that transcribes on your phone, without internet.</string>
+    <string name="voice_ostt_missing_detail">A free app that turns speech into text right on the phone, without internet. Install it, open it once to download a speech model, then tap the mic again.</string>
     <string name="voice_install_ostt">Get it on Zapstore</string>
+    <string name="voice_dictation_help">How dictation works</string>
+    <string name="voice_open_ostt">Open the app</string>
+    <string name="voice_ostt_unavailable">Offline Speech to Text isn\'t ready</string>
+    <string name="voice_ostt_unavailable_detail">It\'s installed, but the keyboard can\'t reach its speech service. Update it from Zapstore, or check that it isn\'t turned off.</string>
+    <string name="voice_ostt_no_model">Offline Speech to Text has no speech model yet</string>
+    <string name="voice_ostt_no_model_detail">Open it, download a model, then tap the mic again.</string>
+    <string name="voice_ostt_permission">Offline Speech to Text is missing a permission</string>
+    <string name="voice_ostt_permission_detail">Open it, allow what it asks for, then tap the mic again.</string>
+    <string name="voice_mic_permission_settings">Under Permissions, allow the microphone for Droneboard.</string>
 </resources>
