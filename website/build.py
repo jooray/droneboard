@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # no __pycache__ in the deployed folder
 import dictation  # noqa: E402  the dictation subpage
+import crosspromo  # noqa: E402  cross-promotion block
 
 ROOT = Path(__file__).resolve().parent
 PLATE = ROOT.parent / "assets" / "plates" / "fog-photo.png"
@@ -669,6 +670,8 @@ def page(code):
   <h2 id="credits-h">{e(t['credits_h'])}</h2>
   <dl>{credits}</dl>
 </section>
+
+{crosspromo.section(code, base, 'dictation/#languages')}
 </main>
 
 <footer class="foot">

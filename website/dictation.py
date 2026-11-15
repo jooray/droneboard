@@ -3,6 +3,7 @@
 Called from build.py, which passes in the shared copy (T) for the header and footer. The strings
 here are written by us and may contain HTML.
 """
+import crosspromo
 from html import escape
 
 OSTT = "https://zapstore.dev/apps/app.offlinespeechtotext"
@@ -281,6 +282,8 @@ def page(code, t, langs, site):
   </div>
   <p class="inst-note"><a href="{home}">{e(d['back'])}</a> · <a href="{OSTT}">Offline Speech to Text · Zapstore</a></p>
 </section>
+
+{crosspromo.section(code, root, '#languages', compact=True)}
 </main>
 
 <footer class="foot">

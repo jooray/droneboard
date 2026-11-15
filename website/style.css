@@ -281,3 +281,19 @@ table.stats tr.us th, table.stats tr.us td { color: var(--ink); }
   .sleeve.subpage { min-height: 30rem; }
   .sleeve.subpage .stack { bottom: 2.5rem; }
 }
+
+/* ───── cross-promotion: two sister apps, listed like the tracks ───── */
+.xpromo h2 { font-size: clamp(1.3rem, 2vw, 1.7rem); margin-bottom: 1.6rem; }
+.xp-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.xp-list li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; gap: 0 1.4rem; padding: 1.25rem 0; border-bottom: 1px solid var(--rule); align-items: start; }
+.xp-list img { width: 3rem; height: 3rem; border-radius: 0.7rem; background: var(--water); }
+.xp-list h3 { margin: 0 0 0.3rem; font-weight: 400; font-size: 1.15rem; line-height: 1.3; color: var(--ink); }
+.xp-list p { margin: 0; max-width: 62ch; }
+.xp-links { display: flex; gap: 1.2rem; padding-top: 0.15rem; white-space: nowrap; }
+.xp-note { margin: 1.4rem 0 0; max-width: 62ch; color: var(--mist); font-size: 0.95rem; }
+.xp-note a { color: var(--fog); }
+.xpromo.compact { padding-top: clamp(2.5rem, 5vw, 4rem); padding-bottom: clamp(2.5rem, 5vw, 4rem); }
+@media (max-width: 760px) {
+  .xp-list li { grid-template-columns: 3rem minmax(0, 1fr); }
+  .xp-links { grid-column: 2; margin-top: 0.8rem; }
+}
