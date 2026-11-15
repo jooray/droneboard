@@ -3,7 +3,7 @@
 // + native/droneswipe key-path dictionaries + ranker) and reports accuracy.
 //
 // usage: swipe-replay --encoder model_int8.pte --dict sk:sk.kpd [--dict en:en.kpd]
-//          [--params sk=gamma,beta,lambda,caps,nu,bonus] [--beam 100] [--topk 1000]
+//          [--params sk=gamma,beta,lambda,caps,nu,bonus] [--beam 200] [--topk 1000]
 //          [--history words.tsv (word \t weight 0-255)] [--history-params lambda,history]
 //          [--kappa 0] [--cap 4] [--prior sk=0.5,en=0.5] [--context 3] [--k3 2] [--tie 0] [--same-path w]
 //          [--out pred.jsonl] in.jsonl...
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     std::vector<std::pair<std::string, std::string>> dict_specs;
     std::map<std::string, std::vector<float>> params;
     std::map<std::string, float> prior_map;
-    int beam = 100, topk = 1000, context_n = 3;
+    int beam = 200, topk = 1000, context_n = 3;
     float kappa = 0.0f, cap = 4.0f, k3 = -1.0f, tie = 0.0f, same_path = -1.0f;
     std::vector<std::string> inputs;
     std::string history_path;
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
                     swipe_decoder::SwipeEngine::Config cfg;
                     cfg.encoder_path = encoder;
                     cfg.layout = layout;
-                    cfg.beam_width = std::max(beam, 100);
+                    cfg.beam_width = std::max(beam, 200);
                     cfg.top_k = 32;
                     cfg.num_threads = 2;
                     cfg.dictionaries = tries;

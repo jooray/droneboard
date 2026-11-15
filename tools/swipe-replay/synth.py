@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Synthetic swipes with real sentence context, in swipe-replay's input format.
 
-usage: synth.py <corpus.txt> <lang> <n> <out.jsonl> [--seed 1] [--layout qwerty|qwertz] [--min-len 2]
+usage: synth.py <corpus.txt> <lang> <n> <out.jsonl> [--seed 1] [--min-len 2] [--cased]
+                [--layout qwerty|qwertz|qwertz-de|qwerty-es]
        synth.py --words <targets.tsv> <lang> <n per line> <out.jsonl> [--seed 1] [--layout ...]
 
 Picks random sentences from the corpus (one per line or plain text), a random word of length
@@ -23,25 +24,36 @@ import random
 import re
 import unicodedata
 
-ROWS = {"qwerty": ["qwertyuiop", "asdfghjkl", "zxcvbnm"], "qwertz": ["qwertzuiop", "asdfghjkl", "yxcvbnm"]}
+# rows, the offset of every row in key widths and the number of key widths across
+ROWS = {
+    "qwerty": (["qwertyuiop", "asdfghjkl", "zxcvbnm"], [0.0, 0.5, 1.5], 10),
+    "qwertz": (["qwertzuiop", "asdfghjkl", "yxcvbnm"], [0.0, 0.5, 1.5], 10),
+    # Gboard German (QWERTZ with ü ö ä keys) and Spanish (QWERTY with ñ)
+    "qwertz-de": (["qwertzuiopü", "asdfghjklöä", "yxcvbnm"], [0.0, 0.0, 2.0], 11),
+    "qwerty-es": (["qwertyuiop", "asdfghjklñ", "zxcvbnm"], [0.0, 0.0, 1.5], 10),
+}
+KEYS_ACROSS = 10
 
 
 def layout(name):
+    global KEYS_ACROSS
+    rows, offsets, KEYS_ACROSS = ROWS[name]
     keys = {}
-    for r, row in enumerate(ROWS[name]):
-        offset = {0: 0.0, 1: 0.5, 2: 1.5}[r]
+    for r, row in enumerate(rows):
         for i, c in enumerate(row):
-            keys[c] = ((offset + i + 0.5) / 10.0, (2 * r + 1) / 6.0)
+            keys[c] = ((offsets[r] + i + 0.5) / KEYS_ACROSS, (2 * r + 1) / 6.0)
     return keys
 
 
-def base(word):
+def base(word, keys=None):
+    """Keys the swipe passes: letters with diacritics on their own key when the layout has it
+    (ñ, ü), otherwise their base letter; ß as s (s-s is one stop)."""
     out = []
-    for ch in word.lower():
+    for ch in word.lower().replace("ß", "ss"):
         if ch in "'’-":
             continue
-        b = unicodedata.normalize("NFD", ch)[0]
-        if not ("a" <= b <= "z"):
+        b = ch if keys and ch in keys else unicodedata.normalize("NFD", ch)[0]
+        if not ("a" <= b <= "z") and not (keys and b in keys):
             return None
         if not out or out[-1] != b:
             out.append(b)
@@ -60,8 +72,8 @@ def chaikin(pts, r=0.12):
 
 
 def gesture(word, keys, rnd):
-    letters = base(word)
-    kw = 0.1  # key width in normalized units
+    letters = base(word, keys)
+    kw = 1.0 / KEYS_ACROSS  # key width in normalized units
     centers = [(keys[c][0] + rnd.gauss(0, 0.18 * kw), keys[c][1] + rnd.gauss(0, 0.18 * kw * 1.6)) for c in letters]
     if len(centers) == 1:
         x, y = centers[0]
@@ -101,6 +113,8 @@ def main():
     ap.add_argument("--require", default="", help="keep only lines containing one of these letters")
     ap.add_argument("--forbid", default="", help="drop lines containing any of these letters")
     ap.add_argument("--words", action="store_true", help="the first argument is a TSV of fixed targets")
+    ap.add_argument("--cased", action="store_true",
+                    help="also capitalized words inside a sentence (German nouns), not only lowercase ones")
     a = ap.parse_args()
     rnd = random.Random(a.seed)
     keys = layout(a.layout)
@@ -136,7 +150,8 @@ def main():
         while written < a.n:
             words = WORD.findall(rnd.choice(lines))
             # plain words only, so that earlier evaluation sets stay reproducible
-            idx = [i for i, w in enumerate(words) if len(w) >= a.min_len and base(w) and w.lower() == w and w.isalpha()]
+            idx = [i for i, w in enumerate(words) if len(w) >= a.min_len and base(w, keys) and w.isalpha()
+                   and (w.lower() == w or a.cased and i > 0 and w[0].isupper() and w[1:].islower())]
             if not idx:
                 continue
             i = rnd.choice(idx)

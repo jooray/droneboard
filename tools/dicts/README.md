@@ -67,6 +67,33 @@ DRONEBOARD_COMBINED=work/out/cs.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/a
 The Czech `.kpd` keeps more n-grams than the Slovak one (19 MB): on synthetic Czech swipes with
 sentence context, top-1 goes from 85.5 % (Slovak thresholds, 5.8 MB) to 87.6 %.
 
+### German, Spanish and Dutch
+
+The same pipeline on FineWeb-2 `deu_Latn`, `spa_Latn` and `nld_Latn` (about 100M words each, no
+personal text). German `ß` has no NFD decomposition, so `keypath()` maps it to `ss` ("Straße" is
+swiped s-t-r-a-s-e); Spanish `ñ` becomes `n` through NFD. HeliBoard's `main_de.dict`, `main_es.dict`
+and `main_nl.dict` stay the typing dictionaries; the emoji dictionaries are aosp-dictionaries'
+`emoji_de/es/nl.dict`.
+
+```sh
+for l in de:deu_Latn:de_DE_frami es:spa_Latn:es_ES nl:nld_Latn:nl_NL; do
+  IFS=: read L F H <<< "$l"
+  .venv/bin/python -I tools/dicts/fetch_corpus.py $F 280 work/corpus-$L
+  python3 -I tools/dicts/build_dicts.py $L work/out work/hunspell/$H work/corpus-$L/corpus.txt
+  .venv/bin/python -I tools/dicts/count_ngrams.py $L work/out/$L.words.tsv work/ngrams --corpus work/corpus-$L/corpus.txt --min-trigram 2
+done
+python3 -I tools/dicts/pack_swipe_dict.py work/ngrams/de.words.tsv work/ngrams/de.bigrams.tsv app/src/main/assets/swipe/de.kpd \
+  --min-bigram=15 --trigrams=work/ngrams/de.trigrams.tsv --min-trigram=3 --trigram-bytes=3000000
+for L in es nl; do
+  python3 -I tools/dicts/pack_swipe_dict.py work/ngrams/$L.words.tsv work/ngrams/$L.bigrams.tsv app/src/main/assets/swipe/$L.kpd \
+    --min-bigram=10 --trigrams=work/ngrams/$L.trigrams.tsv --min-trigram=3 --trigram-bytes=4000000
+done
+```
+
+That gives 7.7 MB (de), 6.6 MB (es) and 7.7 MB (nl). Against the Slovak thresholds (6.1, 3.6 and
+4.6 MB) the larger n-gram sets add 0.3–0.6 pp top-1 on synthetic swipes with held-out sentence
+context (FineWeb-2 test split).
+
 The script produces three outputs:
 
 - **`<lang>.words.tsv`** feeds the swipe engine. Its columns are `surface`, `keypath`, `freq`, `count`:
@@ -145,7 +172,7 @@ python3 -I tools/dicts/strip_diacritics.py cs app/src/main/assets/swipe/cs.kpd w
 python3 -I tools/dicts/pack_swipe_dict.py work/nd/sk_nd.words.tsv work/nd/sk_nd.bigrams.tsv app/src/main/assets/swipe/sk_nd.kpd \
   --min-bigram=0 --trigrams=work/nd/sk_nd.trigrams.tsv --min-trigram=0 --trigram-bytes=2000000 --total=$(cat work/nd/sk_nd.total)
 python3 -I tools/dicts/pack_swipe_dict.py work/nd/cs_nd.words.tsv work/nd/cs_nd.bigrams.tsv app/src/main/assets/swipe/cs_nd.kpd \
-  --min-bigram=0 --trigrams=work/nd/cs_nd.trigrams.tsv --min-trigram=0 --trigram-bytes=8000000 --total=$(cat work/nd/cs_nd.total)
+  --min-bigram=6 --trigrams=work/nd/cs_nd.trigrams.tsv --min-trigram=2 --trigram-bytes=500000 --total=$(cat work/nd/cs_nd.total)
 for l in sk cs; do
   DRONEBOARD_COMBINED=work/nd/${l}_nd.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/main_$l-x-nd.dict \
     ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool --rerun
@@ -155,3 +182,12 @@ done
 The personal vocabulary is already part of the `.kpd` words, so there is no `vocab_<lang>-x-nd.dict`.
 The neural models `sk_nd` and `cs_nd` are trained by tools/lm (`make_nd.py`) on the stripped token
 streams.
+
+`cs_nd.kpd` keeps nearly all bigrams but few trigrams: 9.4 MB instead of 18 MB with the same
+accuracy on held-out stripped Czech swipes (89.6 / 96.2 against 89.6 / 96.3 top-1 / top-3).
+
+Building the no-diacritics lists from stripped text instead (FineWeb-2 and the personal text with
+the marks dropped, then `build_dicts.py` and `count_ngrams.py` on that) was tried for 0.1.13 and
+not kept: on held-out stripped swipes it was no better (sk_nd 86.5 / 94.4 against 86.6 / 94.8; cs_nd
+88.5 / 95.7 against 89.6 / 96.2 at the same size), and its word list lacks the personal and
+hyphenated vocabulary that the derived lists inherit (nostr, lightning, e-mail, wi-fi).

@@ -60,6 +60,9 @@ Options:
 python3 -I tools/swipe-replay/synth.py corpus-sk.txt sk 1500 eval-sk.jsonl --require "ľôäĺŕ" --forbid "ěřůőűöüß"
 ```
 
+`--layout qwertz-de` (ü ö ä keys) and `--layout qwerty-es` (ñ key) swipe over those keys instead of the
+base letter; `--cased` also takes capitalized words inside a sentence (German nouns).
+
 ## Results, 13 Nov 2026
 
 Synthetic swipes, QWERTY, with sentence context: 1500 SK, 1000 EN and 1000 code-switched (an EN word in an SK sentence and the other way round).
@@ -98,3 +101,23 @@ python3 -I tools/swipe-replay/synth.py --words tools/swipe-replay/hyphenated.tsv
 Most of the gain comes from dropping the capital-letter penalty for "I'll", "I'm", "I've" and
 "I'd". The remaining errors are mostly words that the n-gram counts prefer. "well" beats "we'll"
 and "were" beats "we're" even after "so" or "and", and "email" beats "e-mail".
+
+## German, Spanish, Dutch and beam 200, 15 Nov 2026
+
+Synthetic swipes with held-out sentence context (FineWeb-2 test split, which the dictionaries never
+saw), with English as second language; beam 200 as in the app:
+
+| Set | top-1 | top-3 |
+|---|---|---|
+| German, QWERTZ, nouns included (de + en) | 83.8 | 91.4 |
+| German words with ü ö ä, swiped over umlaut keys (de) | 77.6 | 87.6 |
+| Spanish, QWERTY with ñ (es + en) | 86.6 | 96.3 |
+| Spanish words with ñ, swiped over the ñ key (es) | 90.4 | 96.0 |
+| Dutch, QWERTY (nl + en) | 84.6 | 94.3 |
+
+Before the twin trie nodes for keys with diacritics (`set_layout` in `kp_dictionary.cpp`), swipes over
+the ñ key or the umlaut keys reached the word in 28.4 % and 33.6 % of cases. About 8 % of the German
+targets are compounds that the 300,000-word list lacks.
+
+Beam 100 → 200: recordings (106, sk + en) top-3 92.5 → 94.3, sink-or-swipe Czech 78.2 / 92.1 →
+78.6 / 92.6.

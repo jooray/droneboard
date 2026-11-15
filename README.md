@@ -8,11 +8,16 @@ Droneboard is an open-source Android keyboard that works entirely offline and fe
 
 The name comes from drone ambient music. A swipe across the keys feels like someone sliding their hand along a synth keyboard and letting the note hang.
 
+## Languages
+
+Czech, Slovak, English, German, Spanish and Dutch, plus Slovak and Czech without diacritics (for people who type "dakujem" and "muze"). Each has swipe typing, neural next-word prediction and emoji search, and any of them can be mixed in one keyboard. German uses QWERTZ, Spanish has the ñ key, as in Gboard. HeliBoard's layouts and tap-typing dictionaries for other languages are still there.
+
 ## What works today
 
-- **Swipe typing in several languages at once,** e.g. Slovak, Czech and English without switching. It runs on the [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) encoder with our own decoding:
+- **Swipe typing in several languages at once,** e.g. Slovak, German and English without switching. It runs on the [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) encoder with our own decoding:
   - the dictionary is searched by base letters and the accents are added afterwards;
   - the previous word re-ranks the candidates;
+  - swiping over a key with an accent (ñ, ü) counts as its base letter;
   - a live preview runs while you swipe.
 - **One-tap dictation** with a microphone at the right end of the suggestion strip. The keyboard records the audio itself and hands it to [Offline Speech to Text](https://zapstore.dev/apps/app.offlinespeechtotext) for transcription on the phone.
   - It records from Bluetooth headsets, including LE Audio and hearing aids, and falls back to the phone mic if the headset stays silent.
@@ -23,8 +28,8 @@ The name comes from drone ambient music. A swipe across the keys feels like some
   - a number row in password fields;
   - the word you typed in the middle of the strip;
   - suggestions without silent autocorrection.
-- **Next-word prediction with a small neural network on the phone,** for Slovak, Czech and English. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
-- **Emoji:** search the emoji panel by any part of a word in English, Slovak or Czech ("ocket" finds 🚀). A matching emoji also appears in the strip while you type.
+- **Next-word prediction with a small neural network on the phone,** for every language above. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
+- **Emoji:** search the emoji panel by any part of a word in any of these languages ("ocket" finds 🚀). A matching emoji also appears in the strip while you type.
 - **Space bar long-press** moves the cursor like a trackpad, or switches the language if you prefer.
 - **Clipboard history, split and one-handed layouts, themes, custom layouts and a physical keyboard,** all inherited from HeliBoard.
 - **Swipe recording for tuning:** an optional screen shows words for you to swipe and saves the gestures to a local file. The `tools/swipe-replay` tool replays them through the exact decoder.
@@ -34,14 +39,14 @@ The name comes from drone ambient music. A swipe across the keys feels like some
 | Test | Top-1 | Top-3 |
 |---|---|---|
 | Czech gestures, Google gesture library (as in HeliBoard) | 82.4 % | 96.3 % |
-| Czech gestures, Droneboard with its own Czech dictionary | 78.2 % | 92.0 % |
-| Real phone, 106 prompted Slovak and English words | 82.1 % | 92.5 % |
+| Czech gestures, Droneboard with its own Czech dictionary | 78.6 % | 92.6 % |
+| Real phone, 106 prompted Slovak and English words | 82.1 % | 94.3 % |
 
 These numbers come from the offline gesture set "sink-or-swipe" (1,872 Czech gestures, QWERTZ and QWERTY) and from one person's recordings. The gesture words were drawn from the dictionary the Google row uses; 2.3 % of them are rare words that Droneboard's open-data Czech list lacks. On the words it knows, Droneboard gets 79.8 % / 94.0 %. None of these gestures has sentence context, which is where the trigrams help most. Treat the numbers as a direction, not a promise.
 
 ## Planned
 
-- Spanish and German, with the same swipe dictionaries and neural prediction.
+- More languages, with the same swipe dictionaries and neural prediction.
 - Resizing and moving the keyboard with handles, and a floating keyboard on tablets in landscape.
 - A clipboard chip for fresh links, e-mails and one-time codes, like Gboard's.
 - Hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo.
@@ -59,7 +64,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"  
 ./gradlew assembleDebug
 ```
 
-You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Slovak and Czech dictionaries are rebuilt from open data with the scripts in `tools/dicts`.
+You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Droneboard dictionaries (Slovak, Czech, English, German, Spanish, Dutch) are rebuilt from open data with the scripts in `tools/dicts`.
 
 ## Privacy
 

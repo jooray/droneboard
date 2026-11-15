@@ -58,6 +58,11 @@ public:
     void set_layout(const std::vector<int>& layout_codepoints);
 
     ITrie itrie();
+    // Layout key of a trie node or of its twin through a key with a diacritic (see set_layout).
+    int key_of(uint32_t id) const;
+    static constexpr uint32_t kAliasShift = 29;
+    static constexpr uint32_t kAliasBase = 1u << kAliasShift;  // node ids stay below this
+    static constexpr int kMaxAliases = 7;                       // keys per base letter ("e": é è ê ...)
 
     // Variants of a key path, or nullptr.
     const std::vector<uint32_t>* variants_of(const std::string& keypath) const;
@@ -101,6 +106,7 @@ public:
     std::vector<uint32_t> child_start_;     // CSR over valid children (rebuilt by set_layout)
     std::vector<uint32_t> child_list_;
     std::vector<std::string> kps_;
+    std::vector<int32_t> alias_keys_[26];   // per base letter a-z: layout keys of its letters with diacritics
 
 private:
     void add_variant(const std::string& surface, const std::string& keypath, float freq, uint32_t lower,

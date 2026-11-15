@@ -137,6 +137,7 @@ std::string to_lower_utf8(const std::string& s) {
 std::string key_path_of(const std::string& s) {
     std::string kp;
     for (int cp : utf8_to_codepoints(s)) {
+        if (cp == 0xDF || cp == 0x1E9E) { kp += "ss"; continue; }  // German ß is swiped as "ss"
         int b = builtin_base(lower_cp(cp));
         if (b) kp += (char)b;
     }
@@ -435,6 +436,17 @@ void KpDictionary::set_layout(const std::vector<int>& layout_codepoints) {
         auto it = idx.find(node_cp_[n]);
         node_key_[n] = it == idx.end() ? -1 : it->second;
     }
+    // Keys of letters with diacritics on the layout itself (Spanish ñ, German ü ö ä): the trie only
+    // has base letters, so every node of the base letter also gets a twin reached through that key
+    // (n through ñ, u through ü). Swiping "año" over ñ or over n both reach the key path "ano", and
+    // the ranking picks the word. Twins are the node id with the alias number in the top bits.
+    for (auto& a : alias_keys_) a.clear();
+    for (int i = 0; i < (int)layout_codepoints.size(); ++i) {
+        int cp = layout_codepoints[i];
+        if (cp >= 'a' && cp <= 'z') continue;
+        int b = builtin_base(lower_cp(cp));
+        if (b && (int)alias_keys_[b - 'a'].size() < kMaxAliases && idx.count(b)) alias_keys_[b - 'a'].push_back(i);
+    }
     // keep only children that can be reached on this layout (and whose parents can)
     child_start_.assign(node_cp_.size() + 1, 0);
     child_list_.clear();
@@ -443,11 +455,24 @@ void KpDictionary::set_layout(const std::vector<int>& layout_codepoints) {
         if (n == 0 || node_key_[n] >= 0) {
             for (uint32_t i = all_child_start_[n]; i < all_child_start_[n + 1]; ++i) {
                 uint32_t c = all_child_list_[i];
-                if (node_key_[c] >= 0) child_list_.push_back(c);
+                if (node_key_[c] < 0) continue;
+                child_list_.push_back(c);
+                int cp = node_cp_[c];
+                if (cp >= 'a' && cp <= 'z' && c < kAliasBase)
+                    for (size_t k = 0; k < alias_keys_[cp - 'a'].size(); ++k)
+                        child_list_.push_back(c | (uint32_t)(k + 1) << kAliasShift);
             }
         }
     }
     child_start_[node_cp_.size()] = (uint32_t)child_list_.size();
+}
+
+int KpDictionary::key_of(uint32_t id) const {
+    uint32_t alias = id >> kAliasShift;
+    uint32_t n = id & (kAliasBase - 1);
+    if (alias == 0) return node_key_[n];
+    int cp = node_cp_[n];
+    return cp >= 'a' && cp <= 'z' && alias <= alias_keys_[cp - 'a'].size() ? alias_keys_[cp - 'a'][alias - 1] : -1;
 }
 
 const std::vector<uint32_t>* KpDictionary::variants_of(const std::string& keypath) const {
@@ -584,21 +609,24 @@ int KpDictionary::user_weight(const std::string& word_lower) const {
 
 static int T_num_chars(void* s) { return ((KpDictionary*)s)->num_chars_; }
 static TrieId T_root(void*) { return 0; }
-static int T_char(void* s, TrieId id) { return ((KpDictionary*)s)->node_key_[id]; }
+// a twin node (alias key, see set_layout) behaves like its base node except for its key
+static inline TrieId base_of(TrieId id) { return id & (KpDictionary::kAliasBase - 1); }
+static int T_char(void* s, TrieId id) { return ((KpDictionary*)s)->key_of(id); }
 static uint32_t T_cc(void* s, TrieId id) {
     auto* d = (KpDictionary*)s;
+    id = base_of(id);
     return d->child_start_[id + 1] - d->child_start_[id];
 }
 static TrieId T_child(void* s, TrieId id, uint32_t i) {
     auto* d = (KpDictionary*)s;
-    return d->child_list_[d->child_start_[id] + i];
+    return d->child_list_[d->child_start_[base_of(id)] + i];
 }
-static bool T_is_word(void* s, TrieId id) { return ((KpDictionary*)s)->node_term_[id] >= 0; }
-static float T_freq(void* s, TrieId id) { return ((KpDictionary*)s)->node_freq_[id]; }
-static uint16_t T_depth(void* s, TrieId id) { return ((KpDictionary*)s)->node_depth_[id]; }
+static bool T_is_word(void* s, TrieId id) { return ((KpDictionary*)s)->node_term_[base_of(id)] >= 0; }
+static float T_freq(void* s, TrieId id) { return ((KpDictionary*)s)->node_freq_[base_of(id)]; }
+static uint16_t T_depth(void* s, TrieId id) { return ((KpDictionary*)s)->node_depth_[base_of(id)]; }
 static const char* T_word(void* s, TrieId id) {
     auto* d = (KpDictionary*)s;
-    int32_t t = d->node_term_[id];
+    int32_t t = d->node_term_[base_of(id)];
     return t >= 0 ? d->kps_[t].c_str() : "";
 }
 static void T_end(void*) {}

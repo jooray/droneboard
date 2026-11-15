@@ -1,3 +1,5 @@
+- New languages: German, Spanish and Dutch, with swipe typing, neural next-word prediction and emoji search. German uses QWERTZ like Gboard (QWERTY and the layout with ü ö ä keys are available too), Spanish has the ñ key. Long-press characters follow Gboard's order.
+- Swiping over a key with an accent, such as ñ or ü, now finds the word.
 - New languages for typing without háčky and čárky: "Slovak (no diacritics)" and "Czech (no diacritics)". Each has its own dictionaries, swipe and neural next-word model, so suggestions, swipe and the spell checker give words without accents ("dakujem", "uz", "muze"). Turn them on in Languages & Layouts; they also work together with other languages, for example with English.
 - New neural models for Slovak, Czech and English, tuned on real writing. The English model is smaller.
 - Swipe searches wider by default (beam 200), so sloppy swipes find the right word more often. A new "Swipe search width" setting in Gesture Typing lets you choose 50–400, with a short explanation behind the "?" button.

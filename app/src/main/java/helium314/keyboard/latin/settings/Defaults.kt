@@ -85,9 +85,11 @@ object Defaults {
     const val PREF_SHOW_EMOJI_KEY = true
     const val PREF_SHOW_DPAD_KEY = true
     const val PREF_VARIABLE_TOOLBAR_DIRECTION = true
-    // Czech: QWERTY by default (resource subtype), QWERTZ listed as an extra layout
+    // Czech: QWERTY by default (resource subtype), QWERTZ listed as an extra layout. German (Germany):
+    // plain QWERTZ like Gboard (umlauts on long press), the HeliBoard layout with ü ö ä ß keys as an extra one
     const val PREF_ADDITIONAL_SUBTYPES = "cs${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwertz${Separators.SETS}" +
             "de${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty${Separators.SETS}" +
+            "de-DE${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwertz+${Separators.SETS}" +
             "fr${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwertz${Separators.SETS}" +
             "hu${Separators.SET}${ExtraValue.KEYBOARD_LAYOUT_SET}=MAIN:qwerty"
     const val PREF_ENABLE_SPLIT_KEYBOARD = false

@@ -9,7 +9,7 @@ Never feed SNK / CNK (Slovak / Czech national corpus) data into this script: the
 do not allow redistribution.
 
 usage: build_dicts.py <lang> <out_dir> <hunspell_dict_prefix> <corpus.txt>...
-  lang: sk | en | cs
+  lang: sk | en | cs | de | es | nl
 writes:
   <out_dir>/<lang>.words.tsv    surface \t keypath \t freq(0-255) \t count (swipe engine)
   <out_dir>/<lang>.bigrams.tsv  prev_lower \t word_lower \t count         (swipe rescoring)
@@ -33,7 +33,17 @@ LANG = {
                one_letter="a v s z o k u i", min_count=4, description="Čeština"),
     "en": dict(alphabet="abcdefghijklmnopqrstuvwxyz", top=160_000,
                one_letter="a I", min_count=4, description="English"),
+    "de": dict(alphabet="abcdefghijklmnopqrstuvwxyzäöüß", top=320_000, one_letter="", min_count=4,
+               description="Deutsch"),
+    "es": dict(alphabet="abcdefghijklmnopqrstuvwxyzáéíóúüñ", top=240_000, one_letter="a e o u y", min_count=4,
+               description="Español"),
+    "nl": dict(alphabet="abcdefghijklmnopqrstuvwxyzáéíóúàèëïöüâêîôû'", top=300_000, one_letter="u", min_count=4,
+               description="Nederlands"),
 }
+
+# letters without an NFD decomposition to a-z: German ß is swiped as "ss" ("straße" -> "strasse");
+# Spanish ñ already becomes n through NFD
+SPECIAL = {"ß": "ss", "æ": "ae", "œ": "oe"}
 
 # rank -> frequency curve of the AOSP Slovak list (HeliBoard 0-255 log scale). The swipe
 # scoring weights were tuned on this scale, and every language uses the same curve so that
@@ -62,10 +72,14 @@ def rank_to_freq(rank):
 
 
 def keypath(word):
-    """Base letters a-z of a word: diacritics, case and apostrophes removed ("ľahko" -> "lahko")."""
+    """Base letters a-z of a word: diacritics, case and apostrophes removed ("ľahko" -> "lahko"),
+    ß -> ss ("straße" -> "strasse")."""
     out = []
     for ch in word.lower():
         if not ch.isalpha():
+            continue
+        if ch in SPECIAL:
+            out.append(SPECIAL[ch])
             continue
         b = unicodedata.normalize("NFD", ch)[0]
         if not ("a" <= b <= "z"):
