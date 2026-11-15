@@ -94,7 +94,8 @@ object Defaults {
     @JvmField
     val PREF_SPLIT_SPACER_SCALE = Array(4) { DEFAULT_SIZE_SCALE }
     @JvmField
-    val PREF_KEYBOARD_HEIGHT_SCALE = Array(4) { DEFAULT_SIZE_SCALE }
+    // Droneboard: Gboard-sized keys by default (100 % was about 20 % taller per row than Gboard)
+    val PREF_KEYBOARD_HEIGHT_SCALE = Array(4) { 0.85f }
     @JvmField
     val PREF_BOTTOM_ROW_SCALE = Array(4) { DEFAULT_SIZE_SCALE }
     @JvmField
