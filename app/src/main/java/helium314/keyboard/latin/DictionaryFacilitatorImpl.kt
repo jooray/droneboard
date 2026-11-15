@@ -568,7 +568,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             SuggestedWordInfo(
                 p.word, "", score,
                 if (typed.isEmpty()) SuggestedWordInfo.KIND_PREDICTION else SuggestedWordInfo.KIND_COMPLETION,
-                dictionaryGroups.firstOrNull { it.locale.language == p.locale.language }?.getDict(Dictionary.TYPE_MAIN)
+                (dictionaryGroups.firstOrNull { it.locale == p.locale }
+                    ?: dictionaryGroups.firstOrNull { it.locale.language == p.locale.language })?.getDict(Dictionary.TYPE_MAIN)
                     ?: Dictionary.DICTIONARY_USER_TYPED,
                 SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE
             )

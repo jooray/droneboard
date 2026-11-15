@@ -8,6 +8,8 @@ package helium314.keyboard.latin.dictionary
 import android.content.Context
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.LocaleUtils
+import helium314.keyboard.latin.common.LocaleUtils.privateUse
+import helium314.keyboard.latin.common.LocaleUtils.withoutPrivateUse
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import java.io.File
@@ -45,9 +47,7 @@ object DictionaryFactory {
     fun extractBuiltInEmojiDict(context: Context, locale: Locale): File? {
         val candidates = DictionaryInfoUtils.getAssetsDictionaryList(context).orEmpty()
             .filter { it.startsWith(Dictionary.TYPE_EMOJI + "_") }
-        val best = LocaleUtils.getBestMatch(locale, candidates) {
-            DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(it)
-        } ?: return null
+        val best = bestAssetMatch(locale, candidates, Dictionary.TYPE_EMOJI) ?: return null
         return DictionaryInfoUtils.extractAssetsDictionary(best, locale, context)
     }
 
@@ -78,12 +78,19 @@ object DictionaryFactory {
             ?.forEach { (dictType, dicts) ->
                 if (cachedDicts.any { it.name == "$dictType.dict" })
                     return@forEach // dictionary is already extracted (can't be old because of cleanup on upgrade)
-                val bestMatch = LocaleUtils.getBestMatch(locale, dicts) {
-                    DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(it)
-                } ?: return@forEach
+                val bestMatch = bestAssetMatch(locale, dicts, dictType) ?: return@forEach
                 nonExtractedDicts.add(bestMatch)
             }
         return cachedDicts to nonExtractedDicts
+    }
+
+    /**
+     * Best asset dictionary of [type] for [locale]. A locale without diacritics (sk-x-nd) only uses its
+     * own word lists, but shares the emoji dictionary of its language (keywords match without accents).
+     */
+    private fun bestAssetMatch(locale: Locale, files: List<String>, type: String): String? {
+        fun best(l: Locale) = LocaleUtils.getBestMatch(l, files) { DictionaryInfoUtils.extractLocaleFromAssetsDictionaryFile(it) }
+        return best(locale) ?: if (type == Dictionary.TYPE_EMOJI && locale.privateUse.isNotEmpty()) best(locale.withoutPrivateUse()) else null
     }
 
     /**

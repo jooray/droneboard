@@ -246,6 +246,16 @@
         android:imeSubtypeExtraValue="AsciiCapable,SupportTouchPositionCorrection,EmojiCapable"
         android:isAsciiCapable="true"
     />
+    <!-- Droneboard: Czech typed without diacritics (own dictionaries, swipe/cs_nd.*) -->
+    <subtype android:icon="@drawable/ic_ime_switcher"
+        android:label="@string/subtype_generic"
+        android:subtypeId="0x5d0b1a6f"
+        android:imeSubtypeLocale="cs__#x-nd"
+        android:languageTag="cs-x-nd"
+        android:imeSubtypeMode="keyboard"
+        android:imeSubtypeExtraValue="AsciiCapable,SupportTouchPositionCorrection,EmojiCapable"
+        android:isAsciiCapable="true"
+    />
     <subtype android:icon="@drawable/ic_ime_switcher"
         android:label="@string/subtype_generic"
         android:subtypeId="0xdf43fc1d"
@@ -997,6 +1007,16 @@
         android:subtypeId="0x8e94d413"
         android:imeSubtypeLocale="sk"
         android:languageTag="sk"
+        android:imeSubtypeMode="keyboard"
+        android:imeSubtypeExtraValue="AsciiCapable,EmojiCapable"
+        android:isAsciiCapable="true"
+    />
+    <!-- Droneboard: Slovak typed without diacritics (own dictionaries, swipe/sk_nd.*) -->
+    <subtype android:icon="@drawable/ic_ime_switcher"
+        android:label="@string/subtype_generic"
+        android:subtypeId="0x5d0b1a6e"
+        android:imeSubtypeLocale="sk__#x-nd"
+        android:languageTag="sk-x-nd"
         android:imeSubtypeMode="keyboard"
         android:imeSubtypeExtraValue="AsciiCapable,EmojiCapable"
         android:isAsciiCapable="true"

@@ -8,6 +8,7 @@ import helium314.keyboard.keyboard.internal.KeyboardParams
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyData
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.toTextKey
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.LocaleUtils.withoutPrivateUse
 import helium314.keyboard.latin.common.splitOnFirstSpacesOnly
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.settings.Settings
@@ -253,7 +254,7 @@ class LocaleKeyboardInfos(dataStream: InputStream?, locale: Locale) {
             }
             if (locale.country.matches(euroCountries))
                 return euro
-            if (locale.toString().matches(euroLocales))
+            if (locale.withoutPrivateUse().toString().matches(euroLocales)) // sk-x-nd (no diacritics) as sk
                 return euro
             if (locale.language.matches("ca|eu|lb|mt|pms".toRegex()))
                 return euro

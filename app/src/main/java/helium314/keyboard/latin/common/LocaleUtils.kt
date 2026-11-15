@@ -24,6 +24,22 @@ import java.util.Locale
  * this file, consider also updating/fixing the version in Latin IME.
  */
 object LocaleUtils {
+    /**
+     * Droneboard: the private-use subtag of a locale, e.g. "nd" for sk-x-nd (Slovak typed without
+     * diacritics), "" if there is none. Such locales are separate languages with their own dictionaries.
+     */
+    @JvmStatic
+    val Locale.privateUse: String get() = getExtension(Locale.PRIVATE_USE_EXTENSION) ?: ""
+
+    /** Asset name of Droneboard's engines for a locale: "sk" (swipe/sk.kpd, sk.lmb), "sk_nd" for sk-x-nd. */
+    @JvmStatic
+    val Locale.engineKey: String get() = privateUse.let { if (it.isEmpty()) language else language + "_" + it.replace('-', '_') }
+
+    /** The locale without its private-use subtag (sk-x-nd -> sk). */
+    @JvmStatic
+    fun Locale.withoutPrivateUse(): Locale = if (privateUse.isEmpty()) this
+        else runCatching { Locale.Builder().setLocale(this).clearExtensions().build() }.getOrElse { Locale(language, country) }
+
     // Locale match level constants.
     // A higher level of match is guaranteed to have a higher numerical value.
     // Some room is left within constants to add match cases that may arise necessary
@@ -100,6 +116,8 @@ object LocaleUtils {
         if (reference == tested) return LOCALE_FULL_MATCH
         if (reference.toString().isEmpty()) return LOCALE_ANY_MATCH
         if (reference.language != tested.language) return LOCALE_NO_MATCH
+        // Droneboard: sk-x-nd (no diacritics) is a different orthography, like a different script
+        if (reference.privateUse != tested.privateUse) return LOCALE_MATCH_SCRIPT_DIFFER
         // language matches
         if (reference.script() != tested.script()) {
             return LOCALE_MATCH_SCRIPT_DIFFER
@@ -151,6 +169,18 @@ object LocaleUtils {
     fun String.constructLocale(): Locale {
         synchronized(sLocaleCache) {
             sLocaleCache[this]?.let { return it }
+            if (contains("_#") && contains("-")) {
+                // Locale.toString() of a locale with extensions, e.g. "sk__#x-nd" (sk-x-nd)
+                val head = substringBefore("_#").split("_")
+                val tail = substringAfter("_#")
+                val script = if (tail.startsWith("x-") || tail.startsWith("u-")) "" else tail.substringBefore("-")
+                val extensions = if (script.isEmpty()) tail else tail.substringAfter("-", "")
+                val tag = listOf(head[0], script, head.getOrNull(1).orEmpty(), extensions)
+                    .filter { it.isNotEmpty() }.joinToString("-")
+                val locale = Locale.forLanguageTag(tag)
+                sLocaleCache[this] = locale
+                return locale
+            }
             if (contains("-")) {
                 // looks like it's actually a language tag, and not a locale string
                 val locale = Locale.forLanguageTag(this)
@@ -196,6 +226,8 @@ object LocaleUtils {
             "st" -> R.string.subtype_st
             "dag" -> R.string.subtype_dag
             "mhr" -> R.string.subtype_mhr
+            "sk-x-nd" -> R.string.subtype_sk_nd
+            "cs-x-nd" -> R.string.subtype_cs_nd
             else -> 0
         }
         if (overrideResId != 0) {

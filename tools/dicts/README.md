@@ -127,3 +127,31 @@ python3 -I tools/dicts/add_joined_words.py en app/src/main/assets/swipe/en.kpd e
 This added 361 Slovak words (e-mail, on-line, Wi-Fi, make-up, viac-menej, sem-tam), 408 Czech ones
 (e-mail, je-li, chcete-li, Wi-Fi, know-how) and 132 English ones (open-source, so-called,
 well-known, peer-to-peer). They have no n-grams yet; the next full rebuild counts them.
+
+## Slovak and Czech without diacritics
+
+The languages "Slovak (no diacritics)" and "Czech (no diacritics)" have the locales `sk-x-nd` and
+`cs-x-nd`. HeliBoard's dictionary lookup treats them as separate languages (`main_sk-x-nd.dict`,
+never `main_sk.dict`; only the emoji dictionary is shared), and Droneboard's engines load the assets
+named after `LocaleUtils.engineKey`: `swipe/sk_nd.kpd`, `swipe/sk_nd.lmb` + `.lmv`.
+
+`strip_diacritics.py` derives them from the shipped dictionaries. It drops the combining marks of
+every word and merges the words, bigrams and trigrams that become equal, with their counts summed
+("súd" and "sud" become "sud"). It also writes the `.combined` list for the typing dictionary:
+
+```sh
+python3 -I tools/dicts/strip_diacritics.py sk app/src/main/assets/swipe/sk.kpd work/nd "--description=Slovenčina (bez diakritiky)"
+python3 -I tools/dicts/strip_diacritics.py cs app/src/main/assets/swipe/cs.kpd work/nd "--description=Čeština (bez diakritiky)"
+python3 -I tools/dicts/pack_swipe_dict.py work/nd/sk_nd.words.tsv work/nd/sk_nd.bigrams.tsv app/src/main/assets/swipe/sk_nd.kpd \
+  --min-bigram=0 --trigrams=work/nd/sk_nd.trigrams.tsv --min-trigram=0 --trigram-bytes=2000000 --total=$(cat work/nd/sk_nd.total)
+python3 -I tools/dicts/pack_swipe_dict.py work/nd/cs_nd.words.tsv work/nd/cs_nd.bigrams.tsv app/src/main/assets/swipe/cs_nd.kpd \
+  --min-bigram=0 --trigrams=work/nd/cs_nd.trigrams.tsv --min-trigram=0 --trigram-bytes=8000000 --total=$(cat work/nd/cs_nd.total)
+for l in sk cs; do
+  DRONEBOARD_COMBINED=work/nd/${l}_nd.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/main_$l-x-nd.dict \
+    ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool --rerun
+done
+```
+
+The personal vocabulary is already part of the `.kpd` words, so there is no `vocab_<lang>-x-nd.dict`.
+The neural models `sk_nd` and `cs_nd` are trained by tools/lm (`make_nd.py`) on the stripped token
+streams.

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.lm.NeuralLanguageModel
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils
@@ -35,12 +36,8 @@ data class PredictionEngines(val neural: Boolean, val ngrams: Boolean, val swipe
     companion object {
         private val cache = ConcurrentHashMap<Locale, PredictionEngines>()
 
-        /** asset names a locale may use, most specific first (e.g. sk_nd before sk) */
-        private fun keys(locale: Locale): List<String> = listOf(
-            locale.toString().lowercase(Locale.ROOT),
-            locale.toLanguageTag().lowercase(Locale.ROOT).replace('-', '_'),
-            locale.language.lowercase(Locale.ROOT),
-        ).distinct()
+        /** the asset name the engines load for a locale: sk, sk_nd for sk-x-nd (LocaleUtils.engineKey) */
+        private fun keys(locale: Locale): List<String> = listOf(locale.engineKey.lowercase(Locale.ROOT))
 
         fun of(context: Context, locale: Locale): PredictionEngines = cache.getOrPut(locale) {
             if (locale.language == SubtypeLocaleUtils.NO_LANGUAGE) return@getOrPut PredictionEngines(false, false, false)

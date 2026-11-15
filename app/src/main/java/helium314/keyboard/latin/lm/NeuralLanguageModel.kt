@@ -3,6 +3,7 @@ package helium314.keyboard.latin.lm
 
 import android.content.Context
 import android.os.SystemClock
+import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.swipe.FutoSwipe
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
@@ -73,7 +74,7 @@ object NeuralLanguageModel : LanguageModel {
         if (maxResults <= 0 || !FutoSwipe.isAvailable) return emptyList()
         if (!Settings.getValues().mNeuralPredictions) return fallback()
         val app = SwipeGestureDecoder.appContext ?: return fallback()
-        val languages = locales.map { it.language }.distinct()
+        val languages = locales.map { it.engineKey }.distinct()
         if (languages.isEmpty() || !languages.all { it in neuralLanguages(app) }) return fallback()
         releaseOthers(languages)
         val handles = languages.map { models[it] }
@@ -106,7 +107,7 @@ object NeuralLanguageModel : LanguageModel {
         languages: List<String>, tokens: List<String>, bos: Boolean, prefix: String, maxResults: Int,
         locales: List<Locale>, ngramContext: List<String>
     ): List<WordPrediction>? = lock.read {
-        val byLanguage = locales.associateBy { it.language }
+        val byLanguage = locales.associateBy { it.engineKey }
         val handles = languages.map { models[it] ?: return@read null }
         val dicts = SwipeGestureDecoder.loadedDictionaries(languages).toMap()
         val scores = FloatArray(CANDIDATES)

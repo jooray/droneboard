@@ -7,6 +7,7 @@ import helium314.keyboard.keyboard.PointerTracker
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.NgramContext
 import helium314.keyboard.latin.common.InputPointers
+import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo
 import helium314.keyboard.latin.suggestions.SuggestionResults
@@ -77,6 +78,10 @@ object SwipeGestureDecoder {
         "en" to floatArrayOf(0.5f, 0.9866f, 0.025f, -2f, 0.1f),
     )
 
+    /** parameters of a dictionary; sk_nd (Slovak without diacritics) uses those of sk */
+    private fun params(language: String) =
+        LANGUAGE_PARAMS[language] ?: LANGUAGE_PARAMS[language.substringBefore('_')] ?: LANGUAGE_PARAMS.getValue("en")
+
     /** how long the final decode of a swipe waits for dictionaries that are still loading */
     private const val FINAL_WAIT_MS = 6000L
 
@@ -132,7 +137,7 @@ object SwipeGestureDecoder {
             SubtypeSettings.getEnabledSubtypes(true).flatMap { listOf(it.locale()) + getSecondaryLocales(it.extraValue) }
         }.getOrDefault(emptyList())
         preload(app, locales + Locale.ENGLISH)
-        runCatching { NeuralLanguageModel.preload(app, locales.map { it.language }) }
+        runCatching { NeuralLanguageModel.preload(app, locales.map { it.engineKey }) }
     }
 
     @JvmStatic
@@ -204,7 +209,7 @@ object SwipeGestureDecoder {
             loader.execute {
                 try {
                     val file = extract(context, "$language.kpd")
-                    val params = (LANGUAGE_PARAMS[language] ?: LANGUAGE_PARAMS.getValue("en")) + 0f
+                    val params = params(language) + 0f
                     val handle = FutoSwipe.nativeLoadDictionary(file.absolutePath, params)
                     if (handle != 0L) dictionaries[language] = handle
                     else Log.w(TAG, "could not load swipe dictionary $language")
@@ -253,7 +258,7 @@ object SwipeGestureDecoder {
             runCatching { SubtypeSettings.getEnabledSubtypes(true).map { it.locale() } }.getOrDefault(emptyList()) +
             Locale.ENGLISH
         for (l in candidates) {
-            if (l.language in available && l.language !in result) result[l.language] = l
+            if (l.engineKey in available && l.engineKey !in result) result[l.engineKey] = l
             if (result.size >= 3) break
         }
         return result.values.toList()
@@ -265,7 +270,7 @@ object SwipeGestureDecoder {
         if (!FutoSwipe.isAvailable) return
         try {
             val available = languagesWithDictionary(context)
-            locales.map { it.language }.distinct().filter { it in available }.forEach { requestLoad(context, it) }
+            locales.map { it.engineKey }.distinct().filter { it in available }.forEach { requestLoad(context, it) }
         } catch (e: Exception) {
             Log.w(TAG, "preload failed", e)
         }
@@ -279,12 +284,12 @@ object SwipeGestureDecoder {
     private fun updateLayout(context: Context, keyboard: Keyboard, secondary: List<Locale>, waitMs: Long): Boolean {
         val wanted = swipeLocales(context, keyboard, secondary)
         if (wanted.isEmpty()) return false
-        wanted.forEach { requestLoad(context, it.language) }
+        wanted.forEach { requestLoad(context, it.engineKey) }
         maybeRefreshUserWords()
         val deadline = System.currentTimeMillis() + waitMs
-        val locales = wanted.filter { dictionary(context, it.language, (deadline - System.currentTimeMillis()).coerceAtLeast(0)) != 0L }
+        val locales = wanted.filter { dictionary(context, it.engineKey, (deadline - System.currentTimeMillis()).coerceAtLeast(0)) != 0L }
         if (locales.isEmpty()) return false
-        val languages = locales.map { it.language }
+        val languages = locales.map { it.engineKey }
         val letterKeys = keyboard.sortedKeys
             .filter { it.code > 0 && Character.isLetter(it.code) && it.width > 0 }
             .distinctBy { Character.toLowerCase(it.code) }
@@ -310,14 +315,14 @@ object SwipeGestureDecoder {
         languages.forEachIndexed { i, lang ->
             val d = dictionaries[lang] ?: 0L
             if (d == 0L) return@forEachIndexed
-            val params = (LANGUAGE_PARAMS[lang] ?: LANGUAGE_PARAMS.getValue("en")) + (if (i == 0) MAIN_LANGUAGE_BONUS else 0f)
+            val params = params(lang) + (if (i == 0) MAIN_LANGUAGE_BONUS else 0f)
             FutoSwipe.nativeSetDictionaryParams(d, params)
             handles.add(d)
         }
         if (handles.isEmpty()) return false
         if (!FutoSwipe.nativeSetLayout(session, letters, xs, ys, handles.toLongArray())) return false
         activeLanguages = languages.filter { dictionaries[it] in handles }
-        activeLocales = locales.filter { it.language in activeLanguages }
+        activeLocales = locales.filter { it.engineKey in activeLanguages }
         layoutKeys = letters.indices.map { Triple(String(Character.toChars(letters[it])), xs[it], ys[it]) }
         layoutSignature = signature
         Log.i(TAG, "swipe layout ${letters.size} keys, languages $activeLanguages")

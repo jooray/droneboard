@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.lm
 
+import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.swipe.FutoSwipe
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
 import helium314.keyboard.latin.utils.Log
@@ -37,8 +38,8 @@ object NgramLanguageModel : LanguageModel {
 
     override fun predict(context: List<String>, prefix: String, locales: List<Locale>, maxResults: Int): List<WordPrediction> {
         if (maxResults <= 0 || !FutoSwipe.isAvailable) return emptyList()
-        val byLanguage = locales.associateBy { it.language }
-        val dicts = SwipeGestureDecoder.loadedDictionaries(locales.map { it.language })
+        val byLanguage = locales.associateBy { it.engineKey }
+        val dicts = SwipeGestureDecoder.loadedDictionaries(locales.map { it.engineKey })
         if (dicts.isEmpty()) return emptyList()
         return try {
             val scores = FloatArray(maxResults)
