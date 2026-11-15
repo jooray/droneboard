@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="neural_predictions">Neurale voorspellingen</string>
+    <string name="neural_predictions_summary">Voorspel het volgende woord met een klein neuraal model op de telefoon, in de ingeschakelde talen. Uit: alleen statistieken van woordtripletten.</string>
+</resources>

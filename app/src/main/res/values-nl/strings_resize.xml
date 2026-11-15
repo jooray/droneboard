@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
+    <string name="size_position" tools:keep="@string/size_position">Formaat &amp; positie</string>
+    <string name="resize_mode_one_handed">Met één hand</string>
+    <string name="resize_mode_floating">Zwevend</string>
+    <string name="resize_mode_split">Gesplitst</string>
+    <string name="resize_reset">Herstellen</string>
+    <string name="resize_done">Klaar</string>
+    <!-- shown while resizing: width and height in percent of the default size -->
+    <string name="resize_size_label">Breedte %1$d %% · Hoogte %2$d %%</string>
+    <string name="resize_hint">Sleep de randen of hoeken</string>
+    <string name="resize_handle_top">Formaat van toetsenbord wijzigen via de bovenrand</string>
+    <string name="resize_handle_bottom">Formaat van toetsenbord wijzigen via de onderrand</string>
+    <string name="resize_handle_left">Formaat van toetsenbord wijzigen via de linkerrand</string>
+    <string name="resize_handle_right">Formaat van toetsenbord wijzigen via de rechterrand</string>
+    <string name="resize_handle_top_left">Formaat van toetsenbord wijzigen via de hoek linksboven</string>
+    <string name="resize_handle_top_right">Formaat van toetsenbord wijzigen via de hoek rechtsboven</string>
+    <string name="resize_handle_bottom_left">Formaat van toetsenbord wijzigen via de hoek linksonder</string>
+    <string name="resize_handle_bottom_right">Formaat van toetsenbord wijzigen via de hoek rechtsonder</string>
+    <string name="floating_drag_handle">Zwevend toetsenbord verplaatsen</string>
+    <string name="floating_release_to_dock">Laat los om vast te zetten</string>
+    <string name="resize_mode_full">Volledige breedte</string>
+    <string name="resize_mode_compact">Compact</string>
+    <string name="resize_position_left">Links</string>
+    <string name="resize_position_center">Midden</string>
+    <string name="resize_position_right">Rechts</string>
+    <string name="compact_large_screens">Compact toetsenbord op grote schermen</string>
+    <string name="compact_large_screens_summary">Op tablets en uitgeklapte vouwbare telefoons is het toetsenbord ongeveer zo breed als op een telefoon en staat het rechtsonder, binnen bereik van je duim. Pas formaat en kant aan met de toets Formaat &amp; positie.</string>
+</resources>

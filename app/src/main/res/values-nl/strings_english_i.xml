@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="capitalize_english_i">Engelse “I” met hoofdletter</string>
+    <string name="capitalize_english_i_summary">“i think” wordt “I think”, ook i’m, i’ll, i’d en i’ve. Alleen als de tekst eromheen Engels is. Met backspace direct erna maak je de wijziging ongedaan</string>
+</resources>
