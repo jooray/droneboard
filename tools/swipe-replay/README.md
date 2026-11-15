@@ -73,3 +73,28 @@ Synthetic swipes, QWERTY, with sentence context: 1500 SK, 1000 EN and 1000 code-
 Truncating the beam to the engine's own top 32 before our ranking made no difference.
 
 HeliBoard's point sampling (one point per 1/6 key width) costs about 1.5 pp compared with dense points.
+
+## Contractions and hyphenated words, 15 Nov 2026
+
+`contractions-en.tsv` lists 47 English contractions with typical words before them (I'll, I'm,
+don't, we're, it's, …) plus 11 plain words with the same key path as controls (were, well, its,
+ill, …). `hyphenated.tsv` lists Slovak, Czech and English hyphenated words. Each line gets ten
+synthetic swipes:
+
+```sh
+python3 -I tools/swipe-replay/synth.py --words tools/swipe-replay/contractions-en.tsv en 10 contr.jsonl
+python3 -I tools/swipe-replay/synth.py --words tools/swipe-replay/hyphenated.tsv x 10 hyph.jsonl
+```
+
+| Set (dictionaries) | 0.1.11 top-1 / top-3 | 0.1.12 top-1 / top-3 |
+|---|---|---|
+| contractions (en) | 62.1 / 93.2 | 79.4 / 99.8 |
+| contractions (sk + en) | 60.0 / 90.0 | 77.4 / 99.1 |
+| same-key-path controls (en) | 78.2 / 100 | 78.2 / 100 |
+| hyphenated (sk + en) | 0 / 0 | 51.6 / 84.7 |
+| recordings, 106 (sk + en) | 82.1 / 92.5 | 82.1 / 92.5 |
+| sink-or-swipe Czech, 1872 (cs) | 78.2 / 92.0 | 78.2 / 92.1 |
+
+Most of the gain comes from dropping the capital-letter penalty for "I'll", "I'm", "I've" and
+"I'd". The remaining errors are mostly words that the n-gram counts prefer. "well" beats "we'll"
+and "were" beats "we're" even after "so" or "and", and "email" beats "e-mail".

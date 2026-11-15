@@ -3,7 +3,7 @@
 """Pack a swipe word list and bigram list (TSV, see build_dicts.py) into one compact .kpd file.
 
     pack_swipe_dict.py <lang>.words.tsv <lang>.bigrams.tsv out.kpd [--min-bigram=N]
-                       [--trigrams=<lang>.trigrams.tsv --min-trigram=N --trigram-bytes=B]
+                       [--trigrams=<lang>.trigrams.tsv --min-trigram=N --trigram-bytes=B] [--total=T]
 
 Trigrams (count_ngrams.py: w1, w2, w3, count, count(w1 w2)) below --min-trigram are dropped, and of
 the rest only the most frequent ones that fit into --trigram-bytes are kept.
@@ -79,6 +79,7 @@ def main():
     trigrams_tsv = None
     min_trigram = 3
     trigram_bytes = 2_000_000
+    total_override = None
     for a in sys.argv[1:]:
         if a.startswith("--min-bigram="):
             min_bigram = int(a.split("=", 1)[1])
@@ -88,6 +89,8 @@ def main():
             min_trigram = int(a.split("=", 1)[1])
         elif a.startswith("--trigram-bytes="):
             trigram_bytes = int(a.split("=", 1)[1])
+        elif a.startswith("--total="):
+            total_override = float(a.split("=", 1)[1])
     words_tsv, bigrams_tsv, out = args
 
     by_lower = {}     # lower -> list of (surface, freq) in TSV order
@@ -98,7 +101,7 @@ def main():
         f = line.rstrip("\n").split("\t")
         if len(f) != 4 or not f[1]:
             continue
-        surface, kp, freq, count = f[0], f[1], int(float(f[2])), int(f[3])
+        surface, kp, freq, count = f[0], f[1], int(float(f[2])), float(f[3])
         low = native_lower(surface)
         by_lower.setdefault(low, []).append((surface, max(0, min(255, freq))))
         lower_count.setdefault(low, count)  # first variant's count, like the TSV loader
@@ -119,7 +122,7 @@ def main():
 
     lowers = sorted(by_lower, key=lambda s: s.encode())
     lower_id = {s: i for i, s in enumerate(lowers)}
-    total = float(sum(lower_count.values())) or 1.0
+    total = total_override or float(sum(lower_count.values())) or 1.0
 
     bigrams = {}
     n_big = 0
@@ -127,7 +130,7 @@ def main():
         f = line.rstrip("\n").split("\t")
         if len(f) != 3:
             continue
-        a, b, c = native_lower(f[0]), native_lower(f[1]), int(f[2])
+        a, b, c = native_lower(f[0]), native_lower(f[1]), float(f[2])
         if c < min_bigram or a not in lower_id or b not in lower_id:
             continue
         bigrams.setdefault(lower_id[a], {})[lower_id[b]] = c
@@ -189,12 +192,12 @@ def main():
         rows = []
         for line in open(trigrams_tsv, encoding="utf-8"):
             f = line.rstrip("\n").split("\t")
-            if len(f) != 5 or int(f[3]) < min_trigram:
+            if len(f) != 5 or float(f[3]) < min_trigram:
                 continue
             ids = [lower_id.get(native_lower(w)) for w in f[:3]]
             if None in ids:
                 continue
-            rows.append((int(f[3]), ids[0], ids[1], ids[2], int(f[4])))
+            rows.append((float(f[3]), ids[0], ids[1], ids[2], float(f[4])))
         rows.sort(key=lambda r: -r[0])
         # most frequent first, until the estimated size is used up (about 3 bytes per continuation
         # plus 6 per context)

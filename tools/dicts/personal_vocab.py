@@ -28,7 +28,7 @@ import unicodedata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_dicts import LANG, keypath, rank_to_freq  # noqa: E402
 
-TOKEN = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
+TOKEN = re.compile(r"[^\W\d_]+(?:['-][^\W\d_]+)*")  # as in build_dicts.py
 VOWELS = set("aeiouyáäéíóôúýěů")
 
 
@@ -100,7 +100,7 @@ def main():
 
     cand = []
     for low, c in count.items():
-        if low in base or len(low) < 2 or any(ch not in alphabet for ch in low) or not keypath(low):
+        if low in base or len(low) < 2 or any(ch not in alphabet and ch not in "'-" for ch in low) or not keypath(low):
             continue
         allowed = low in allow
         if not allowed:

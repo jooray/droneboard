@@ -30,7 +30,7 @@ import sys
 
 import numpy as np
 
-TOKEN = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
+TOKEN = re.compile(r"[^\W\d_]+(?:['-][^\W\d_]+)*")  # as in build_dicts.py
 SENTENCE = re.compile(r"[.!?\n]+")
 BITS = 20  # word ids < 2^20
 
@@ -50,7 +50,11 @@ def count_text(text):
     uni, big, tri = [], [], []
     skipped = 0
     for s in SENTENCE.split(text.replace("’", "'")):
-        toks = [t.lower() for t in TOKEN.findall(s)]
+        toks = []
+        for t in TOKEN.findall(s):
+            t = t.lower()
+            # a hyphenated word that is not in the list counts as its parts
+            toks.extend(t.split("-") if "-" in t and t not in VOCAB else [t])
         if not toks:
             continue
         if EX4 or EX3:

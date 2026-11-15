@@ -1,0 +1,61 @@
+# target	words before it (empty = start of a sentence)	group
+# English contractions swiped without the apostrophe, and plain words with the same key path
+# (controls: they must keep winning in their own context). synth.py --words reads this file.
+I'll		contraction
+I'll	I think	contraction
+I'll	and then	contraction
+I'm		contraction
+I'm	and	contraction
+I'm	but	contraction
+I've		contraction
+I've	and	contraction
+I'd		contraction
+I'd	said	contraction
+don't	I	contraction
+don't	you	contraction
+can't	I	contraction
+can't	we	contraction
+won't	it	contraction
+isn't	that	contraction
+doesn't	it	contraction
+didn't	I	contraction
+wasn't	it	contraction
+aren't	they	contraction
+haven't	I	contraction
+couldn't	I	contraction
+wouldn't	it	contraction
+shouldn't	you	contraction
+you're	if	contraction
+you're	thank you	contraction
+they're	because	contraction
+we're	and	contraction
+we're		contraction
+we'll	so	contraction
+we'll		contraction
+it's	because	contraction
+it's		contraction
+that's	and	contraction
+there's	and	contraction
+what's		contraction
+let's		contraction
+he's	because	contraction
+she's	and	contraction
+he'll	then	contraction
+she'll	maybe	contraction
+they'll	then	contraction
+you'll	then	contraction
+we've	and	contraction
+they've	now	contraction
+you've	if	contraction
+o'clock	at five	contraction
+were	they	control
+were	there	control
+well	as	control
+well	very	control
+its	on	control
+its	and	control
+ill	he was	control
+hell	the	control
+cant	the	control
+shell	the	control
+lets	it	control

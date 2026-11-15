@@ -45,6 +45,7 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
         if (!prev_lower.empty()) prev_id[di] = dicts[di]->lower_id(prev_lower);
         if (!prev2_lower.empty() && prev_id[di] >= 0) prev2_id[di] = dicts[di]->lower_id(prev2_lower);
     }
+    std::vector<float> scores, lps;
     for (const auto& r : beam) {
         const float L = std::max(1.0f, r.word_length);
         for (int di = 0; di < (int)dicts.size(); ++di) {
@@ -54,10 +55,26 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
             const auto& p = d->params;
             const float lb = di < (int)lang_bonus.size() ? lang_bonus[di] : 0.0f;
             const float base = r.ctc_score / std::pow(L, p.gamma) + p.beta * L + p.bonus + lb;
+            scores.clear();
+            lps.clear();
+            float top = -1e30f, top_lp = -1e30f;
+            const bool by_context = p.same_path > 0.0f && vs->size() > 1 && d != user;
             for (uint32_t vi : *vs) {
                 const auto& v = d->variant(vi);
                 float sc = base + p.lambda * v.freq + (v.capitalized ? p.caps : 0.0f);
                 if (prev_id[di] >= 0 && p.nu != 0.0f) sc += p.nu * d->pmi3(prev2_id[di], prev_id[di], v.lower);
+                scores.push_back(sc);
+                top = std::max(top, sc);
+                if (by_context) {
+                    lps.push_back(d->logp_ctx(prev2_id[di], prev_id[di], v.lower));
+                    top_lp = std::max(top_lp, lps.back());
+                }
+            }
+            for (size_t k = 0; k < vs->size(); ++k) {
+                const auto& v = d->variant((*vs)[k]);
+                // same gesture: the context decides ("we'll" after "so", "well" after "as"); the
+                // general score only breaks ties (capitalization of the same word)
+                float sc = by_context ? top - p.same_path * (top_lp - lps[k]) + 1e-3f * (scores[k] - top) : scores[k];
                 auto it = best.find(v.surface);
                 if (it == best.end() || sc > it->second.first) best[v.surface] = {sc, di};
             }

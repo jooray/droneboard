@@ -162,7 +162,9 @@ void KpDictionary::add_variant(const std::string& surface, const std::string& ke
     v.freq = freq;
     v.lower = lower;
     auto scps = utf8_to_codepoints(surface);
-    v.capitalized = scps.size() > 1 && lower_cp(scps[0]) != scps[0];
+    // "I'll", "I'm": the pronoun is always capitalized, it is not a proper noun ("H's" still is)
+    const bool pronoun_i = scps.size() > 1 && scps[0] == 'I' && (scps[1] == '\'' || scps[1] == 0x2019);
+    v.capitalized = scps.size() > 1 && lower_cp(scps[0]) != scps[0] && !pronoun_i;
     uint32_t vid = (uint32_t)variants_.size();
     variants_.push_back(std::move(v));
     kp_variants_[keypath].push_back(vid);

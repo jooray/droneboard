@@ -31,7 +31,7 @@ LANG = {
                one_letter="a v s z o k u i", min_count=4, description="Slovenčina"),
     "cs": dict(alphabet="aábcčdďeéěfghiíjklmnňoópqrřsštťuúůvwxyýzž", top=500_000,
                one_letter="a v s z o k u i", min_count=4, description="Čeština"),
-    "en": dict(alphabet="abcdefghijklmnopqrstuvwxyz'", top=160_000,
+    "en": dict(alphabet="abcdefghijklmnopqrstuvwxyz", top=160_000,
                one_letter="a I", min_count=4, description="English"),
 }
 
@@ -41,7 +41,9 @@ LANG = {
 RANK_CURVE = [(1, 251), (10, 233), (100, 209), (1000, 187), (3000, 176), (10000, 162),
               (30000, 148), (100000, 127), (200000, 113), (300000, 103), (500000, 88), (1000000, 62)]
 
-TOKEN = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
+# words may contain inner apostrophes and hyphens ("don't", "e-mail"); key paths skip them
+TOKEN = re.compile(r"[^\W\d_]+(?:['-][^\W\d_]+)*")
+JOINERS = "'-"
 SENTENCE = re.compile(r"[.!?\n]+")
 MAX_BIGRAMS = 600_000
 MIN_BIGRAM_COUNT = 3
@@ -72,12 +74,32 @@ def keypath(word):
     return "".join(out) or None
 
 
+def hyphen_title(w):
+    """Every hyphen-separated part is capitalized ("Wi-Fi", "Rakúsko-Uhorsko"), not mIxEd case."""
+    return "-" in w and all(p[:1].isupper() and not any(c.isupper() for c in p[1:]) for p in w.split("-") if p)
+
+
+def split_unknown(toks, vocab_lower):
+    """Hyphenated tokens that are not words of the list count as their parts (n-gram chains stay as
+    they were before hyphenated words were kept)."""
+    out = []
+    for t in toks:
+        if "-" in t and t.lower() not in vocab_lower:
+            out.extend(t.split("-"))
+        else:
+            out.append(t)
+    return out
+
+
 def count_unigrams(paths):
     uni = collections.Counter()
     for p in paths:
         with open(p, encoding="utf-8", errors="replace") as f:
             for n, line in enumerate(f):
-                uni.update(TOKEN.findall(line.replace("\u2019", "'")))
+                toks = TOKEN.findall(line.replace("\u2019", "'"))
+                uni.update(toks)
+                # the parts of a hyphenated word also count as words, as before hyphens were kept
+                uni.update(p for t in toks if "-" in t for p in t.split("-"))
                 if n % 2_000_000 == 0:
                     print(f"  unigrams {p.split('/')[-2]} line {n:,} types {len(uni):,}", file=sys.stderr, flush=True)
     return uni
@@ -99,9 +121,9 @@ def select_words(lang, uni, prefix):
             continue
         if len(w) > 1 and w.isupper():           # ALL-CAPS junk ("TRIM", "ZASTUPITEĽSTVO")
             continue
-        if any(ch not in alphabet for ch in w.lower()):  # foreign letters, e.g. Czech ě ř ů in Slovak
+        if any(ch not in alphabet and ch not in JOINERS for ch in w.lower()):  # foreign letters, e.g. Czech ě ř ů in Slovak
             continue
-        if len(w) > 1 and any(ch.isupper() for ch in w[1:]):  # mIxEd case
+        if len(w) > 1 and any(ch.isupper() for ch in w[1:]) and not hyphen_title(w):  # mIxEd case
             continue
         cand[w] = c
     # Hunspell filter on the most frequent candidates
@@ -144,7 +166,7 @@ def count_bigrams(paths, vocab_lower):
         with open(p, encoding="utf-8", errors="replace") as f:
             for n, line in enumerate(f):
                 for s in SENTENCE.split(line.replace("\u2019", "'")):
-                    toks = [t.lower() for t in TOKEN.findall(s)]
+                    toks = [t.lower() for t in split_unknown(TOKEN.findall(s), vocab_lower)]
                     for a, b in zip(toks, toks[1:]):
                         if a in vocab_lower and b in vocab_lower:
                             big[(a, b)] += 1

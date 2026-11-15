@@ -28,12 +28,21 @@ struct ScoringParams {
     float bonus = 0.0f;     // per-language bonus (e.g. for the main language)
     float history = 0.0f;   // user dictionary only: bonus for any candidate the user has written, x weight/255
     float k3 = 10.0f;       // Dirichlet prior weight of the trigram estimate (towards the bigram estimate)
+    // Words with the same key path ("well" / "we'll", "its" / "it's", "byt" / "byť") are the same
+    // gesture, so only the language model can tell them apart: they are ordered by
+    // log P(w | previous words), and each one sits same_path x its log-probability gap below the
+    // best score of the key path. 0 = off (the general score decides). 0.3: tools/swipe-replay on
+    // English contractions +1 pp top-1, no change on the recordings and the Czech gesture sets
+    // (0.5 already costs top-3 there).
+    float same_path = 0.3f;
 };
 
 struct Variant {
     std::string surface;
     float freq;          // 0..255 log scale
     uint32_t lower;      // id of the lowercase form
+    // starts with a capital letter (gets the capital-letter penalty); not for the pronoun I and its
+    // contractions ("I'll", "I'm"), which are always written that way
     bool capitalized;
 };
 

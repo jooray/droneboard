@@ -2,6 +2,7 @@
 """Synthetic swipes with real sentence context, in swipe-replay's input format.
 
 usage: synth.py <corpus.txt> <lang> <n> <out.jsonl> [--seed 1] [--layout qwerty|qwertz] [--min-len 2]
+       synth.py --words <targets.tsv> <lang> <n per line> <out.jsonl> [--seed 1] [--layout ...]
 
 Picks random sentences from the corpus (one per line or plain text), a random word of length
 >= min-len in each, and writes the swipe for that word together with the up to 3 words before
@@ -9,6 +10,11 @@ it. The path follows the bench-swipe generator (internal research): key centres 
 letters with Gaussian aim error (sigma 0.18 key widths), mild corner rounding, variable speed
 and 60-120 Hz sampling. Coordinates are normalized like the keyboard does it: x by keyboard
 width, letter rows at y = 1/6, 1/2, 5/6.
+
+With --words, the first argument is a TSV of fixed targets instead of a corpus: the target word,
+then optionally the words before it (space separated; empty = start of a sentence) and a group name
+for the "lang" field (default <lang>). Every line yields <n> gestures with different noise.
+Apostrophes and hyphens are skipped in the path, like in the key paths ("I'll" is swiped i-l-l).
 """
 import argparse
 import json
@@ -32,12 +38,14 @@ def layout(name):
 def base(word):
     out = []
     for ch in word.lower():
+        if ch in "'’-":
+            continue
         b = unicodedata.normalize("NFD", ch)[0]
         if not ("a" <= b <= "z"):
             return None
         if not out or out[-1] != b:
             out.append(b)
-    return out
+    return out or None
 
 
 def chaikin(pts, r=0.12):
@@ -92,9 +100,24 @@ def main():
     ap.add_argument("--max-lines", type=int, default=400000)
     ap.add_argument("--require", default="", help="keep only lines containing one of these letters")
     ap.add_argument("--forbid", default="", help="drop lines containing any of these letters")
+    ap.add_argument("--words", action="store_true", help="the first argument is a TSV of fixed targets")
     a = ap.parse_args()
     rnd = random.Random(a.seed)
     keys = layout(a.layout)
+    if a.words:
+        lay = [{"c": c, "x": x, "y": y} for c, (x, y) in sorted(keys.items())]
+        with open(a.corpus, encoding="utf-8") as f, open(a.out, "w") as o:
+            for line in f:
+                if not line.strip() or line.startswith("#"):
+                    continue
+                cols = line.rstrip("\n").split("\t")
+                context = cols[1].split() if len(cols) > 1 else []
+                group = cols[2] if len(cols) > 2 and cols[2] else a.lang
+                for _ in range(a.n):
+                    xs, ys, ts = gesture(cols[0], keys, rnd)
+                    o.write(json.dumps({"target": cols[0], "lang": group, "context": context[-3:],
+                                        "layout": lay, "x": xs, "y": ys, "t": ts}, ensure_ascii=False) + "\n")
+        return
     lines = []
     with open(a.corpus, encoding="utf-8", errors="ignore") as f:
         for i, line in enumerate(f):
@@ -112,7 +135,8 @@ def main():
     with open(a.out, "w") as o:
         while written < a.n:
             words = WORD.findall(rnd.choice(lines))
-            idx = [i for i, w in enumerate(words) if len(w) >= a.min_len and base(w) and w.lower() == w]
+            # plain words only, so that earlier evaluation sets stay reproducible
+            idx = [i for i, w in enumerate(words) if len(w) >= a.min_len and base(w) and w.lower() == w and w.isalpha()]
             if not idx:
                 continue
             i = rnd.choice(idx)

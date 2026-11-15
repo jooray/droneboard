@@ -102,3 +102,28 @@ use the public writing of Droneboard's author (blogs, books, Nostr posts) plus
 token breaking the chain. The personal corpus is added with a moderate weight (about 5 % of the
 counts). Trigrams are stored in the `TRIG` section of the `.kpd` files and used by swipe ranking
 and by tap-typing prediction (see `native/droneswipe/FORMAT.md`).
+
+## Apostrophes and hyphens
+
+Words keep their inner apostrophes and hyphens ("don't", "I'll", "e-mail", "je-li"), and their
+key paths skip them the way they skip diacritics: swiping i-l-l reaches both "ill" and "I'll", and
+the ranking picks between words of the same key path by the words before the cursor (see
+`same_path` in `native/droneswipe/kp_dictionary.hpp`). `build_dicts.py`, `count_ngrams.py` and
+`personal_vocab.py` count a hyphenated word as one token when it is in the list and as its parts
+otherwise. Apostrophes belong to English only; in Slovak and Czech text they mark English words.
+
+The dictionaries shipped before 0.1.12 were built without hyphenated words. `add_joined_words.py`
+adds them to a `.kpd` from any corpus without rebuilding it, by way of `unpack_swipe_dict.py`
+(which turns a `.kpd` back into the TSVs that `pack_swipe_dict.py` reads, byte for byte):
+
+```sh
+B=internal/research/droneboard/bench-swipe/data/corpus   # FineWeb-2 samples (ODC-By)
+P=personal                                               # the personal writing corpus
+python3 -I tools/dicts/add_joined_words.py sk app/src/main/assets/swipe/sk.kpd sk.kpd $B/slk_Latn/B.txt $P/sk.final.txt
+python3 -I tools/dicts/add_joined_words.py cs app/src/main/assets/swipe/cs.kpd cs.kpd $B/ces_Latn/B.txt $P/cs.final.txt
+python3 -I tools/dicts/add_joined_words.py en app/src/main/assets/swipe/en.kpd en.kpd $P/en.final.txt --min-count=5
+```
+
+This added 361 Slovak words (e-mail, on-line, Wi-Fi, make-up, viac-menej, sem-tam), 408 Czech ones
+(e-mail, je-li, chcete-li, Wi-Fi, know-how) and 132 English ones (open-source, so-called,
+well-known, peer-to-peer). They have no n-grams yet; the next full rebuild counts them.

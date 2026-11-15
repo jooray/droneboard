@@ -5,10 +5,10 @@
 // usage: swipe-replay --encoder model_int8.pte --dict sk:sk.kpd [--dict en:en.kpd]
 //          [--params sk=gamma,beta,lambda,caps,nu,bonus] [--beam 100] [--topk 1000]
 //          [--history words.tsv (word \t weight 0-255)] [--history-params lambda,history]
-//          [--kappa 0] [--cap 4] [--prior sk=0.5,en=0.5] [--context 3] [--k3 2] [--tie 0]
+//          [--kappa 0] [--cap 4] [--prior sk=0.5,en=0.5] [--context 3] [--k3 2] [--tie 0] [--same-path w]
 //          [--out pred.jsonl] in.jsonl...
 //   --k3: trigram smoothing weight (KpDictionary params.k3); --tie: language tie-breaker margin
-//   (rank_candidates tie_margin, 0 = off)
+//   (rank_candidates tie_margin, 0 = off); --same-path: ScoringParams::same_path of every dictionary
 //
 // Input: one gesture per line, as written by the keyboard's swipe recorder (or the bench tools):
 //   {"target": "ďakujem", "layout": [{"c": "q", "x": 0.05, "y": 0.17}, ...],
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     std::map<std::string, std::vector<float>> params;
     std::map<std::string, float> prior_map;
     int beam = 100, topk = 1000, context_n = 3;
-    float kappa = 0.0f, cap = 4.0f, k3 = -1.0f, tie = 0.0f;
+    float kappa = 0.0f, cap = 4.0f, k3 = -1.0f, tie = 0.0f, same_path = -1.0f;
     std::vector<std::string> inputs;
     std::string history_path;
     std::vector<float> history_params = {0.025f, 1.0f};
@@ -104,6 +104,7 @@ int main(int argc, char** argv) {
         else if (a == "--kappa") kappa = std::stof(next());
         else if (a == "--k3") k3 = std::stof(next());
         else if (a == "--tie") tie = std::stof(next());
+        else if (a == "--same-path") same_path = std::stof(next());
         else if (a == "--cap") cap = std::stof(next());
         else if (a == "--context") context_n = std::stoi(next());
         else if (a == "--out") out_path = next();
@@ -128,6 +129,7 @@ int main(int argc, char** argv) {
             d->params = {v[0], v[1], v[2], v[3], v[4], v[5]};
         }
         if (k3 >= 0.0f) d->params.k3 = k3;
+        if (same_path >= 0.0f) d->params.same_path = same_path;
         std::fprintf(stderr, "%s: %zu words in %.0f ms\n", lang.c_str(), d->word_count(),
                      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
         langs.push_back(lang);
