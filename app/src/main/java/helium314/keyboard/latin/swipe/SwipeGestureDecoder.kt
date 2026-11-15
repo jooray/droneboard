@@ -139,7 +139,8 @@ object SwipeGestureDecoder {
     fun isAvailable(context: Context): Boolean =
         FutoSwipe.isAvailable && languagesWithDictionary(context).isNotEmpty()
 
-    private fun languagesWithDictionary(context: Context): Set<String> = availableLanguages ?: run {
+    /** Languages with a .kpd swipe dictionary in the APK. */
+    fun languagesWithDictionary(context: Context): Set<String> = availableLanguages ?: run {
         val files = runCatching { context.assets.list(ASSET_DIR)?.toSet() }.getOrNull() ?: emptySet()
         files.filter { it.endsWith(".kpd") }.map { it.substringBefore('.') }.toSet()
             .also { availableLanguages = it }

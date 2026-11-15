@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Nahrávání tahů pro ladění</string>
+    <string name="swipe_recorder_summary">Pište tahem zobrazená slova nebo věty; tahy se uloží jen v tomto telefonu</string>
+    <string name="swipe_recorder_intro">Napište tahem do pole to, co je zobrazené níže, tak jak běžně píšete. Tahy se ukládají jen v tomto telefonu, do složky uvedené dole, a nikam se neodesílají. Nic, co píšete mimo tuto obrazovku, se nenahrává.</string>
+    <string name="swipe_recorder_progress">Slovo %1$d z %2$d</string>
+    <string name="swipe_recorder_last">Poslední tah: %1$s</string>
+    <string name="swipe_recorder_skip">Přeskočit slovo</string>
+    <string name="swipe_recorder_done">Hotovo, děkuji!</string>
+    <string name="swipe_recorder_file">Aktuální soubor: %1$s</string>
+    <string name="swipe_recorder_no_storage">Soubor pro nahrávání nelze vytvořit.</string>
+    <string name="swipe_recorder_mode_words">Slova</string>
+    <string name="swipe_recorder_mode_sentences">Věty</string>
+    <string name="swipe_recorder_style_normal">Normálně</string>
+    <string name="swipe_recorder_style_sloppy">Rychle a ledabyle</string>
+    <string name="swipe_recorder_style_hint_normal">Pište tahem svým obvyklým tempem.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Pište tahem co nejrychleji a nemiřte přesně.</string>
+    <string name="swipe_recorder_sentence_hint">Napište větu tahem slovo po slově. Špatné slovo opravte tak, jak běžně opravujete (návrhy nebo nový tah), potom stiskněte Enter nebo Další věta.</string>
+    <string name="swipe_recorder_sentence_progress">Věta %1$d z %2$d · slovo %3$d z %4$d</string>
+    <string name="swipe_recorder_next_sentence">Další věta</string>
+    <string name="swipe_recorder_skip_sentence">Přeskočit</string>
+    <string name="swipe_recorder_languages">Jazyky vět</string>
+    <string name="swipe_recorder_counter">%1$d nahráno v této relaci · %2$d ve všech souborech</string>
+    <string name="swipe_recorder_export_title">Jak získat nahrávky</string>
+    <string name="swipe_recorder_export_text">Soubory zůstávají v této složce v telefonu (aplikace nemá přístup k internetu). Do počítače je zkopírujete příkazem:</string>
+    <string name="swipe_recorder_copy">Kopírovat příkaz</string>
+</resources>
