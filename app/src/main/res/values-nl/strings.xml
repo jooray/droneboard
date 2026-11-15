@@ -559,4 +559,12 @@
     <string name="show_dpad_key">D-pad sneltoets</string>
     <string name="prefs_enable_hardware_keyboard">Ondersteuning voor fysiek toetsenbord</string>
     <string name="accent_shifted_icon">Geaccentueerd Shift-pictogram</string>
+    <string name="number_row_for_passwords">Cijferrij bij wachtwoorden</string>
+    <string name="number_row_for_passwords_summary">Toon de cijferrij bij het typen van een wachtwoord</string>
+    <string name="space_long_press">Lang indrukken van de spatiebalk</string>
+    <string name="space_long_press_trackpad">Trackpad</string>
+    <string name="space_long_press_language">Van taal of toetsenbord wisselen</string>
+    <string name="delete_swipe_letters">Letters</string>
+    <string name="delete_swipe_words">Woorden</string>
+    <string name="gesture_data_single_instance_per_word">Slechts één item per woord tonen</string>
 </resources>

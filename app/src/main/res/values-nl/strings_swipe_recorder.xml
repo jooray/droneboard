@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Veegbewegingen opnemen voor afstemming</string>
+    <string name="swipe_recorder_summary">Veeg woorden of zinnen die worden getoond; de gebaren worden alleen op deze telefoon opgeslagen</string>
+    <string name="swipe_recorder_intro">Veeg wat hieronder staat in het veld, zoals je normaal veegt. De gebaren worden alleen op deze telefoon opgeslagen, in de map onderaan, en worden nooit geüpload. Wat je buiten dit scherm typt, wordt niet opgenomen.</string>
+    <string name="swipe_recorder_progress">Woord %1$d van %2$d</string>
+    <string name="swipe_recorder_last">Laatste veegbeweging: %1$s</string>
+    <string name="swipe_recorder_skip">Woord overslaan</string>
+    <string name="swipe_recorder_done">Klaar, bedankt!</string>
+    <string name="swipe_recorder_file">Huidig bestand: %1$s</string>
+    <string name="swipe_recorder_no_storage">Het opnamebestand kan niet worden gemaakt.</string>
+    <string name="swipe_recorder_mode_words">Woorden</string>
+    <string name="swipe_recorder_mode_sentences">Zinnen</string>
+    <string name="swipe_recorder_style_normal">Normaal</string>
+    <string name="swipe_recorder_style_sloppy">Snel &amp; slordig</string>
+    <string name="swipe_recorder_style_hint_normal">Veeg in je gebruikelijke tempo.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Veeg zo snel als je kunt, zonder nauwkeurig te mikken.</string>
+    <string name="swipe_recorder_sentence_hint">Veeg de zin woord voor woord. Corrigeer een fout woord zoals je dat normaal doet (suggestiebalk of opnieuw vegen) en druk dan op Enter of Volgende zin.</string>
+    <string name="swipe_recorder_sentence_progress">Zin %1$d van %2$d · woord %3$d van %4$d</string>
+    <string name="swipe_recorder_next_sentence">Volgende zin</string>
+    <string name="swipe_recorder_skip_sentence">Overslaan</string>
+    <string name="swipe_recorder_languages">Talen van de zinnen</string>
+    <string name="swipe_recorder_counter">%1$d opgenomen in deze sessie · %2$d in alle bestanden</string>
+    <string name="swipe_recorder_export_title">De opnamen ophalen</string>
+    <string name="swipe_recorder_export_text">De bestanden blijven in deze map op de telefoon (de app heeft geen toegang tot internet). Kopieer ze naar een computer met:</string>
+    <string name="swipe_recorder_copy">Opdracht kopiëren</string>
+</resources>

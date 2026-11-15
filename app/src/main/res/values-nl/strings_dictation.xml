@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="voice_starting">Microfoon starten…</string>
+    <string name="voice_waiting_bluetooth">Wachten op de microfoon van de headset…</string>
+    <string name="voice_speak_now">Spreek nu</string>
+    <string name="voice_silent">De microfoon hoort niets. Staat hij gedempt?</string>
+    <string name="voice_transcribing">Bezig met uitschrijven…</string>
+    <string name="voice_stop">Dicteren stoppen</string>
+    <string name="voice_cancel">Dicteren annuleren</string>
+    <string name="voice_mic_phone">Telefoonmicrofoon</string>
+    <string name="voice_mic_phone_fallback">Telefoonmicrofoon (de headset reageerde niet)</string>
+    <string name="voice_mic_headset">Microfoon: %s</string>
+    <string name="voice_mic_bluetooth">Bluetooth-headset</string>
+    <string name="voice_mic_failed">De microfoon kon niet starten</string>
+    <string name="voice_transcription_failed">Uitschrijven mislukt</string>
+    <string name="voice_ostt_missing">Voor dicteren is Offline Speech to Text nodig</string>
+    <string name="voice_ostt_missing_detail">Een gratis app die spraak op je telefoon omzet in tekst, zonder internet.</string>
+    <string name="voice_install_ostt">Downloaden via Zapstore</string>
+</resources>
