@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="capitalize_english_i">Englisches „I“ großschreiben</string>
+    <string name="capitalize_english_i_summary">Aus „i think“ wird „I think“, ebenso bei i’m, i’ll, i’d und i’ve. Nur wenn der umgebende Text englisch ist. Die Rücktaste direkt danach macht die Änderung rückgängig</string>
+</resources>

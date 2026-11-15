@@ -550,4 +550,12 @@
     <string name="recent_emojis_cleared">Zuletzt verwendete Emojis gelöscht</string>
     <string name="prefs_enable_hardware_keyboard">Unterstützung für Hardwaretastaturen</string>
     <string name="accent_shifted_icon">Akzentfarbe für das Umschaltsymbol</string>
+    <string name="delete_swipe_letters">Buchstaben</string>
+    <string name="delete_swipe_words">Wörter</string>
+    <string name="number_row_for_passwords">Zahlenreihe für Passwörter</string>
+    <string name="number_row_for_passwords_summary">Zahlenreihe beim Eingeben eines Passworts anzeigen</string>
+    <string name="space_long_press">Lange auf die Leertaste drücken</string>
+    <string name="space_long_press_trackpad">Trackpad</string>
+    <string name="space_long_press_language">Sprache oder Tastatur wechseln</string>
+    <string name="gesture_data_single_instance_per_word">Nur einen Eintrag pro Wort anzeigen</string>
 </resources>

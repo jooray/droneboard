@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- About screen: attribution required by the FUTO Model Weights License -->
+    <string name="about_futo_swipe_title">Gestenschreiben mit FUTO Swipe</string>
+    <string name="about_futo_swipe_summary">Die Gestenerkennung nutzt das Modell FUTO Swipe von FUTO Holdings, Inc. unter der FUTO Model Weights License.</string>
+    <!-- Gesture typing: width of the final swipe search (beam width) -->
+    <string name="swipe_beam_width_title">Suchbreite beim Wischen</string>
+    <string name="swipe_beam_width_recommended">%1$d (empfohlen)</string>
+    <string name="swipe_beam_width_previous_default">%1$d (frühere Standardeinstellung)</string>
+    <string name="swipe_beam_width_help_button">Was ist die Suchbreite beim Wischen?</string>
+    <string name="swipe_beam_width_help">Die Tastatur vergleicht Ihre Wischgeste mit vielen möglichen Wörtern. Eine größere Suchbreite findet das richtige Wort häufiger, wenn die Geste schnell oder ungenau ist, braucht aber etwas mehr Zeit und Akku.\n\n50: am schnellsten, übersieht bei schnellen, ungenauen Gesten eher Wörter.\n100: die frühere Standardeinstellung.\n200: empfohlen. In unseren Aufzeichnungen war das richtige Wort in 94,3 % der Fälle unter den ersten drei Vorschlägen, bei 100 waren es 92,5 %, bei etwa 0,3 ms mehr pro Geste.\n300 bis 400: kaum noch Gewinn, auf alten Smartphones etwas langsamer.</string>
+</resources>

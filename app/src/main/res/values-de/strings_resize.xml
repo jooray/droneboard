@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
+    <string name="size_position" tools:keep="@string/size_position">Größe &amp; Position</string>
+    <string name="resize_mode_one_handed">Einhandmodus</string>
+    <string name="resize_mode_floating">Schwebend</string>
+    <string name="resize_mode_split">Geteilt</string>
+    <string name="resize_reset">Zurücksetzen</string>
+    <string name="resize_done">Fertig</string>
+    <!-- shown while resizing: width and height in percent of the default size -->
+    <string name="resize_size_label">Breite %1$d %% · Höhe %2$d %%</string>
+    <string name="resize_hint">Ränder oder Ecken ziehen</string>
+    <string name="resize_handle_top">Tastaturgröße am oberen Rand ändern</string>
+    <string name="resize_handle_bottom">Tastaturgröße am unteren Rand ändern</string>
+    <string name="resize_handle_left">Tastaturgröße am linken Rand ändern</string>
+    <string name="resize_handle_right">Tastaturgröße am rechten Rand ändern</string>
+    <string name="resize_handle_top_left">Tastaturgröße an der Ecke oben links ändern</string>
+    <string name="resize_handle_top_right">Tastaturgröße an der Ecke oben rechts ändern</string>
+    <string name="resize_handle_bottom_left">Tastaturgröße an der Ecke unten links ändern</string>
+    <string name="resize_handle_bottom_right">Tastaturgröße an der Ecke unten rechts ändern</string>
+    <string name="floating_drag_handle">Schwebende Tastatur verschieben</string>
+    <string name="floating_release_to_dock">Zum Andocken loslassen</string>
+    <string name="resize_mode_full">Volle Breite</string>
+    <string name="resize_mode_compact">Kompakt</string>
+    <string name="resize_position_left">Links</string>
+    <string name="resize_position_center">Mitte</string>
+    <string name="resize_position_right">Rechts</string>
+    <string name="compact_large_screens">Kompakte Tastatur auf großen Displays</string>
+    <string name="compact_large_screens_summary">Auf Tablets und aufgeklappten Faltgeräten ist die Tastatur etwa so breit wie auf einem Smartphone und sitzt unten rechts, in Reichweite des Daumens. Größe und Seite ändern Sie mit der Taste „Größe &amp; Position“.</string>
+</resources>

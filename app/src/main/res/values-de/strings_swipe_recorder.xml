@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Wischgesten zur Optimierung aufzeichnen</string>
+    <string name="swipe_recorder_summary">Vorgegebene Wörter oder Sätze wischen; die Gesten werden nur auf diesem Smartphone gespeichert</string>
+    <string name="swipe_recorder_intro">Wischen Sie den unten angezeigten Text so in das Feld, wie Sie es sonst auch tun. Die Gesten werden nur auf diesem Smartphone im unten angezeigten Ordner gespeichert und nie hochgeladen. Eingaben außerhalb dieses Bildschirms werden nicht aufgezeichnet.</string>
+    <string name="swipe_recorder_progress">Wort %1$d von %2$d</string>
+    <string name="swipe_recorder_last">Letzte Geste: %1$s</string>
+    <string name="swipe_recorder_skip">Wort überspringen</string>
+    <string name="swipe_recorder_done">Fertig, vielen Dank!</string>
+    <string name="swipe_recorder_file">Aktuelle Datei: %1$s</string>
+    <string name="swipe_recorder_no_storage">Die Aufzeichnungsdatei konnte nicht erstellt werden.</string>
+    <string name="swipe_recorder_mode_words">Wörter</string>
+    <string name="swipe_recorder_mode_sentences">Sätze</string>
+    <string name="swipe_recorder_style_normal">Normal</string>
+    <string name="swipe_recorder_style_sloppy">Schnell &amp; schlampig</string>
+    <string name="swipe_recorder_style_hint_normal">Wischen Sie in Ihrem gewohnten Tempo.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Wischen Sie so schnell wie möglich, ohne genau zu zielen.</string>
+    <string name="swipe_recorder_sentence_hint">Wischen Sie den Satz Wort für Wort. Korrigieren Sie ein falsches Wort wie gewohnt (Vorschlagsleiste oder erneutes Wischen) und tippen Sie dann auf die Eingabetaste oder auf „Nächster Satz“.</string>
+    <string name="swipe_recorder_sentence_progress">Satz %1$d von %2$d · Wort %3$d von %4$d</string>
+    <string name="swipe_recorder_next_sentence">Nächster Satz</string>
+    <string name="swipe_recorder_skip_sentence">Überspringen</string>
+    <string name="swipe_recorder_languages">Sprachen der Sätze</string>
+    <string name="swipe_recorder_counter">%1$d in dieser Sitzung aufgezeichnet · %2$d in allen Dateien</string>
+    <string name="swipe_recorder_export_title">Aufzeichnungen abrufen</string>
+    <string name="swipe_recorder_export_text">Die Dateien bleiben in diesem Ordner auf dem Smartphone (die App hat keinen Internetzugriff). Mit diesem Befehl kopieren Sie sie auf einen Computer:</string>
+    <string name="swipe_recorder_copy">Befehl kopieren</string>
+</resources>

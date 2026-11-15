@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="neural_predictions">Neuronale Vorhersagen</string>
+    <string name="neural_predictions_summary">Das nächste Wort mit einem kleinen neuronalen Modell auf dem Smartphone vorhersagen, in den aktivierten Sprachen. Deaktiviert: nur Statistik über Worttripel.</string>
+</resources>

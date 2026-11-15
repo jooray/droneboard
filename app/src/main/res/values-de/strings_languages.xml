@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- languages typed without diacritics (sk-x-nd, cs-x-nd) -->
+    <string name="subtype_sk_nd">Slowakisch (ohne Diakritika)</string>
+    <string name="subtype_cs_nd">Tschechisch (ohne Diakritika)</string>
+</resources>
