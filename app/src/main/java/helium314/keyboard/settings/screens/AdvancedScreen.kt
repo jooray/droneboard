@@ -42,6 +42,8 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.preferences.BackupRestorePreference
+import helium314.keyboard.settings.preferences.ExportSettingsPreference
+import helium314.keyboard.settings.preferences.ImportSettingsPreference
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.latin.utils.previewDark
@@ -82,6 +84,8 @@ fun AdvancedSettingsScreen(
         Settings.PREF_CUSTOM_CURRENCY_KEY,
         Settings.PREF_MORE_POPUP_KEYS,
         Settings.PREF_TIMESTAMP_FORMAT,
+        SettingsWithoutKey.EXPORT_SETTINGS,
+        SettingsWithoutKey.IMPORT_SETTINGS,
         SettingsWithoutKey.BACKUP_RESTORE,
         if (BuildConfig.DEBUG || prefs.getBoolean(DebugSettings.PREF_SHOW_DEBUG_SETTINGS, Defaults.PREF_SHOW_DEBUG_SETTINGS))
             SettingsWithoutKey.DEBUG_SETTINGS else null,
@@ -235,6 +239,12 @@ fun createAdvancedSettings(context: Context) = listOf(
     },
     Setting(context, SettingsWithoutKey.BACKUP_RESTORE, R.string.backup_restore_title) {
         BackupRestorePreference(it)
+    },
+    Setting(context, SettingsWithoutKey.EXPORT_SETTINGS, R.string.settings_export_title, R.string.settings_export_summary) {
+        ExportSettingsPreference(it)
+    },
+    Setting(context, SettingsWithoutKey.IMPORT_SETTINGS, R.string.settings_import_title, R.string.settings_import_summary) {
+        ImportSettingsPreference(it)
     },
     Setting(context, Settings.PREF_TIMESTAMP_FORMAT, R.string.timestamp_format_title) { setting ->
         TextInputPreference(setting, Defaults.PREF_TIMESTAMP_FORMAT, stringResource(R.string.timestamp_description)) { checkTimestampFormat(it) }

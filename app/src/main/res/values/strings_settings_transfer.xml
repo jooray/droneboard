@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Advanced settings: save all settings to a JSON file, to set up another profile or device the same way -->
+    <string name="settings_export_title">Export settings</string>
+    <string name="settings_export_summary">Saves your settings to a JSON file for another profile or device. Learned words, dictionaries and the clipboard are not in it; Backup and restore keeps those</string>
+    <string name="settings_import_title">Import settings</string>
+    <string name="settings_import_summary">Loads settings from an exported file. Your learned words and dictionaries stay as they are</string>
+    <string name="settings_exported">Settings exported</string>
+    <string name="settings_imported">Settings imported</string>
+    <!-- %s is the error message -->
+    <string name="settings_export_error">Could not save the file: %s</string>
+    <!-- %s is the error message -->
+    <string name="settings_import_error">Could not import the settings: %s</string>
+    <string name="settings_import_confirm_title">Import settings?</string>
+    <!-- %d is the number of settings (custom layouts included) the import changes -->
+    <plurals name="settings_import_confirm_message">
+        <item quantity="one">%d setting will change. Settings that are not in the file go back to their defaults.</item>
+        <item quantity="other">%d settings will change. Settings that are not in the file go back to their defaults.</item>
+    </plurals>
+    <string name="settings_import_button">Import</string>
+    <string name="settings_import_nothing">This file has the same settings you already use.</string>
+    <string name="settings_import_error_foreign">This is not a Droneboard settings file.</string>
+    <string name="settings_import_error_newer">This file comes from a newer version of Droneboard. Update the app and try again.</string>
+    <string name="settings_import_error_empty">The file has no settings this version of Droneboard can use.</string>
+    <string name="settings_transfer_locked">Unlock the device first.</string>
+</resources>

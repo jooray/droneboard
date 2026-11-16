@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="settings_export_title">Exportovať nastavenia</string>
+    <string name="settings_export_summary">Uloží nastavenia do súboru JSON, ktorý načítate v inom profile alebo zariadení. Naučené slová, slovníky ani schránka v ňom nie sú, tie uloží Zálohovanie a obnovenie</string>
+    <string name="settings_import_title">Importovať nastavenia</string>
+    <string name="settings_import_summary">Načíta nastavenia z exportovaného súboru. Naučené slová a slovníky zostanú tak, ako sú</string>
+    <string name="settings_exported">Nastavenia sú exportované</string>
+    <string name="settings_imported">Nastavenia sú importované</string>
+    <string name="settings_export_error">Súbor sa nepodarilo uložiť: %s</string>
+    <string name="settings_import_error">Nastavenia sa nepodarilo importovať: %s</string>
+    <string name="settings_import_confirm_title">Importovať nastavenia?</string>
+    <plurals name="settings_import_confirm_message">
+        <item quantity="one">Zmení sa %d nastavenie. Čo v súbore nie je, sa vráti na predvolenú hodnotu.</item>
+        <item quantity="few">Zmenia sa %d nastavenia. Čo v súbore nie je, sa vráti na predvolenú hodnotu.</item>
+        <item quantity="many">Zmení sa %d nastavenia. Čo v súbore nie je, sa vráti na predvolenú hodnotu.</item>
+        <item quantity="other">Zmení sa %d nastavení. Čo v súbore nie je, sa vráti na predvolenú hodnotu.</item>
+    </plurals>
+    <string name="settings_import_button">Importovať</string>
+    <string name="settings_import_nothing">V súbore sú rovnaké nastavenia, aké už máte.</string>
+    <string name="settings_import_error_foreign">Toto nie je súbor s nastaveniami Droneboardu.</string>
+    <string name="settings_import_error_newer">Súbor je z novšej verzie Droneboardu. Aktualizujte aplikáciu a skúste to znova.</string>
+    <string name="settings_import_error_empty">V súbore nie sú nastavenia, ktoré by táto verzia Droneboardu poznala.</string>
+    <string name="settings_transfer_locked">Najprv odomknite zariadenie.</string>
+</resources>

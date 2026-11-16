@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="settings_export_title">Einstellungen exportieren</string>
+    <string name="settings_export_summary">Speichert deine Einstellungen in einer JSON-Datei für ein anderes Profil oder Gerät. Gelernte Wörter, Wörterbücher und die Zwischenablage sind nicht dabei, dafür gibt es Sichern und Wiederherstellen</string>
+    <string name="settings_import_title">Einstellungen importieren</string>
+    <string name="settings_import_summary">Lädt Einstellungen aus einer exportierten Datei. Gelernte Wörter und Wörterbücher bleiben, wie sie sind</string>
+    <string name="settings_exported">Einstellungen exportiert</string>
+    <string name="settings_imported">Einstellungen importiert</string>
+    <string name="settings_export_error">Datei konnte nicht gespeichert werden: %s</string>
+    <string name="settings_import_error">Einstellungen konnten nicht importiert werden: %s</string>
+    <string name="settings_import_confirm_title">Einstellungen importieren?</string>
+    <plurals name="settings_import_confirm_message">
+        <item quantity="one">%d Einstellung wird geändert. Was nicht in der Datei steht, wird auf den Standardwert zurückgesetzt.</item>
+        <item quantity="other">%d Einstellungen werden geändert. Was nicht in der Datei steht, wird auf den Standardwert zurückgesetzt.</item>
+    </plurals>
+    <string name="settings_import_button">Importieren</string>
+    <string name="settings_import_nothing">Die Datei enthält dieselben Einstellungen, die du schon verwendest.</string>
+    <string name="settings_import_error_foreign">Das ist keine Einstellungsdatei von Droneboard.</string>
+    <string name="settings_import_error_newer">Die Datei stammt aus einer neueren Droneboard-Version. Aktualisiere die App und versuche es noch einmal.</string>
+    <string name="settings_import_error_empty">Die Datei enthält keine Einstellungen, die diese Droneboard-Version kennt.</string>
+    <string name="settings_transfer_locked">Entsperre zuerst das Gerät.</string>
+</resources>
