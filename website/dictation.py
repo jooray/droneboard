@@ -36,8 +36,8 @@ D["en"] = dict(
     route="Don’t have Droneboard yet? The <a href=\"{home}#install\">main page</a> shows how to install it.",
     tip_h="if you speak several languages",
     tip=[
-        "In Offline Speech to Text, choose the model <strong>Cadence V2</strong>, set the language to auto-detect, and in the list of languages you speak, keep only the ones you want to dictate in.",
-        "The default model, Parakeet, also detects the language on its own, but you can’t limit it. It may take Slovak for Czech or Polish and then keep writing in that language. Cadence V2 only picks from the languages you chose.",
+        "In Offline Speech to Text, choose the model <strong>Canary V2</strong>, set the language to auto-detect, and in the list of languages you speak, keep only the ones you want to dictate in.",
+        "The default model, Parakeet, also detects the language on its own, but you can’t limit it. It may take Slovak for Czech or Polish and then keep writing in that language. Canary V2 only picks from the languages you chose.",
     ],
     back="back to the main page",
 )
@@ -68,8 +68,8 @@ D["sk"] = dict(
     route="Droneboard ešte nemáte? Návod na inštaláciu je na <a href=\"{home}#install\">hlavnej stránke</a>.",
     tip_h="ak hovoríte viacerými jazykmi",
     tip=[
-        "V Offline Speech to Text si vyberte model <strong>Cadence V2</strong>, jazyk nastavte na automatické rozpoznanie a v zozname jazykov, ktorými hovoríte, nechajte len tie, v ktorých chcete diktovať.",
-        "Predvolený model Parakeet tiež rozpozná jazyk sám, ale obmedziť sa nedá. Slovenčinu si potom môže pomýliť s češtinou alebo poľštinou a v tom jazyku už pokračuje. Cadence V2 vyberá len z jazykov, ktoré ste zvolili.",
+        "V Offline Speech to Text si vyberte model <strong>Canary V2</strong>, jazyk nastavte na automatické rozpoznanie a v zozname jazykov, ktorými hovoríte, nechajte len tie, v ktorých chcete diktovať.",
+        "Predvolený model Parakeet tiež rozpozná jazyk sám, ale obmedziť sa nedá. Slovenčinu si potom môže pomýliť s češtinou alebo poľštinou a v tom jazyku už pokračuje. Canary V2 vyberá len z jazykov, ktoré ste zvolili.",
     ],
     back="späť na hlavnú stránku",
 )
@@ -100,8 +100,8 @@ D["cs"] = dict(
     route="Droneboard ještě nemáte? Návod k instalaci je na <a href=\"{home}#install\">hlavní stránce</a>.",
     tip_h="když mluvíte více jazyky",
     tip=[
-        "V Offline Speech to Text zvolte model <strong>Cadence V2</strong>, jazyk nastavte na automatické rozpoznání a v seznamu jazyků, kterými mluvíte, nechte jen ty, ve kterých chcete diktovat.",
-        "Výchozí model Parakeet jazyk také rozpozná sám, ale omezit ho nejde. Slovenštinu si pak může splést s češtinou nebo polštinou a v tom jazyce už pokračuje. Cadence V2 vybírá jen z jazyků, které jste zvolili.",
+        "V Offline Speech to Text zvolte model <strong>Canary V2</strong>, jazyk nastavte na automatické rozpoznání a v seznamu jazyků, kterými mluvíte, nechte jen ty, ve kterých chcete diktovat.",
+        "Výchozí model Parakeet jazyk také rozpozná sám, ale omezit ho nejde. Slovenštinu si pak může splést s češtinou nebo polštinou a v tom jazyce už pokračuje. Canary V2 vybírá jen z jazyků, které jste zvolili.",
     ],
     back="zpět na hlavní stránku",
 )
@@ -132,8 +132,8 @@ D["de"] = dict(
     route="Droneboard noch nicht installiert? Die Anleitung steht auf der <a href=\"{home}#install\">Startseite</a>.",
     tip_h="wenn Sie mehrere Sprachen sprechen",
     tip=[
-        "Wählen Sie in Offline Speech to Text das Modell <strong>Cadence V2</strong>, stellen Sie die Sprache auf automatische Erkennung und lassen Sie in der Liste der Sprachen, die Sie sprechen, nur die stehen, in denen Sie diktieren wollen.",
-        "Das voreingestellte Modell Parakeet erkennt die Sprache zwar auch selbst, lässt sich aber nicht einschränken. Slowakisch hält es dann manchmal für Tschechisch oder Polnisch und schreibt in dieser Sprache weiter. Cadence V2 wählt nur unter den Sprachen, die Sie ausgewählt haben.",
+        "Wählen Sie in Offline Speech to Text das Modell <strong>Canary V2</strong>, stellen Sie die Sprache auf automatische Erkennung und lassen Sie in der Liste der Sprachen, die Sie sprechen, nur die stehen, in denen Sie diktieren wollen.",
+        "Das voreingestellte Modell Parakeet erkennt die Sprache zwar auch selbst, lässt sich aber nicht einschränken. Slowakisch hält es dann manchmal für Tschechisch oder Polnisch und schreibt in dieser Sprache weiter. Canary V2 wählt nur unter den Sprachen, die Sie ausgewählt haben.",
     ],
     back="zurück zur Startseite",
 )
@@ -164,8 +164,8 @@ D["es"] = dict(
     route="¿Aún no tienes Droneboard? En la <a href=\"{home}#install\">página principal</a> se explica cómo instalarlo.",
     tip_h="si hablas varios idiomas",
     tip=[
-        "En Offline Speech to Text elige el modelo <strong>Cadence V2</strong>, pon el idioma en detección automática y, en la lista de idiomas que hablas, deja solo aquellos en los que quieres dictar.",
-        "El modelo predeterminado, Parakeet, también detecta el idioma solo, pero no se puede limitar. Puede tomar el eslovaco por checo o polaco y seguir escribiendo en ese idioma. Cadence V2 elige solo entre los idiomas que hayas marcado.",
+        "En Offline Speech to Text elige el modelo <strong>Canary V2</strong>, pon el idioma en detección automática y, en la lista de idiomas que hablas, deja solo aquellos en los que quieres dictar.",
+        "El modelo predeterminado, Parakeet, también detecta el idioma solo, pero no se puede limitar. Puede tomar el eslovaco por checo o polaco y seguir escribiendo en ese idioma. Canary V2 elige solo entre los idiomas que hayas marcado.",
     ],
     back="volver a la página principal",
 )
