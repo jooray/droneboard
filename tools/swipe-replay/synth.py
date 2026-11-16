@@ -2,8 +2,9 @@
 """Synthetic swipes with real sentence context, in swipe-replay's input format.
 
 usage: synth.py <corpus.txt> <lang> <n> <out.jsonl> [--seed 1] [--min-len 2] [--cased]
-                [--layout qwerty|qwertz|qwertz-de|qwerty-es]
+                [--layout qwerty|qwertz|qwertz-de|qwerty-es] [--sloppy 0..3]
        synth.py --words <targets.tsv> <lang> <n per line> <out.jsonl> [--seed 1] [--layout ...]
+       synth.py --items <items.jsonl> <lang> 1 <out.jsonl> [--seed 1] [--layout ...] [--sloppy 0..3]
 
 Picks random sentences from the corpus (one per line or plain text), a random word of length
 >= min-len in each, and writes the swipe for that word together with the up to 3 words before
@@ -16,6 +17,17 @@ With --words, the first argument is a TSV of fixed targets instead of a corpus: 
 then optionally the words before it (space separated; empty = start of a sentence) and a group name
 for the "lang" field (default <lang>). Every line yields <n> gestures with different noise.
 Apostrophes and hyphens are skipped in the path, like in the key paths ("I'll" is swiped i-l-l).
+
+With --items, the first argument is a held-out item set of tools/lm/make_lm_eval_set.py (target,
+lang, context, tokens, bos); every item gets one gesture and keeps its fields, so the replay can give
+the neural language model the same context as the keyboard does.
+
+--sloppy s (0 = the precise default above) swipes less carefully, like someone typing fast: the aim
+error grows to (0.18 + 0.12 s) key widths, the whole word drifts off by up to 0.1 s key widths,
+corners are cut harder (more and stronger rounding), letters between two others are passed by on
+the way (pulled towards the straight line by up to 0.25 s, the "shortcut" through a key), and the
+finger moves up to (1 + 0.4 s) times faster with more jitter. s = 1, 2, 3 are the sloppy levels of
+the evaluation.
 """
 import argparse
 import json
@@ -71,17 +83,36 @@ def chaikin(pts, r=0.12):
     return new
 
 
-def gesture(word, keys, rnd):
+def gesture(word, keys, rnd, sloppy=0.0):
     letters = base(word, keys)
     kw = 1.0 / KEYS_ACROSS  # key width in normalized units
-    centers = [(keys[c][0] + rnd.gauss(0, 0.18 * kw), keys[c][1] + rnd.gauss(0, 0.18 * kw * 1.6)) for c in letters]
+    sigma = (0.18 + 0.12 * sloppy) * kw
+    centers = [(keys[c][0] + rnd.gauss(0, sigma), keys[c][1] + rnd.gauss(0, sigma * 1.6)) for c in letters]
+    if sloppy > 0:
+        # the whole word a bit off, and inner letters passed by on the way to the next one
+        dx, dy = rnd.gauss(0, 0.1 * sloppy * kw), rnd.gauss(0, 0.1 * sloppy * kw * 1.6)
+        centers = [(x + dx, y + dy) for x, y in centers]
+        cut = []
+        for i, (x, y) in enumerate(centers):
+            if 0 < i < len(centers) - 1:
+                (ax, ay), (bx, by) = centers[i - 1], centers[i + 1]
+                u = min(0.6, rnd.uniform(0, 0.25 * sloppy))
+                x, y = x + u * ((ax + bx) / 2 - x), y + u * ((ay + by) / 2 - y)
+            cut.append((x, y))
+        centers = cut
     if len(centers) == 1:
         x, y = centers[0]
         centers = [(x, y), (x + 0.01, y + 0.005)]
-    pts = chaikin(centers)
-    speed = rnd.uniform(0.9, 1.8) / 1000.0  # keyboard widths per ms
+    if sloppy > 0:
+        pts = centers
+        for _ in range(1 + int(sloppy >= 2)):
+            pts = chaikin(pts, min(0.3, 0.12 + 0.06 * sloppy))
+    else:
+        pts = chaikin(centers)
+    speed = rnd.uniform(0.9, 1.8 * (1 + 0.4 * sloppy)) / 1000.0  # keyboard widths per ms
     hz = rnd.uniform(60, 120)
     step = speed * 1000.0 / hz
+    jx, jy = 0.002 * (1 + 0.5 * sloppy), 0.003 * (1 + 0.5 * sloppy)
     xs, ys, ts = [], [], []
     t = 0.0
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
@@ -89,8 +120,8 @@ def gesture(word, keys, rnd):
         n = max(1, int(d / step))
         for k in range(n):
             f = k / n
-            xs.append(x0 + f * (x1 - x0) + rnd.gauss(0, 0.002))
-            ys.append(y0 + f * (y1 - y0) + rnd.gauss(0, 0.003))
+            xs.append(x0 + f * (x1 - x0) + rnd.gauss(0, jx))
+            ys.append(y0 + f * (y1 - y0) + rnd.gauss(0, jy))
             ts.append(t)
             t += 1000.0 / hz * rnd.uniform(0.85, 1.15)
     xs.append(pts[-1][0]); ys.append(pts[-1][1]); ts.append(t)
@@ -98,6 +129,8 @@ def gesture(word, keys, rnd):
 
 
 WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)?", re.UNICODE)
+# the neural language model's tokens (tools/lm/prepare.py)
+TOKEN = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*|\d+(?:[.,]\d+)*|[.,!?:;]")
 
 
 def main():
@@ -113,11 +146,26 @@ def main():
     ap.add_argument("--require", default="", help="keep only lines containing one of these letters")
     ap.add_argument("--forbid", default="", help="drop lines containing any of these letters")
     ap.add_argument("--words", action="store_true", help="the first argument is a TSV of fixed targets")
+    ap.add_argument("--items", action="store_true", help="the first argument is a make_lm_eval_set.py item set")
+    ap.add_argument("--tokens", action="store_true",
+                    help="corpus mode: also write the neural model's tokens before the word (and bos)")
+    ap.add_argument("--sloppy", type=float, default=0.0, help="0 = precise; 1-3 = less and less careful")
     ap.add_argument("--cased", action="store_true",
                     help="also capitalized words inside a sentence (German nouns), not only lowercase ones")
     a = ap.parse_args()
     rnd = random.Random(a.seed)
     keys = layout(a.layout)
+    if a.items:
+        lay = [{"c": c, "x": x, "y": y} for c, (x, y) in sorted(keys.items())]
+        with open(a.corpus, encoding="utf-8") as f, open(a.out, "w") as o:
+            for line in f:
+                it = json.loads(line)
+                if not base(it["target"], keys):
+                    continue
+                xs, ys, ts = gesture(it["target"], keys, rnd, a.sloppy)
+                it.update({"layout": lay, "x": xs, "y": ys, "t": ts})
+                o.write(json.dumps(it, ensure_ascii=False) + "\n")
+        return
     if a.words:
         lay = [{"c": c, "x": x, "y": y} for c, (x, y) in sorted(keys.items())]
         with open(a.corpus, encoding="utf-8") as f, open(a.out, "w") as o:
@@ -147,6 +195,29 @@ def main():
     lay = [{"c": c, "x": x, "y": y} for c, (x, y) in sorted(keys.items())]
     written = 0
     with open(a.out, "w") as o:
+        while written < a.n and a.tokens:
+            # the tokens before the word as the keyboard gives them to the neural model, and the n-gram
+            # context words of the same sentence, like tools/lm/make_lm_eval_set.py (but any word may be
+            # the target, also one the neural vocabulary lacks)
+            toks = TOKEN.findall(rnd.choice(lines))
+            idx = [i for i, w in enumerate(toks) if len(w) >= a.min_len and w.isalpha() and base(w, keys)
+                   and (w.lower() == w or a.cased and i > 0 and w[0].isupper() and w[1:].islower())]
+            if not idx:
+                continue
+            i = rnd.choice(idx)
+            norm = ["<num>" if t[0].isdigit() else t.lower().replace("’", "'") for t in toks[:i]]
+            context = []
+            for t in reversed(toks[:i]):
+                if t in ".!?" or len(context) == 3:
+                    break
+                if t[0].isalpha():
+                    context.insert(0, t)
+                elif t != ",":
+                    break
+            xs, ys, ts = gesture(toks[i], keys, rnd, a.sloppy)
+            o.write(json.dumps({"target": toks[i], "lang": a.lang, "context": context, "tokens": norm[-31:],
+                                "bos": i <= 31, "layout": lay, "x": xs, "y": ys, "t": ts}, ensure_ascii=False) + "\n")
+            written += 1
         while written < a.n:
             words = WORD.findall(rnd.choice(lines))
             # plain words only, so that earlier evaluation sets stay reproducible
@@ -155,7 +226,7 @@ def main():
             if not idx:
                 continue
             i = rnd.choice(idx)
-            xs, ys, ts = gesture(words[i], keys, rnd)
+            xs, ys, ts = gesture(words[i], keys, rnd, a.sloppy)
             o.write(json.dumps({"target": words[i], "lang": a.lang, "context": [w for w in words[max(0, i - 3):i]],
                                 "layout": lay, "x": xs, "y": ys, "t": ts}, ensure_ascii=False) + "\n")
             written += 1
