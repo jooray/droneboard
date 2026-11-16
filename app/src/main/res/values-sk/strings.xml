@@ -213,7 +213,7 @@
     <string name="localized_number_row_summary">Uprednostňujte lokalizované číslice pred latinskými</string>
     <string name="number_row_hints">Zobraziť nápovedu v riadku s číslami</string>
     <string name="save_subtype_per_app">Zapamätať si jazyk pre každú aplikáciu</string>
-    <string name="show_hints">Zobraziť tipy k klávesám</string>
+    <string name="show_hints">Zobraziť nápovedu na klávesoch</string>
     <string name="show_hints_summary">Zobraziť tipy pri dlhom stlačení</string>
     <string name="popup_order_and_hint_source">Zdroj poradia klávesov a tipov pre vyskakovacie okná</string>
     <string name="hint_source">Vyberte zdroj nápovedy</string>

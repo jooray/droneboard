@@ -86,7 +86,7 @@ X["sk"] = dict(
         ]),
         ("písanie", [
             ("podržaním klávesu získate diakritiku a symboly",
-             "Podržte kláves a zobrazia sa ďalšie znaky, napríklad písmená s diakritikou a symboly. Prstom prejdite na ten, ktorý chcete. Malé znaky v rohu klávesu ukazujú, čo sa skrýva pod dlhým stlačením. Sú predvolene zapnuté: <strong>Nastavenia → Predvoľby → Zobraziť tipy k klávesám</strong>."),
+             "Podržte kláves a zobrazia sa ďalšie znaky, napríklad písmená s diakritikou a symboly. Prstom prejdite na ten, ktorý chcete. Malé znaky v rohu klávesu ukazujú, čo sa skrýva pod dlhým stlačením. Sú predvolene zapnuté: <strong>Nastavenia → Predvoľby → Zobraziť nápovedu na klávesoch</strong>."),
             ("píšte potiahnutím po písmenách",
              "Prejdite prstom po písmenách slova a nezdvíhajte ho, až na konci. Droneboard slovo napíše a doplní medzeru. Je to predvolene zapnuté (<strong>Nastavenia → Písanie gestami</strong>). <strong>Šírka hľadania pri písaní potiahnutím</strong> na tej istej obrazovke vyvažuje rýchlosť a presnosť, odporúčaná hodnota je 200."),
             ("miešajte jazyky bez prepínania",
