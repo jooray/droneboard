@@ -183,7 +183,9 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onCustomRequest(request: KeyboardActionListener.CustomAction) = when (request) {
         KeyboardActionListener.CustomAction.SHOW_INPUT_METHOD_PICKER -> latinIME.showInputPickerDialog()
         KeyboardActionListener.CustomAction.TOUCHPAD_ON -> {
-            keyboardSwitcher.mainKeyboardView?.alpha = 0.5f
+            // Droneboard: clearly visible (0.5 was hard to notice on dark themes, and without vibration it
+            // was the only sign that the trackpad is on); like Gboard, the keys almost disappear
+            keyboardSwitcher.mainKeyboardView?.alpha = 0.15f
             true
         }
         KeyboardActionListener.CustomAction.TOUCHPAD_OFF -> {
