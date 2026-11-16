@@ -32,8 +32,8 @@ android {
         applicationId = "today.cypherpunk.droneboard"
         minSdk = 21
         targetSdk = 37
-        versionCode = 5015
-        versionName = "0.1.15"
+        versionCode = 5016
+        versionName = "0.1.16"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
