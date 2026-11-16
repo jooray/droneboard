@@ -158,3 +158,15 @@ fun String.withHtmlLink(link: String) = "<a href='$link'>$this</a>"
 
 /** Convenience for converting dp to px, int -> int */
 fun Int.dpToPx(resources: Resources) = TypedValueCompat.dpToPx(this.toFloat(), resources.displayMetrics).toInt()
+
+/**
+ * Views that fit system windows and are attached after the window's insets pass (e.g. the emoji and
+ * clipboard views, inflated from ViewStubs on first use) never receive window insets on their own,
+ * so their navigation bar bottom padding stays 0 and their bottom row ends up behind the
+ * navigation bar. Apply the window's current insets right away and request a new insets pass.
+ */
+fun View.applyWindowInsetsAfterLateAttach() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        rootWindowInsets?.let { dispatchApplyWindowInsets(it) }
+    requestApplyInsets()
+}

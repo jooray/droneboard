@@ -49,6 +49,7 @@ import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.ResourceUtils;
 
 import static helium314.keyboard.latin.common.Constants.NOT_A_COORDINATE;
@@ -217,6 +218,13 @@ public final class EmojiPalettesView extends LinearLayout
         mEmojiCategory = new EmojiCategory(context, layoutSet, emojiPalettesViewAttr);
         emojiPalettesViewAttr.recycle();
         setFitsSystemWindows(true);
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        // inflated lazily from a ViewStub: without this the navigation bar padding is missing
+        KtxKt.applyWindowInsetsAfterLateAttach(this);
     }
 
     @Override
