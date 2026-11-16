@@ -4,6 +4,7 @@ Called from build.py, which passes in the shared copy (T) for the header and foo
 here are written by us and may contain HTML.
 """
 import crosspromo
+import tips
 from html import escape
 
 OSTT = "https://zapstore.dev/apps/app.offlinespeechtotext"
@@ -239,6 +240,7 @@ def page(code, t, langs, site):
         <li><a href="{home}#privacy">{nav['privacy']}</a></li>
         <li><a href="{home}#install">{nav['install']}</a></li>
         <li><a href="{home}#nostr">{nav['nostr']}</a></li>
+        <li><a href="{home}{tips.PATH}">{tips.LABEL[code]}</a></li>
       </ul>
       <ul class="langs" aria-label="{e(t['langlabel'])}">{switcher}</ul>
     </nav>
@@ -280,7 +282,7 @@ def page(code, t, langs, site):
     <h2 id="tip-h">{e(d['tip_h'])}</h2>
     {tip}
   </div>
-  <p class="inst-note"><a href="{home}">{e(d['back'])}</a> · <a href="{OSTT}">Offline Speech to Text · Zapstore</a></p>
+  <p class="inst-note"><a href="{home}">{e(d['back'])}</a> · <a href="{OSTT}">Offline Speech to Text · Zapstore</a> · <a href="{home}{tips.PATH}">{e(tips.LABEL_LONG[code])}</a></p>
 </section>
 
 {crosspromo.section(code, root, '#languages', compact=True)}

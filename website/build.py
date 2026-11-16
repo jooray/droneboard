@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # no __pycache__ in the deployed folder
 import dictation  # noqa: E402  the dictation subpage
+import tips  # noqa: E402  the tips subpage
 import crosspromo  # noqa: E402  cross-promotion block
 
 ROOT = Path(__file__).resolve().parent
@@ -589,6 +590,7 @@ def page(code):
         <li><a href="#privacy">{nav['privacy']}</a></li>
         <li><a href="#install">{nav['install']}</a></li>
         <li><a href="#nostr">{nav['nostr']}</a></li>
+        <li><a href="{tips.PATH}">{tips.LABEL[code]}</a></li>
       </ul>
       <ul class="langs" aria-label="{e(t['langlabel'])}">{switcher}</ul>
     </nav>
@@ -616,6 +618,7 @@ def page(code):
     <ol class="tracks b">{coming}</ol>
   </div>
   <div class="shots">{shots}</div>
+  <p class="inst-note">{tips.MAIN_NOTE[code].format(href=tips.PATH)}</p>
 </section>
 
 <figure class="held">
@@ -706,6 +709,7 @@ def main():
         out.write_text(page(code), encoding="utf-8")
         print("wrote", out.relative_to(ROOT))
     dictation.write_pages(ROOT, T, LANGS, SITE)
+    tips.write_pages(ROOT, T, LANGS, SITE)
 
 
 if __name__ == "__main__":
