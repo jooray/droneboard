@@ -121,3 +121,47 @@ targets are compounds that the 300,000-word list lacks.
 
 Beam 100 → 200: recordings (106, sk + en) top-3 92.5 → 94.3, sink-or-swipe Czech 78.2 / 92.1 →
 78.6 / 92.6.
+
+## Tap typing end to end, 16 Nov 2026
+
+`lm-eval` scores the model's own top 3, which is not what the suggestion strip shows. The strip has
+three slots for the next word; while typing, the centre echoes the typed word, so two slots are left
+for words, and one when an emoji takes the right slot. `TapPredictionEval` (app unit test, skipped
+unless `TAP_EVAL_DIR` is set) replays held-out text through what the app does: the AOSP dictionaries
+(the real native library, built for the host), `LanguageModelSuggestions`, the facilitator's emoji and
+word rules and `Suggest`'s strip order. It counts a hit when the target is in a visible slot.
+
+```sh
+# the AOSP library for the host: compile app/src/main/jni (NativeFileList.mk: LATIN_IME_JNI_SRC_FILES
+# and src/ + LATIN_IME_CORE_SRC_FILES) with clang++ -std=c++17 -shared -fPIC -Isrc -I$JDK/include{,/darwin}
+# into $T/libjni_latinime.dylib
+.venv/bin/python -I tools/lm/make_lm_eval_set.py --work $LM --langs sk --split test --n 1000 --out $T/items-sk.jsonl
+build/swipe-replay/lm-eval --dict sk:$A/sk.kpd --dict en:$A/en.kpd --neural sk:$A --neural en:$A --mode interp \
+  --tokens --dump $T/dump-sk.jsonl --max-typed 12 $T/items-sk.jsonl          # add --fold for dump-sk-fold.jsonl
+TAP_EVAL_DIR=$T ./gradlew :app:testDebugUnitTest --tests 'helium314.keyboard.latin.lm.TapPredictionEval'
+```
+
+`--dump` writes the app's model candidates (neural and n-gram mixed, 8 words) for every prefix;
+`--fold` types the letters without accents. `TAP_EVAL_CONFIGS="base:rerank=0,modelnext=0,emoji=0;now:"`
+compares settings in one run (`aosp=`, `gap=`, `emojimin=` set the weights). The `swipePromotion`
+test measures `preferNextWordSuggestion` on `swipe-replay --out` results.
+
+Visible keystroke savings (KSS), 1000 held-out FineWeb-2 items per language, sk and cs with en as
+second language, en with sk; "fold" types without accents:
+
+| Step | sk | sk fold | en | cs | cs fold |
+|---|---|---|---|---|---|
+| 0.1.14 | 37.5 | 34.4 | 39.1 | 40.9 | 38.0 |
+| model ranks completions (accent-folded) | 46.0 | 44.8 | 47.6 | 49.5 | 47.9 |
+| + emoji only on a keyword, 3+ letters | 51.2 | 50.7 | 52.0 | 53.6 | 52.3 |
+| + next word in the model's order | 51.5 | 50.9 | 52.8 | 54.3 | 52.9 |
+| model alone, top 3 (lm-eval) | 54.4 | 53.6 | 55.8 | 57.3 | 56.4 |
+
+In 0.1.14 an emoji took the right slot in 82–89 % of typing states, now in 6–9 %. The target was
+visible after one letter in 22.0 / 20.8 / 25.0 % (sk / en / cs) of items, now 39.2 / 49.0 / 43.8 %.
+The dictionaries' rank weight 0.35 was best among 0, 0.25, 0.35, 0.5, 1 and 2 (0.25–0.5 within
+0.3 pp); it keeps their spatial evidence for typos, which this eval (exact letters) does not test.
+
+`preferNextWordSuggestion` (a next-word prediction among the swipe candidates replaces the first) on
+FUTO Swipe results, top-1: recordings 82.1 → 82.1, synthetic sk 84.9 → 84.2, en 93.5 → 92.0,
+cs 89.0 → 87.1, sink-or-swipe cs 78.3 → 77.9. It is off for the FUTO decoder now.
