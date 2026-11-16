@@ -15,8 +15,3 @@
 
 # FUTO Swipe JNI (libdroneswipe.so binds to this class name)
 -keep class helium314.keyboard.latin.swipe.FutoSwipe { *; }
-
-# Settings export/import (SettingsTransfer) finds pref keys and their default types by reflection
--keepclassmembers class helium314.keyboard.latin.settings.Settings { public static final java.lang.String PREF*; }
--keepclassmembers class helium314.keyboard.latin.settings.DebugSettings { public static final java.lang.String PREF*; }
--keepclassmembers class helium314.keyboard.latin.settings.Defaults { static *** PREF*; }
