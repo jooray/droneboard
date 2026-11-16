@@ -299,3 +299,48 @@ table.stats tr.us th, table.stats tr.us td { color: var(--ink); }
   .xp-list li { grid-template-columns: 3rem minmax(0, 1fr); }
   .xp-links { grid-column: 2; margin-top: 0.8rem; }
 }
+
+/* ───── tips: one small looping animation per tip (drawn by tipanim.py, keyframes inlined per page) ───── */
+.ta {
+  --ta-kb: #1e2227; --ta-key: #3a4249; --ta-fn: #2c3338; --ta-pop: #4c565e; --ta-label: #e4e9eb; --ta-bg: var(--slate-deep);
+  display: block; width: 100%; max-width: 20rem; height: auto; margin-top: 1rem;
+}
+.ta text { font-family: var(--sans); }
+.ta .kbp { fill: var(--ta-kb); }
+.ta .k { fill: var(--ta-key); }
+.ta .kf { fill: var(--ta-fn); }
+.ta .kl { fill: var(--ta-label); font-size: 10px; text-anchor: middle; }
+.ta .ks { font-size: 7.5px; fill: var(--mist); letter-spacing: 0.04em; }
+.ta .kh { fill: var(--mist); font-size: 6px; text-anchor: end; }
+.ta .pl { font-size: 11px; }
+.ta .cl { text-anchor: start; }
+.ta .ft { fill: var(--ink); font: 13px ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+.ta .fe, .ta .se { font-size: 14px; }
+.ta .se { text-anchor: middle; }
+.ta .sg { fill: var(--fog); font-size: 11px; text-anchor: middle; }
+.ta .ln { stroke: var(--rule); }
+.ta .cur { fill: var(--red-lit); }
+.ta .cover { fill: var(--ta-bg); }
+.ta .sel { fill: rgba(208, 88, 75, 0.42); }
+.ta .ic { fill: none; stroke: var(--fog); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.ta .icf { fill: var(--fog); }
+.ta .gr { stroke-dasharray: 2.2 2.1; stroke-width: 2.4; stroke-linecap: butt; }
+.ta .icr { stroke: var(--red-lit); }
+.ta .fg { fill: rgba(242, 242, 238, 0.2); stroke: var(--ink); stroke-width: 1.4; }
+.ta .rg { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.ta .rgr { fill: none; stroke: var(--red-lit); stroke-width: 1.4; }
+.ta .trail { fill: none; stroke: var(--red-lit); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; }
+.ta .pop { fill: var(--ta-pop); }
+.ta .hl { fill: var(--red); }
+.ta .fr { fill: none; stroke: var(--ink); stroke-dasharray: 3 3; opacity: 0.7; }
+.ta .hd { fill: var(--ink); }
+.ta .act { fill: rgba(242, 242, 238, 0.16); }
+.tracks.tips li { grid-template-columns: 3rem minmax(0, 15rem) minmax(0, 1fr); grid-template-areas: "no h p" "no fig p"; grid-template-rows: auto 1fr; }
+.tracks.tips .no { grid-area: no; }
+.tracks.tips h3 { grid-area: h; }
+.tracks.tips .ta { grid-area: fig; align-self: start; }
+.tracks.tips p { grid-area: p; }
+@media (max-width: 760px) {
+  .tracks.tips li { grid-template-columns: 2.4rem minmax(0, 1fr); grid-template-areas: "no h" ". fig" ". p"; grid-template-rows: auto; }
+  .tracks.tips p { margin-top: 1rem; }
+}

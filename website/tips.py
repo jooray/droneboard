@@ -5,6 +5,7 @@ here are written by us and may contain HTML. Every tip was checked against the a
 defaults (Defaults.kt); UI names are the app's own string resources in each language.
 """
 import crosspromo
+import tipanim
 from html import escape
 
 PATH = "tips/"
@@ -32,11 +33,11 @@ X["en"] = dict(
     groups=[
         ("text and cursor", [
             ("slide along the space bar to move the cursor",
-             "Put a finger on the space bar and slide left or right: the cursor follows. It works out of the box. What the slide does can be changed in <strong>Settings → Advanced → Horizontal spacebar swipe gesture</strong>."),
-            ("hold the space bar for a trackpad",
-             "Press and hold the space bar, then slide anywhere on the keyboard to steer the cursor like on a laptop trackpad. Lifting your finger does not type a space. It is on by default; <strong>Settings → Advanced → Long press on space bar</strong> offers Trackpad, Switch language or keyboard, or None."),
+             "Put a finger on the space bar and start sliding left or right straight away: the cursor moves letter by letter as you go. If you keep the finger still first, you get the trackpad from the next tip instead. It works out of the box. What the slide does can be changed in <strong>Settings → Advanced → Horizontal spacebar swipe gesture</strong>."),
+            ("hold the space bar still for a trackpad",
+             "Press the space bar and keep your finger still for about half a second, until the phone gives a short vibration. Then move anywhere over the keyboard and the cursor follows, like on a laptop trackpad. Lifting your finger does not type a space. If you start sliding right away, you get the other gesture: the cursor moves letter by letter along the space bar. The trackpad is on by default; <strong>Settings → Advanced → Long press on space bar</strong> offers Trackpad, Switch language or keyboard, or None."),
             ("slide left from the delete key to select and delete",
-             "Hold the delete key and slide left: the text before the cursor is selected word by word, and lifting your finger deletes it. Slide back to the right to select less. <strong>Settings → Advanced → Delete swipe</strong> switches between Words (the default) and Letters."),
+             "Put your finger on the delete key and slide left straight away, without waiting. The text before the cursor gets selected word by word, and sliding back to the right selects less. Lifting your finger deletes the selection. If you hold the key instead, it keeps deleting one character after another, as usual. <strong>Settings → Advanced → Delete swipe</strong> switches between Words (the default) and Letters."),
         ]),
         ("typing", [
             ("long-press for accents and symbols",
@@ -78,11 +79,11 @@ X["sk"] = dict(
     groups=[
         ("text a kurzor", [
             ("potiahnutím po medzerníku posuniete kurzor",
-             "Priložte prst na medzerník a potiahnite doľava alebo doprava, kurzor ide s ním. Funguje to hneď. Čo má potiahnutie robiť, zmeníte v <strong>Nastavenia → Rozšírené → Gesto potiahnutia horizontálne po medzerníku</strong>."),
-            ("podržaním medzerníka dostanete trackpad",
-             "Podržte medzerník a potom ťahajte prstom kdekoľvek po klávesnici: kurzor sa hýbe ako na trackpade notebooku. Po zdvihnutí prsta sa nevloží medzera. Je to predvolene zapnuté. V <strong>Nastavenia → Rozšírené → Podržanie medzerníka</strong> môžete vybrať Trackpad, Prepnúť jazyk alebo klávesnicu, alebo Žiadne."),
+             "Priložte prst na medzerník a hneď ním potiahnite doľava alebo doprava. Kurzor sa posúva po písmenách. Ak prst najprv necháte chvíľu na mieste, dostanete namiesto toho trackpad z ďalšieho tipu. Funguje to bez nastavovania. Čo má potiahnutie robiť, zmeníte v <strong>Nastavenia → Rozšírené → Gesto potiahnutia horizontálne po medzerníku</strong>."),
+            ("podržte medzerník bez pohnutia a dostanete trackpad",
+             "Stlačte medzerník a nechajte prst asi pol sekundy na mieste, kým telefón krátko nezavibruje. Potom ťahajte prstom kamkoľvek po klávesnici a kurzor ide za ním ako na trackpade notebooku. Po zdvihnutí prsta sa medzera nevloží. Ak začnete ťahať hneď, je to iné gesto: kurzor sa posúva po písmenách pozdĺž medzerníka. Trackpad je predvolene zapnutý. V <strong>Nastavenia → Rozšírené → Podržanie medzerníka</strong> môžete vybrať Trackpad, Prepnúť jazyk alebo klávesnicu, alebo Žiadne."),
             ("potiahnutím od mazania doľava text označíte a zmažete",
-             "Podržte kláves mazania a potiahnite doľava: text pred kurzorom sa označuje po slovách a po zdvihnutí prsta sa zmaže. Potiahnutím späť doprava označíte menej. V <strong>Nastavenia → Rozšírené → Potiahnutím odstrániť</strong> si vyberiete Slová (predvolené) alebo Písmená."),
+             "Položte prst na kláves mazania a hneď, bez čakania, ním potiahnite doľava. Text pred kurzorom sa označuje po slovách, potiahnutím späť doprava označíte menej. Keď prst zdvihnete, označený text sa zmaže. Ak kláves podržíte, maže ako zvyčajne znak po znaku. V <strong>Nastavenia → Rozšírené → Potiahnutím odstrániť</strong> si vyberiete Slová (predvolené) alebo Písmená."),
         ]),
         ("písanie", [
             ("podržaním klávesu získate diakritiku a symboly",
@@ -124,11 +125,11 @@ X["cs"] = dict(
     groups=[
         ("text a kurzor", [
             ("tažením po mezerníku posunete kurzor",
-             "Položte prst na mezerník a táhněte doleva nebo doprava, kurzor jde s ním. Funguje to hned. Co má tažení dělat, změníte v <strong>Nastavení → Rozšířená nastavení → Vodorovné gesto přejetí mezerníku</strong>."),
-            ("podržením mezerníku dostanete trackpad",
-             "Podržte mezerník a pak jezděte prstem kamkoli po klávesnici: kurzor se hýbe jako na trackpadu notebooku. Po zvednutí prstu se nevloží mezera. Je to ve výchozím nastavení zapnuté. V <strong>Nastavení → Rozšířená nastavení → Podržení mezerníku</strong> můžete zvolit Trackpad, Přepnout jazyk nebo klávesnici, nebo Žádné."),
+             "Položte prst na mezerník a hned s ním táhněte doleva nebo doprava. Kurzor se posouvá po písmenech. Když prst nejdřív chvíli necháte na místě, dostanete místo toho trackpad z dalšího tipu. Funguje to bez nastavování. Co má tažení dělat, změníte v <strong>Nastavení → Rozšířená nastavení → Vodorovné gesto přejetí mezerníku</strong>."),
+            ("podržte mezerník bez hnutí a dostanete trackpad",
+             "Stiskněte mezerník a nechte prst asi půl sekundy na místě, dokud telefon krátce nezavibruje. Pak jezděte prstem kamkoli po klávesnici a kurzor jde za ním jako na trackpadu notebooku. Po zvednutí prstu se mezera nevloží. Když začnete táhnout hned, je to jiné gesto: kurzor se posouvá po písmenech podél mezerníku. Trackpad je ve výchozím nastavení zapnutý. V <strong>Nastavení → Rozšířená nastavení → Podržení mezerníku</strong> můžete zvolit Trackpad, Přepnout jazyk nebo klávesnici, nebo Žádné."),
             ("tažením od mazání doleva text označíte a smažete",
-             "Podržte klávesu mazání a táhněte doleva: text před kurzorem se označuje po slovech a po zvednutí prstu se smaže. Tažením zpět doprava označíte méně. V <strong>Nastavení → Rozšířená nastavení → Mazat posunutím</strong> si vyberete Slova (výchozí) nebo Písmena."),
+             "Položte prst na klávesu mazání a hned, bez čekání, s ním táhněte doleva. Text před kurzorem se označuje po slovech, tažením zpět doprava označíte méně. Když prst zvednete, označený text se smaže. Když klávesu podržíte, maže jako obvykle znak po znaku. V <strong>Nastavení → Rozšířená nastavení → Mazat posunutím</strong> si vyberete Slova (výchozí) nebo Písmena."),
         ]),
         ("psaní", [
             ("podržením klávesy získáte diakritiku a symboly",
@@ -170,11 +171,11 @@ X["de"] = dict(
     groups=[
         ("text und cursor", [
             ("über die leertaste wischen bewegt den cursor",
-             "Legen Sie den Finger auf die Leertaste und wischen Sie nach links oder rechts: Der Cursor folgt. Das geht ohne Einrichtung. Was die Geste tut, ändern Sie unter <strong>Einstellungen → Erweitert → Horizontale Wischgeste der Leertaste</strong>."),
-            ("leertaste halten für das trackpad",
-             "Halten Sie die Leertaste gedrückt und fahren Sie dann irgendwo über die Tastatur: Der Cursor bewegt sich wie auf dem Trackpad eines Laptops. Beim Loslassen wird kein Leerzeichen getippt. Das ist standardmäßig an. Unter <strong>Einstellungen → Erweitert → Lange auf die Leertaste drücken</strong> wählen Sie Trackpad, Sprache oder Tastatur wechseln oder Nichts."),
+             "Legen Sie den Finger auf die Leertaste und wischen Sie sofort nach links oder rechts: Der Cursor wandert Buchstabe für Buchstabe mit. Lassen Sie den Finger zuerst ruhig liegen, bekommen Sie stattdessen das Trackpad aus dem nächsten Tipp. Das geht ohne Einrichtung. Was die Geste tut, ändern Sie unter <strong>Einstellungen → Erweitert → Horizontale Wischgeste der Leertaste</strong>."),
+            ("leertaste ruhig halten für das trackpad",
+             "Drücken Sie die Leertaste und lassen Sie den Finger etwa eine halbe Sekunde ruhig liegen, bis das Telefon kurz vibriert. Dann fahren Sie irgendwo über die Tastatur, und der Cursor folgt wie auf dem Trackpad eines Laptops. Beim Loslassen wird kein Leerzeichen getippt. Wischen Sie dagegen sofort los, ist das die andere Geste: Der Cursor wandert Buchstabe für Buchstabe entlang der Leertaste. Das Trackpad ist standardmäßig an. Unter <strong>Einstellungen → Erweitert → Lange auf die Leertaste drücken</strong> wählen Sie Trackpad, Sprache oder Tastatur wechseln oder Nichts."),
             ("von der löschtaste nach links wischen, um zu markieren und zu löschen",
-             "Halten Sie die Löschtaste und wischen Sie nach links: Der Text vor dem Cursor wird wortweise markiert, und beim Loslassen wird er gelöscht. Wischen Sie zurück nach rechts, markieren Sie weniger. Unter <strong>Einstellungen → Erweitert → Löschen durch Wischen</strong> stellen Sie Wörter (Standard) oder Buchstaben ein."),
+             "Legen Sie den Finger auf die Löschtaste und wischen Sie sofort nach links, ohne zu warten. Der Text vor dem Cursor wird wortweise markiert; wischen Sie zurück nach rechts, markieren Sie weniger. Beim Loslassen wird die Markierung gelöscht. Halten Sie die Taste dagegen gedrückt, löscht sie wie gewohnt Zeichen für Zeichen. Unter <strong>Einstellungen → Erweitert → Löschen durch Wischen</strong> stellen Sie Wörter (Standard) oder Buchstaben ein."),
         ]),
         ("tippen", [
             ("lange drücken für akzente und symbole",
@@ -216,11 +217,11 @@ X["es"] = dict(
     groups=[
         ("texto y cursor", [
             ("desliza por la barra espaciadora para mover el cursor",
-             "Pon el dedo en la barra espaciadora y deslízalo a izquierda o derecha: el cursor te sigue. Funciona sin configurar nada. Lo que hace el gesto lo cambias en <strong>Ajustes → Avanzado → Gesto de deslizar horizontalmente barra espaciadora</strong>."),
-            ("mantén la barra espaciadora para usar un panel táctil",
-             "Mantén pulsada la barra espaciadora y desliza el dedo por cualquier parte del teclado: el cursor se mueve como en el panel táctil de un portátil. Al levantar el dedo no se escribe un espacio. Viene activado de serie. En <strong>Ajustes → Avanzado → Mantener pulsada la barra espaciadora</strong> puedes elegir Panel táctil, Cambiar de idioma o de teclado, o Ninguna."),
+             "Pon el dedo en la barra espaciadora y deslízalo enseguida a izquierda o derecha: el cursor avanza letra a letra. Si primero dejas el dedo quieto, obtienes el panel táctil del siguiente consejo. Funciona sin configurar nada. Lo que hace el gesto lo cambias en <strong>Ajustes → Avanzado → Gesto de deslizar horizontalmente barra espaciadora</strong>."),
+            ("mantén quieta la barra espaciadora para usar un panel táctil",
+             "Pulsa la barra espaciadora y deja el dedo quieto medio segundo, hasta que el teléfono vibre un instante. Después mueve el dedo por cualquier parte del teclado y el cursor lo sigue como en el panel táctil de un portátil. Al levantar el dedo no se escribe un espacio. Si empiezas a deslizar enseguida, es el otro gesto: el cursor avanza letra a letra por la barra espaciadora. El panel táctil viene activado de serie. En <strong>Ajustes → Avanzado → Mantener pulsada la barra espaciadora</strong> puedes elegir Panel táctil, Cambiar de idioma o de teclado, o Ninguna."),
             ("desliza a la izquierda desde borrar para seleccionar y borrar",
-             "Mantén pulsada la tecla de borrar y desliza a la izquierda: el texto anterior al cursor se selecciona palabra a palabra y, al levantar el dedo, se borra. Si vuelves hacia la derecha, seleccionas menos. En <strong>Ajustes → Avanzado → Borrar deslizando</strong> eliges Palabras (lo predeterminado) o Letras."),
+             "Pon el dedo en la tecla de borrar y deslízalo a la izquierda enseguida, sin esperar. El texto anterior al cursor se selecciona palabra a palabra; si vuelves hacia la derecha, seleccionas menos. Al levantar el dedo se borra la selección. Si mantienes pulsada la tecla, borra letra a letra como siempre. En <strong>Ajustes → Avanzado → Borrar deslizando</strong> eliges Palabras (lo predeterminado) o Letras."),
         ]),
         ("escribir", [
             ("mantén una tecla para acentos y símbolos",
@@ -276,17 +277,19 @@ def page(code, t, langs, site):
     alternates += f'\n<link rel="alternate" hreflang="x-default" href="{url("en")}">'
     nav = t["nav"]
 
+    svgs, anim_css = tipanim.build(code)
+    assert sum(len(tips) for _, tips in d["groups"]) == len(svgs), "one animation per tip"
     panels = []
     n = 0
     for gi, (gtitle, tips) in enumerate(d["groups"]):
         items = []
         for title, text in tips:
             n += 1
-            items.append(f'<li><span class="no">{n:02d}</span><h3>{title}</h3><p>{text.replace("{dict}", DICT_HREF)}</p></li>')
+            items.append(f'<li><span class="no">{n:02d}</span><h3>{title}</h3>{svgs[n - 1]}<p>{text.replace("{dict}", DICT_HREF)}</p></li>')
         panels.append(
             f'<section class="panel" id="g{gi + 1}" aria-labelledby="g{gi + 1}-h">\n'
             f'  <h2 id="g{gi + 1}-h">{e(gtitle)}</h2>\n'
-            f'  <ol class="tracks">{"".join(items)}</ol>\n'
+            f'  <ol class="tracks tips">{"".join(items)}</ol>\n'
             f"</section>"
         )
     panels = "\n\n".join(panels)
@@ -312,6 +315,7 @@ def page(code, t, langs, site):
 <link rel="apple-touch-icon" href="{root}img/apple-touch-icon.png">
 <link rel="preload" href="{root}fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{root}style.css">
+<style>{anim_css}</style>
 </head>
 <body>
 <a class="skip" href="#g1">{e(t['skip'])}</a>
