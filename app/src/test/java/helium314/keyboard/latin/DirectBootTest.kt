@@ -107,6 +107,8 @@ class DirectBootTest {
         assertFailsWith<IllegalStateException> { SwipeGestureDecoder.extract(ctx, "en.kpd") }
         NeuralLanguageModel.preload(ctx, listOf("en"))
         assertTrue(NeuralLanguageModel.predict(listOf("good"), "", listOf(Locale.ENGLISH), 5).isEmpty())
+        // the swipe ranking gets no neural model (and none starts loading) before the first unlock
+        assertNull(NeuralLanguageModel.withSwipeModels(ctx, listOf("en", "sk")) { it })
         assertTrue(NgramLanguageModel.predict(listOf("good"), "mor", listOf(Locale.ENGLISH), 5).isEmpty())
         assertNull(DictionaryFactory.extractBuiltInEmojiDict(ctx, Locale.ENGLISH))
         assertTrue(EmojiSearchIndex.search(ctx, "rocket", listOf(Locale.ENGLISH)).isEmpty())

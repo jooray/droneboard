@@ -39,6 +39,7 @@ struct Session {
     // still holds tries pointing into it
     std::unique_ptr<KpDictionary> retired_user;
     float last_ms = 0;
+    float neural_ms = 0;  // of last_ms: the neural fusion
     float tie_margin = 0.0f;  // language continuity tie-breaker (ranker.hpp), 0 = off
 };
 
@@ -206,12 +207,17 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetLayout(JNIEnv* env, jclas
 // context: up to a few words before the cursor, oldest first (the last one is the previous word);
 // prior: per-dictionary language prior (may be null); kappa/cap: weight and floor of the
 // context language bonus (see ranker.hpp).
+// models: neural models (neural_lm.hpp) of the layout's dictionaries in their order, or null; with
+// them, the candidates are reranked with fuse_neural from the normalized tokens before the cursor
+// (bos: they start at the beginning of the text) and fusion = NeuralFusion's fields in order (null =
+// defaults). A 0 handle (model not loaded) switches the fusion off.
 JNIEXPORT jobjectArray JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeRecognize(JNIEnv* env, jclass, jlong h, jfloatArray jx,
                                                              jfloatArray jy, jfloatArray jt, jobjectArray jcontext,
                                                              jfloatArray jprior, jfloat kappa, jfloat cap,
                                                              jint beam, jint maxResults, jfloatArray outScores,
-                                                             jintArray outDict) {
+                                                             jintArray outDict, jlongArray models, jobjectArray jtokens,
+                                                             jboolean bos, jfloatArray jfusion) {
     auto* s = (Session*)(uintptr_t)h;
     jclass strCls = env->FindClass("java/lang/String");
     if (!s || !s->initialized || s->dicts.empty()) return env->NewObjectArray(0, strCls, nullptr);
@@ -236,12 +242,49 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeRecognize(JNIEnv* env, jclas
         env->GetFloatArrayRegion(jprior, 0, (jsize)prior.size(), prior.data());
     }
 
+    KpDictionary* user = s->user && s->dicts.back() == s->user.get() ? s->user.get() : nullptr;
+    // neural fusion: one model per language dictionary (the user dictionary is last and has none)
+    std::vector<droneswipe::NeuralLanguageInput> nin;
+    std::vector<std::string> tokens;
+    droneswipe::NeuralFusion fusion;
+    if (models) {
+        const size_t nlang = s->dicts.size() - (user ? 1 : 0);
+        jsize nm = env->GetArrayLength(models);
+        std::vector<jlong> mh(nm);
+        env->GetLongArrayRegion(models, 0, nm, mh.data());
+        if ((size_t)nm == nlang && std::all_of(mh.begin(), mh.end(), [](jlong m) { return m != 0; })) {
+            for (size_t i = 0; i < nlang; ++i) nin.push_back({(droneswipe::NeuralLm*)(uintptr_t)mh[i], s->dicts[i]});
+        }
+        if (jtokens) {
+            jsize nt = env->GetArrayLength(jtokens);
+            for (jsize i = 0; i < nt; ++i) {
+                auto js = (jstring)env->GetObjectArrayElement(jtokens, i);
+                tokens.push_back(jstr(env, js));
+                if (js) env->DeleteLocalRef(js);
+            }
+        }
+        if (jfusion && env->GetArrayLength(jfusion) >= 7) {
+            float p[7];
+            env->GetFloatArrayRegion(jfusion, 0, 7, p);
+            fusion = {p[0], p[1], p[2], p[3], p[4], p[5], p[6]};
+        }
+    }
+
     auto t0 = std::chrono::steady_clock::now();
     // the whole final beam is ranked below; the engine's own top-k would cut it by its internal score
     auto res = s->engine.recognize(x.data(), y.data(), t.data(), (size_t)n, {}, std::max(beam, 32), beam);
     auto bonus = droneswipe::language_bonus(s->dicts, context, prior, kappa, cap);
-    KpDictionary* user = s->user && s->dicts.back() == s->user.get() ? s->user.get() : nullptr;
-    auto cands = droneswipe::rank_candidates(res, s->dicts, bonus, context, maxResults, user, s->tie_margin);
+    // fusion reranks a longer list (tools/swipe-replay tuned it on the 40 best)
+    auto cands = droneswipe::rank_candidates(res, s->dicts, bonus, context, nin.empty() ? maxResults : std::max(maxResults, 40),
+                                             user, s->tie_margin);
+    if (!nin.empty()) {
+        auto t1 = std::chrono::steady_clock::now();
+        droneswipe::fuse_neural(cands, s->dicts, user, nin, tokens, bos, fusion);
+        s->neural_ms = (float)std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t1).count();
+        if ((int)cands.size() > maxResults) cands.resize(maxResults);
+    } else {
+        s->neural_ms = 0;
+    }
     s->last_ms = (float)std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 
     jobjectArray out = env->NewObjectArray((jsize)cands.size(), strCls, nullptr);
@@ -269,6 +312,12 @@ JNIEXPORT jfloat JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastMillis(JNIEnv*, jclass, jlong h) {
     auto* s = (Session*)(uintptr_t)h;
     return s ? s->last_ms : 0.0f;
+}
+
+JNIEXPORT jfloat JNICALL
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastNeuralMillis(JNIEnv*, jclass, jlong h) {
+    auto* s = (Session*)(uintptr_t)h;
+    return s ? s->neural_ms : 0.0f;
 }
 
 JNIEXPORT void JNICALL

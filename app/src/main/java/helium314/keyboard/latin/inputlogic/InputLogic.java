@@ -2550,8 +2550,9 @@ public final class InputLogic {
         final SettingsValues settingsValues = Settings.getValues();
         mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
                 getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
-        // Droneboard: the neural language model reads the text before the cursor (cached, no IPC in most cases)
-        NeuralLanguageModel.textBeforeCursor.set(inputStyle == InputStyle.UPDATE_BATCH || inputStyle == InputStyle.TAIL_BATCH
+        // Droneboard: the neural language model reads the text before the cursor (cached, no IPC in most cases);
+        // also for the final swipe decode, which reranks with it (not for the previews while the finger moves)
+        NeuralLanguageModel.textBeforeCursor.set(inputStyle == InputStyle.UPDATE_BATCH
                 ? null : mConnection.getTextBeforeCursor(NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0));
         try {
             SuggestedWords suggestedWords = mSuggest.getSuggestedWords(

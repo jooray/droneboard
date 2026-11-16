@@ -9,6 +9,13 @@
 //          [--out pred.jsonl] in.jsonl...
 //   --k3: trigram smoothing weight (KpDictionary params.k3); --tie: language tie-breaker margin
 //   (rank_candidates tie_margin, 0 = off); --same-path: ScoringParams::same_path of every dictionary
+//   --neural lang:dir: the neural model dir/<lang>.lmb + .lmv of a dictionary's language; with models,
+//   the ranking fuses them like the keyboard (fuse_neural, NeuralFusion defaults) unless --no-fuse;
+//   --fuse w,w_max,margin,w_no_context,oov,lambda_delta,nu_delta overrides the fusion parameters
+//   --dump out.jsonl: the 40 best candidates before fusion with their score parts, the neural and
+//   n-gram log probabilities (for offline tuning)
+// The neural model gets the item's "tokens" and "bos" when present (tools/lm/make_lm_eval_set.py,
+// synth.py --items / --tokens), otherwise its context words, like the keyboard without editor text.
 //
 // Input: one gesture per line, as written by the keyboard's swipe recorder (or the bench tools):
 //   {"target": "ďakujem", "layout": [{"c": "q", "x": 0.05, "y": 0.17}, ...],
@@ -16,6 +23,7 @@
 // x/y are normalized like the keyboard does it (letter rows at 1/6, 1/2, 5/6), t in ms.
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -28,6 +36,7 @@
 #include <nlohmann/json.hpp>
 
 #include "kp_dictionary.hpp"
+#include "neural_lm.hpp"
 #include "ranker.hpp"
 #include "swipe_decoder/engine.hpp"
 #include "swipe_decoder/layout.hpp"
@@ -85,7 +94,10 @@ int main(int argc, char** argv) {
     int beam = 200, topk = 1000, context_n = 3;
     float kappa = 0.0f, cap = 4.0f, k3 = -1.0f, tie = 0.0f, same_path = -1.0f;
     std::vector<std::string> inputs;
-    std::string history_path;
+    std::string history_path, dump_path;
+    std::vector<std::pair<std::string, std::string>> neural_specs;
+    droneswipe::NeuralFusion fusion;  // the app's defaults
+    bool fuse = true;
     std::vector<float> history_params = {0.025f, 1.0f};
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -109,6 +121,15 @@ int main(int argc, char** argv) {
         else if (a == "--context") context_n = std::stoi(next());
         else if (a == "--out") out_path = next();
         else if (a == "--history") history_path = next();
+        else if (a == "--neural") { auto s = next(); auto p = s.find(':'); neural_specs.push_back({s.substr(0, p), s.substr(p + 1)}); }
+        else if (a == "--dump") dump_path = next();
+        else if (a == "--no-fuse") fuse = false;
+        else if (a == "--fuse") {
+            auto v = split(next(), ',');
+            float* f[] = {&fusion.weight, &fusion.weight_max, &fusion.margin_scale, &fusion.weight_no_context,
+                          &fusion.oov, &fusion.lambda_delta, &fusion.nu_delta};
+            for (size_t k = 0; k < v.size() && k < 7; ++k) *f[k] = std::stof(v[k]);
+        }
         else if (a == "--history-params") { history_params.clear(); for (auto& x : split(next(), ',')) history_params.push_back(std::stof(x)); }
         else inputs.push_back(a);
     }
@@ -156,6 +177,20 @@ int main(int argc, char** argv) {
     }
     std::vector<KpDictionary*> raw;
     for (auto& d : dicts) raw.push_back(d.get());
+    // neural models (dir/<lang>.lmb, .lmv) in the dictionaries' order
+    std::vector<std::unique_ptr<droneswipe::NeuralLm>> neural;
+    std::vector<droneswipe::NeuralLanguageInput> nin;
+    for (size_t i = 0; i < langs.size(); ++i)
+        for (auto& [l, dir] : neural_specs) {
+            if (l != langs[i]) continue;
+            std::string err;
+            auto m = droneswipe::NeuralLm::load(dir + "/" + l + ".lmb", dir + "/" + l + ".lmv", &err);
+            if (!m) { std::fprintf(stderr, "neural %s: %s\n", l.c_str(), err.c_str()); return 1; }
+            nin.push_back({m.get(), raw[i]});
+            neural.push_back(std::move(m));
+        }
+    std::ofstream dump;
+    if (!dump_path.empty()) dump.open(dump_path);
     std::vector<float> prior;
     for (auto& l : langs) prior.push_back(prior_map.count(l) ? prior_map[l] : 1.0f / langs.size());
 
@@ -169,7 +204,7 @@ int main(int argc, char** argv) {
 
     std::map<std::string, Stats> by_lang;
     Stats all;
-    double total_ms = 0;
+    double total_ms = 0, neural_ms = 0;
     for (auto& path : inputs) {
         std::ifstream in(path);
         std::string line;
@@ -220,7 +255,52 @@ int main(int argc, char** argv) {
             auto t0 = std::chrono::steady_clock::now();
             auto res = engine.recognize(x.data(), y.data(), t.data(), x.size(), {}, topk, beam);
             auto bonus = droneswipe::language_bonus(raw, ctx, prior, kappa, cap);
-            auto ranked = droneswipe::rank_candidates(res, raw, bonus, ctx, 18, user, tie);
+            auto ranked = droneswipe::rank_candidates(res, raw, bonus, ctx, dump.is_open() || fuse ? 40 : 18, user, tie);
+            // neural context: the item's tokens (held-out sets) or the context words, like the app
+            std::vector<std::string> ntok;
+            bool nbos = false;
+            if (j.contains("tokens")) { for (auto& w : j["tokens"]) ntok.push_back(w); nbos = j.value("bos", false); }
+            else {
+                if (j.contains("context")) for (auto& w : j["context"]) ntok.push_back(droneswipe::to_lower_utf8(w));
+                nbos = ntok.empty();
+            }
+            std::vector<float> nlp;
+            float unk = -INFINITY;
+            if (!nin.empty() && dump.is_open()) {
+                std::vector<std::string> lows;
+                for (auto& r : ranked) lows.push_back(droneswipe::to_lower_utf8(r.word));
+                nlp = droneswipe::neural_word_logp(nin, ntok, nbos, lows, 0.05f, &unk);
+            }
+            if (dump.is_open()) {
+                json o;
+                o["target"] = j["target"];
+                o["lang"] = j.contains("lang") ? j["lang"] : json("all");
+                std::string tkp0 = keypath(j["target"]);
+                o["unk"] = std::isfinite(unk) ? unk : -99.0f;
+                o["ntok"] = ntok.size();
+                o["in_beam"] = std::any_of(res.begin(), res.end(), [&](auto& r) { return r.word == tkp0; });
+                json c = json::array();
+                for (size_t i = 0; i < ranked.size(); ++i) {
+                    auto& r = ranked[i];
+                    auto* d = raw[r.dict];
+                    const std::string low = droneswipe::to_lower_utf8(r.word);
+                    const size_t nc = ctx.size();
+                    int32_t p1 = nc ? d->lower_id(ctx[nc - 1]) : -1, p2 = nc > 1 && p1 >= 0 ? d->lower_id(ctx[nc - 2]) : -1;
+                    int32_t wid = d->lower_id(low);
+                    float ng = wid >= 0 ? d->logp_ctx(p2, p1, (uint32_t)wid) : -30.0f;
+                    float nn = i < nlp.size() && std::isfinite(nlp[i]) ? nlp[i] : -99.0f;
+                    float ug = wid >= 0 ? d->logp_id((uint32_t)wid) : -30.0f;
+                    c.push_back({r.word, r.dict, r.score, r.ctc, r.len, r.freq, r.ctx, nn, ng, ug});
+                }
+                o["c"] = c;
+                dump << o.dump() << "\n";
+            }
+            if (fuse && !nin.empty()) {
+                auto t1 = std::chrono::steady_clock::now();
+                droneswipe::fuse_neural(ranked, raw, user, nin, ntok, nbos, fusion);
+                neural_ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t1).count();
+            }
+            if ((int)ranked.size() > 18) ranked.resize(18);
             total_ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 
             std::string target = j["target"];
@@ -260,6 +340,7 @@ int main(int argc, char** argv) {
     }
     for (auto& [l, s] : by_lang) if (l != "all") s.print(l.c_str());
     all.print("ALL");
-    if (all.n) std::fprintf(stderr, "decode+rank %.1f ms per swipe (Mac)\n", total_ms / all.n);
+    if (all.n) std::fprintf(stderr, "decode+rank %.1f ms per swipe (Mac), of which neural fusion %.1f ms\n",
+                            total_ms / all.n, neural_ms / all.n);
     return 0;
 }

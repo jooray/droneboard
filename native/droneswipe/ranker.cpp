@@ -36,7 +36,7 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
                                     const std::vector<float>& lang_bonus,
                                     const std::vector<std::string>& context_lower, int max_results,
                                     const KpDictionary* user, float tie_margin) {
-    std::unordered_map<std::string, std::pair<float, int>> best;
+    std::unordered_map<std::string, Ranked> best;
     const size_t nc = context_lower.size();
     const std::string prev_lower = nc ? context_lower[nc - 1] : std::string();
     const std::string prev2_lower = nc > 1 ? context_lower[nc - 2] : std::string();
@@ -45,7 +45,7 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
         if (!prev_lower.empty()) prev_id[di] = dicts[di]->lower_id(prev_lower);
         if (!prev2_lower.empty() && prev_id[di] >= 0) prev2_id[di] = dicts[di]->lower_id(prev2_lower);
     }
-    std::vector<float> scores, lps;
+    std::vector<float> scores, lps, ctxs;
     for (const auto& r : beam) {
         const float L = std::max(1.0f, r.word_length);
         for (int di = 0; di < (int)dicts.size(); ++di) {
@@ -57,12 +57,15 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
             const float base = r.ctc_score / std::pow(L, p.gamma) + p.beta * L + p.bonus + lb;
             scores.clear();
             lps.clear();
+            ctxs.clear();
             float top = -1e30f, top_lp = -1e30f;
             const bool by_context = p.same_path > 0.0f && vs->size() > 1 && d != user;
             for (uint32_t vi : *vs) {
                 const auto& v = d->variant(vi);
                 float sc = base + p.lambda * v.freq + (v.capitalized ? p.caps : 0.0f);
-                if (prev_id[di] >= 0 && p.nu != 0.0f) sc += p.nu * d->pmi3(prev2_id[di], prev_id[di], v.lower);
+                const float c = prev_id[di] >= 0 && p.nu != 0.0f ? d->pmi3(prev2_id[di], prev_id[di], v.lower) : 0.0f;
+                sc += p.nu * c;
+                ctxs.push_back(c);
                 scores.push_back(sc);
                 top = std::max(top, sc);
                 if (by_context) {
@@ -76,7 +79,8 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
                 // general score only breaks ties (capitalization of the same word)
                 float sc = by_context ? top - p.same_path * (top_lp - lps[k]) + 1e-3f * (scores[k] - top) : scores[k];
                 auto it = best.find(v.surface);
-                if (it == best.end() || sc > it->second.first) best[v.surface] = {sc, di};
+                if (it == best.end() || sc > it->second.score)
+                    best[v.surface] = {v.surface, sc, di, r.ctc_score, L, v.freq, ctxs[k]};
             }
         }
     }
@@ -86,8 +90,7 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
     for (auto& kv : best) {
         std::string lower = to_lower_utf8(kv.first);
         auto it = by_lower.find(lower);
-        if (it == by_lower.end() || kv.second.first > it->second.score)
-            by_lower[lower] = {kv.first, kv.second.first, kv.second.second};
+        if (it == by_lower.end() || kv.second.score > it->second.score) by_lower[lower] = kv.second;
     }
     std::vector<Ranked> out;
     out.reserve(by_lower.size());

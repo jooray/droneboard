@@ -24,7 +24,7 @@ foreach(v ET_INCLUDE_DIRS ET_WHOLE_ARCHIVE_LIBS ET_REGULAR_LIBS)
 endforeach()
 
 set(DRONESWIPE ${CMAKE_CURRENT_SOURCE_DIR}/../../native/droneswipe)
-add_executable(swipe-replay swipe_replay.cpp ${DRONESWIPE}/kp_dictionary.cpp ${DRONESWIPE}/ranker.cpp)
+add_executable(swipe-replay swipe_replay.cpp ${DRONESWIPE}/kp_dictionary.cpp ${DRONESWIPE}/ranker.cpp ${DRONESWIPE}/neural_lm.cpp)
 target_include_directories(swipe-replay PRIVATE ${DRONESWIPE}
     ${SWIPE_LIBRARY_DIR}/third_party/executorch/third-party/json/include)
 target_link_libraries(swipe-replay PRIVATE swipe_decoder)

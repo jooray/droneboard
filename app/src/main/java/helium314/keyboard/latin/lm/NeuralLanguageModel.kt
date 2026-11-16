@@ -181,8 +181,34 @@ object NeuralLanguageModel : LanguageModel {
         }
     }
 
-    /** Frees the models of languages that are no longer enabled. */
-    private fun releaseOthers(languages: List<String>) {
+    /** Languages of the swipe decoder's dictionaries; their models stay loaded for [withSwipeModels]. */
+    @Volatile private var swipeLanguages: List<String> = emptyList()
+
+    /**
+     * Runs [block] with the handles of the loaded models of [languages] (the swipe decoder's dictionaries, in
+     * that order), or with null when neural predictions are off, the user is locked (direct boot: no model
+     * files before the first unlock), a language has no neural model, or a model is still loading (it starts
+     * loading then). The models cannot be freed while [block] runs.
+     */
+    fun <T> withSwipeModels(context: Context, languages: List<String>, block: (LongArray?) -> T): T {
+        if (languages.isEmpty() || !DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable
+            || Settings.getValues()?.mNeuralPredictions != true) return block(null)
+        swipeLanguages = languages
+        if (!languages.all { it in neuralLanguages(context) }) return block(null)
+        return lock.read {
+            val handles = languages.map { models[it] }
+            if (handles.any { it == null }) {
+                languages.forEach { requestLoad(context, it) }
+                block(null)
+            } else {
+                block(LongArray(handles.size) { handles[it]!! })
+            }
+        }
+    }
+
+    /** Frees the models of languages that are no longer enabled (for typing or swiping). */
+    private fun releaseOthers(typing: List<String>) {
+        val languages = typing + swipeLanguages
         if (models.keys.all { it in languages }) return
         loader.execute {
             lock.write {

@@ -22,6 +22,7 @@
 namespace droneswipe {
 
 class KpDictionary;
+struct Ranked;
 
 class NeuralLm {
 public:
@@ -110,5 +111,39 @@ std::vector<NeuralPrediction> predict_neural(const std::vector<NeuralLanguageInp
                                              const std::vector<std::string>& context, bool bos,
                                              const std::string& prefix_lower, int max_results,
                                              float switch_p = 0.05f);
+
+// log P(w | context) of each lowercase word under the languages' models mixed by the language
+// posterior (the probability predict_neural ranks by); -INFINITY when no model has the word.
+// unk_logp (optional): log P(<unk> | context), the mass of all words outside the vocabularies.
+// Runs each model once per context: the distribution is cached, so after the next-word prediction
+// for the same text it costs only the lookups.
+std::vector<float> neural_word_logp(const std::vector<NeuralLanguageInput>& langs,
+                                    const std::vector<std::string>& context, bool bos,
+                                    const std::vector<std::string>& words_lower, float switch_p = 0.05f,
+                                    float* unk_logp = nullptr);
+
+// Log-linear fusion of the neural model into the swipe ranking (tuned with tools/swipe-replay on
+// synthetic swipes with held-out sentence context, precise and sloppy; see its README):
+//   score + w * log P_nn(word | tokens) + lambda_delta * freq + nu_delta * context term
+// The weight grows from `weight` to `weight_max` as the gesture gets ambiguous: w = weight +
+// (weight_max - weight) * exp(-margin / margin_scale), margin = the score gap of the two best
+// candidates before fusion. Without context (no tokens) only `weight_no_context` applies and the
+// n-gram weights stay. A word no model knows gets log P(<unk> | tokens) + its unigram log
+// probability in the dictionary + oov.
+struct NeuralFusion {
+    float weight = 0.2f;
+    float weight_max = 0.4f;
+    float margin_scale = 4.0f;
+    float weight_no_context = 0.1f;
+    float oov = 3.0f;
+    float lambda_delta = -0.015f;
+    float nu_delta = -0.05f;
+};
+
+// Rescores and re-sorts candidates of rank_candidates (with their score parts). langs: the models
+// of the dictionaries' languages; user: the user dictionary among dicts, or nullptr.
+void fuse_neural(std::vector<Ranked>& ranked, const std::vector<KpDictionary*>& dicts, const KpDictionary* user,
+                 const std::vector<NeuralLanguageInput>& langs, const std::vector<std::string>& tokens, bool bos,
+                 const NeuralFusion& f);
 
 }  // namespace droneswipe

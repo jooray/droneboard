@@ -25,6 +25,7 @@
 #endif
 
 #include "kp_dictionary.hpp"
+#include "ranker.hpp"
 
 namespace droneswipe {
 
@@ -516,6 +517,82 @@ std::vector<NeuralPrediction> predict_neural(const std::vector<NeuralLanguageInp
     });
     if ((int)out.size() > max_results) out.resize(max_results);
     return out;
+}
+
+std::vector<float> neural_word_logp(const std::vector<NeuralLanguageInput>& langs,
+                                    const std::vector<std::string>& context, bool bos,
+                                    const std::vector<std::string>& words_lower, float switch_p,
+                                    float* unk_logp) {
+    std::vector<float> out(words_lower.size(), -INFINITY);
+    float unk = -INFINITY;
+    auto add = [](float& o, float lp) {
+        if (o == -INFINITY) o = lp;
+        else { const float m = std::max(o, lp); o = m + std::log(std::exp(o - m) + std::exp(lp - m)); }
+    };
+    if (langs.empty() || words_lower.empty()) return out;
+    const auto lpost = neural_language_posterior(langs, context, switch_p);
+    for (size_t k = 0; k < langs.size(); ++k) {
+        NeuralLm* lm = langs[k].model;
+        if (!lm) continue;
+        std::vector<int32_t> ids;
+        ids.reserve(context.size() + 1);
+        if (bos || context.empty()) ids.push_back(2);
+        for (const auto& t : context) ids.push_back(lm->id_of(t));
+        std::lock_guard<std::mutex> lock(lm->mutex());
+        float lse = 0;
+        const float* lg = lm->distribution(ids, &lse);
+        if (!lg) continue;
+        add(unk, lg[1] - lse + lpost[k]);
+        for (size_t i = 0; i < words_lower.size(); ++i) {
+            const int32_t id = lm->id_of(words_lower[i]);
+            if (id <= 2 || !lm->is_word(id)) continue;
+            add(out[i], lg[id] - lse + lpost[k]);
+        }
+    }
+    if (unk_logp) *unk_logp = unk;
+    return out;
+}
+
+void fuse_neural(std::vector<Ranked>& ranked, const std::vector<KpDictionary*>& dicts, const KpDictionary* user,
+                 const std::vector<NeuralLanguageInput>& langs, const std::vector<std::string>& tokens, bool bos,
+                 const NeuralFusion& f) {
+    if (ranked.empty() || langs.empty()) return;
+    const bool context = !tokens.empty();
+    float w = context ? f.weight : f.weight_no_context;
+    if (context && ranked.size() > 1 && f.margin_scale > 0)
+        w += (f.weight_max - f.weight) * std::exp(-std::max(0.0f, ranked[0].score - ranked[1].score) / f.margin_scale);
+    if (w == 0.0f) return;
+    std::vector<std::string> lows;
+    lows.reserve(ranked.size());
+    for (const auto& r : ranked) lows.push_back(to_lower_utf8(r.word));
+    float unk = -INFINITY;
+    const auto lp = neural_word_logp(langs, tokens, bos, lows, 0.05f, &unk);
+    if (!std::isfinite(unk)) unk = std::log(1e-3f);
+    for (size_t i = 0; i < ranked.size(); ++i) {
+        auto& r = ranked[i];
+        float l = lp[i];
+        if (!std::isfinite(l)) {
+            // unigram log probability in the candidate's dictionary; a word only the user has written:
+            // the best of the languages' dictionaries, or a rare word's
+            float ug = -30.0f;
+            const KpDictionary* d = r.dict >= 0 && r.dict < (int)dicts.size() ? dicts[r.dict] : nullptr;
+            if (d && d != user) {
+                const int32_t id = d->lower_id(lows[i]);
+                if (id >= 0) ug = d->logp_id((uint32_t)id);
+            } else {
+                ug = -16.0f;
+                for (const auto* o : dicts) {
+                    if (o == user) continue;
+                    const int32_t id = o->lower_id(lows[i]);
+                    if (id >= 0) ug = std::max(ug, o->logp_id((uint32_t)id));
+                }
+            }
+            l = unk + ug + f.oov;
+        }
+        r.score += w * l;
+        if (context) r.score += f.lambda_delta * r.freq + f.nu_delta * r.ctx;
+    }
+    std::stable_sort(ranked.begin(), ranked.end(), [](const Ranked& a, const Ranked& b) { return a.score > b.score; });
 }
 
 }  // namespace droneswipe

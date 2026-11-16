@@ -41,14 +41,21 @@ object FutoSwipe {
      * context: words before the cursor, oldest first (the last one is the previous word);
      * prior: language prior per dictionary of the layout (null = equal); kappa, cap: weight and
      * floor of the context language bonus.
+     * models: the neural models of the layout's dictionaries in their order (null = no neural fusion; a
+     * 0 handle switches it off too), reranking with [tokens] before the cursor ([bos]: they start the
+     * text) and [fusion] = NeuralFusion's fields (native/droneswipe/neural_lm.hpp; null = defaults).
      */
     @JvmStatic external fun nativeRecognize(
         handle: Long, x: FloatArray, y: FloatArray, t: FloatArray, context: Array<String>,
         prior: FloatArray?, kappa: Float, cap: Float,
-        beam: Int, maxResults: Int, outScores: FloatArray, outDict: IntArray
+        beam: Int, maxResults: Int, outScores: FloatArray, outDict: IntArray,
+        models: LongArray?, tokens: Array<String>?, bos: Boolean, fusion: FloatArray?
     ): Array<String>
 
     @JvmStatic external fun nativeLastMillis(handle: Long): Float
+
+    /** Of [nativeLastMillis]: the time the neural fusion took. */
+    @JvmStatic external fun nativeLastNeuralMillis(handle: Long): Float
 
     /** Language continuity tie-breaker margin of the swipe ranking (0 = off). */
     @JvmStatic external fun nativeSetTieMargin(handle: Long, margin: Float)
