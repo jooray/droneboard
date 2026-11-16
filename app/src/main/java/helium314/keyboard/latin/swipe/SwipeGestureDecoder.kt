@@ -152,7 +152,7 @@ object SwipeGestureDecoder {
         val locales = runCatching {
             SubtypeSettings.getEnabledSubtypes(true).flatMap { listOf(it.locale()) + getSecondaryLocales(it.extraValue) }
         }.getOrDefault(emptyList())
-        preload(app, locales + Locale.ENGLISH)
+        preload(app, locales)
         runCatching { NeuralLanguageModel.preload(app, locales.map { it.engineKey }) }
     }
 
@@ -283,10 +283,9 @@ object SwipeGestureDecoder {
     private fun swipeLocales(context: Context, keyboard: Keyboard, secondary: List<Locale>): List<Locale> {
         val available = languagesWithDictionary(context)
         val result = LinkedHashMap<String, Locale>()
-        // English always joins as the last language: mixing it in is the common case (like Gboard)
+        // only languages the user enabled (a turned-off English must not show up in swipe results)
         val candidates = listOf(keyboard.mId.locale) + secondary +
-            runCatching { SubtypeSettings.getEnabledSubtypes(true).map { it.locale() } }.getOrDefault(emptyList()) +
-            Locale.ENGLISH
+            runCatching { SubtypeSettings.getEnabledSubtypes(true).map { it.locale() } }.getOrDefault(emptyList())
         for (l in candidates) {
             if (l.engineKey in available && l.engineKey !in result) result[l.engineKey] = l
             if (result.size >= 3) break
