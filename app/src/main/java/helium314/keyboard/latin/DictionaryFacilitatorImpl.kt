@@ -574,8 +574,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE
             )
         }
-        val merged = if (typed.isEmpty()) LanguageModelSuggestions.mergeNextWord(native, predictions, makeInfo)
-            else LanguageModelSuggestions.mergeCompletions(native, predictions, typed, makeInfo)
+        val merged = LanguageModelSuggestions.merge(native, predictions, typed, makeInfo)
         if (merged === native) return
         results.clear()
         merged.forEach { results.add(it) }
@@ -730,7 +729,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
 
         /** Include at least two non-emoji, non-typed word results if possible, so that the first two shown suggestions can be non-emoji */
-        private fun includeAtLeastTwoWordSuggestions(
+        internal fun includeAtLeastTwoWordSuggestions(
             suggestionResults: SuggestionResults,
             suggestionsArray: Array<List<SuggestedWordInfo>?>,
             typedWord: String
@@ -763,7 +762,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         /** Droneboard: like Gboard, a matching emoji keeps a place even when many word forms outrank it
          *  (e.g. Slovak "raketa" has many inflections that push the rocket out of the capped results) */
-        private fun keepBestEmoji(
+        internal fun keepBestEmoji(
             suggestionResults: SuggestionResults,
             suggestionsArray: Array<List<SuggestedWordInfo>?>,
             typedWord: String

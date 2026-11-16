@@ -539,7 +539,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             else -> word
         }
 
-        private fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
+        internal fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
             for (i in 0..1) {
                 if (words.size > 2 && words[i].isEmoji) {
                     val relativeIndex = words.subList(2, words.size).indexOfFirst { !it.isEmoji }
@@ -559,7 +559,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
 
         /** Droneboard: the best emoji takes the right slot of the strip (index 3: index 0 is the hidden typed
          *  word, 1 the center, 2 the left slot), as in Gboard */
-        private fun moveEmojiToRightSlot(words: MutableList<SuggestedWordInfo>) {
+        internal fun moveEmojiToRightSlot(words: MutableList<SuggestedWordInfo>) {
             if (words.size <= 3 || words[3].isEmoji) return
             val emojiIndex = words.indexOfFirst { it.isEmoji }
             if (emojiIndex > 3) words.add(3, words.removeAt(emojiIndex))
@@ -584,12 +584,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
 
         /** returns new pseudoTypedWordInfo, puts it in suggestionsContainer, modifies nextWordSuggestions */
-        private fun preferNextWordSuggestion(
+        internal fun preferNextWordSuggestion(
             pseudoTypedWordInfo: SuggestedWordInfo?,
             suggestionsContainer: ArrayList<SuggestedWordInfo>,
-            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
+            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?,
+            usePersonalizedDicts: Boolean = Settings.getValues().mUsePersonalizedDicts
         ): SuggestedWordInfo? {
-            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
+            if (pseudoTypedWordInfo == null || !usePersonalizedDicts
                 || pseudoTypedWordInfo.sourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
             ) return pseudoTypedWordInfo
             val goodNextSuggestions = nextWordSuggestions.filter { it.score >= 170 } // we only want reasonably often typed words, value may require tuning

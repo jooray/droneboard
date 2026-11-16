@@ -36,6 +36,14 @@ object LanguageModelSuggestions {
         return words
     }
 
+    /** [mergeNextWord] when nothing is typed, else [mergeCompletions] */
+    fun merge(
+        native: List<SuggestedWordInfo>, predictions: List<WordPrediction>, typedWord: String,
+        makeInfo: (WordPrediction, Int) -> SuggestedWordInfo
+    ): List<SuggestedWordInfo> =
+        if (typedWord.isEmpty()) mergeNextWord(native, predictions, makeInfo)
+        else mergeCompletions(native, predictions, typedWord, makeInfo)
+
     /** Next-word prediction: [native] best first; returns the fused list with scores that keep its order. */
     fun mergeNextWord(
         native: List<SuggestedWordInfo>, predictions: List<WordPrediction>,
