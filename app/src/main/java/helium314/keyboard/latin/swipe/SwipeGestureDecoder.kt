@@ -114,6 +114,9 @@ object SwipeGestureDecoder {
     private val dictionaries = ConcurrentHashMap<String, Long>()
     /** one latch per language that has been requested; counted down when loading ends (also on failure) */
     private val loading = ConcurrentHashMap<String, CountDownLatch>()
+    /** when loading a language last failed; it is tried again after [RETRY_FAILED_MS] instead of never */
+    private val failedAt = ConcurrentHashMap<String, Long>()
+    private const val RETRY_FAILED_MS = 15_000L
     /** loads dictionaries one after another, never on the input thread, never under the decoder lock */
     private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-load") }
     private val extractLock = Any()
@@ -222,6 +225,13 @@ object SwipeGestureDecoder {
     private fun requestLoad(context: Context, language: String): CountDownLatch {
         // while locked nothing is requested, so a failed attempt is never remembered as "loaded"
         if (!DirectBoot.isUnlocked(context)) return CountDownLatch(0)
+        // a failed load (for example during an app update or a low-memory moment) must not disable the
+        // language until the process restarts: forget it after a while so that the next swipe retries
+        failedAt[language]?.let { t ->
+            if (System.currentTimeMillis() - t < RETRY_FAILED_MS) return CountDownLatch(0)
+            failedAt.remove(language)
+            if (dictionaries[language] == null) loading.remove(language)
+        }
         return loading.computeIfAbsent(language) {
             val latch = CountDownLatch(1)
             loader.execute {
@@ -234,6 +244,7 @@ object SwipeGestureDecoder {
                 } catch (e: Throwable) {
                     Log.w(TAG, "could not load swipe dictionary $language", e)
                 } finally {
+                    if (dictionaries[language] == null) failedAt[language] = System.currentTimeMillis()
                     latch.countDown()
                 }
             }
