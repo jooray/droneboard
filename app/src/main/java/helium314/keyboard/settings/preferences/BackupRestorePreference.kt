@@ -144,6 +144,13 @@ private fun backupLauncher(onError: (String) -> Unit): ManagedActivityResultLaun
                         fileStream.close()
                         zipStream.closeEntry()
                     }
+                    runCatching { PersonalDictionaryBackup.export(ctx) }
+                        .onFailure { Log.w("AdvancedScreen", "personal dictionary not included in backup", it) }
+                        .getOrNull()?.let {
+                            zipStream.putNextEntry(ZipEntry(PersonalDictionaryBackup.FILE_NAME))
+                            zipStream.write(it.toByteArray())
+                            zipStream.closeEntry()
+                        }
                     zipStream.putNextEntry(ZipEntry(PREFS_FILE_NAME))
                     settingsToJsonStream(ctx.prefs().all, zipStream)
                     zipStream.closeEntry()
@@ -202,6 +209,11 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                             } else if (entry.name == Database.NAME) {
                                 anyMatch = true
                                 FileUtils.copyStreamToNewFile(zip, restoredDb)
+                            } else if (entry.name == PersonalDictionaryBackup.FILE_NAME) {
+                                anyMatch = true
+                                val json = String(zip.readBytes())
+                                runCatching { PersonalDictionaryBackup.restore(ctx, json) }
+                                    .onFailure { Log.w("AdvancedScreen", "could not restore the personal dictionary", it) }
                             } else if (entry.name == PREFS_FILE_NAME) {
                                 val prefLines = String(zip.readBytes()).split("\n")
                                 val prefs = ctx.prefs()
