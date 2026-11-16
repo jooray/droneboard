@@ -281,11 +281,17 @@ def page(code, t, langs, site):
     assert sum(len(tips) for _, tips in d["groups"]) == len(svgs), "one animation per tip"
     panels = []
     n = 0
+    k = 0  # index into svgs (one per tip in the source, also for tips skipped in this language)
     for gi, (gtitle, tips) in enumerate(d["groups"]):
         items = []
         for title, text in tips:
+            svg = svgs[k]
+            k += 1
+            # typing Slovak or Czech without diacritics only matters to readers of those two languages
+            if tipanim.ANIMS[k - 1][0] == "nodia" and code not in ("sk", "cs"):
+                continue
             n += 1
-            items.append(f'<li><span class="no">{n:02d}</span><h3>{title}</h3>{svgs[n - 1]}<p>{text.replace("{dict}", DICT_HREF)}</p></li>')
+            items.append(f'<li><span class="no">{n:02d}</span><h3>{title}</h3>{svg}<p>{text.replace("{dict}", DICT_HREF)}</p></li>')
         panels.append(
             f'<section class="panel" id="g{gi + 1}" aria-labelledby="g{gi + 1}-h">\n'
             f'  <h2 id="g{gi + 1}-h">{e(gtitle)}</h2>\n'
