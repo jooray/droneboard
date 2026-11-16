@@ -55,6 +55,15 @@ object SwipeGestureDecoder {
     /** words before the cursor used for the language guess; the last one also feeds the bigrams */
     private const val CONTEXT_WORDS = 3
 
+    /**
+     * Neural language model fusion of the final decode (NeuralFusion in native/droneswipe/neural_lm.hpp): weight
+     * 0.2 growing to 0.4 for ambiguous gestures (margin scale 4), 0.1 without context, OOV offset 3, frequency
+     * weight -0.015 and context weight -0.05 when the model has context. Tuned with tools/swipe-replay on
+     * synthetic swipes with held-out sentence context in sk, en, cs, de and hu, precise and sloppy: top-1 +3 to
+     * +5 pp on precise swipes, +8 to +15 pp on sloppy ones; the user's recordings 82.1 -> 84.9.
+     */
+    private val NEURAL_FUSION = floatArrayOf(0.2f, 0.4f, 4f, 0.1f, 3f, -0.015f, -0.05f)
+
     /** what a decode fed the native decoder, for the swipe recorder */
     class LastInput(val x: FloatArray, val y: FloatArray, val t: FloatArray, val context: List<String>)
 
@@ -418,10 +427,16 @@ object SwipeGestureDecoder {
         val previous = contextWords.lastOrNull()
         val scores = FloatArray(MAX_RESULTS)
         val dicts = IntArray(MAX_RESULTS)
-        val words = FutoSwipe.nativeRecognize(
-            session, x, y, t, contextWords.toTypedArray(), null, LANGUAGE_KAPPA, LANGUAGE_CAP,
-            if (isFinal) (Settings.getValues()?.mSwipeBeamWidth ?: Defaults.PREF_SWIPE_BEAM_WIDTH) else BEAM_PREVIEW, MAX_RESULTS, scores, dicts
-        )
+        // the final decode reranks with the neural models of the swipe languages (see NEURAL_FUSION), from the
+        // text before the cursor when the input logic hands it over, otherwise from the context words
+        val (tokens, bos) = NeuralLanguageModel.tokensBeforeCursor(NeuralLanguageModel.textBeforeCursor.get(), contextWords, "")
+        val words = NeuralLanguageModel.withSwipeModels(context, if (isFinal) activeLanguages else emptyList()) { models ->
+            FutoSwipe.nativeRecognize(
+                session, x, y, t, contextWords.toTypedArray(), null, LANGUAGE_KAPPA, LANGUAGE_CAP,
+                if (isFinal) (Settings.getValues()?.mSwipeBeamWidth ?: Defaults.PREF_SWIPE_BEAM_WIDTH) else BEAM_PREVIEW,
+                MAX_RESULTS, scores, dicts, models, tokens.toTypedArray(), bos, NEURAL_FUSION
+            )
+        }
         lastMillis = FutoSwipe.nativeLastMillis(session)
         val results = SuggestionResults(MAX_RESULTS, ngramContext, false)
         words.forEachIndexed { i, word ->
@@ -442,7 +457,8 @@ object SwipeGestureDecoder {
             )
         }
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "swipe ${if (isFinal) "final" else "preview"} ${lastMillis}ms prev=$previous -> ${words.take(4)}")
+            Log.d(TAG, "swipe ${if (isFinal) "final" else "preview"} ${lastMillis}ms (neural ${FutoSwipe.nativeLastNeuralMillis(session)}ms," +
+                " ${tokens.size} tokens${if (bos) " +bos" else ""}) prev=$previous -> ${words.take(4)}")
             if (isFinal) Log.d(TAG, "points n=$n first=(${x[0]},${y[0]}) last=(${x[n - 1]},${y[n - 1]}) dur=${t[n - 1]}ms")
         }
         return results

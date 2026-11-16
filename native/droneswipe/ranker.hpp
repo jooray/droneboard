@@ -16,6 +16,9 @@ struct Ranked {
     std::string word;   // surface form
     float score;
     int dict;           // index into the dictionaries
+    // parts of the score, for offline tuning (tools/swipe-replay --dump): the engine's CTC score and
+    // key path length, the 0-255 frequency and the context term (pmi3) of the winning variant
+    float ctc = 0, len = 0, freq = 0, ctx = 0;
 };
 
 // Per-language score offsets (<= 0) from the words before the cursor and a prior per language
