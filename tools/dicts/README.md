@@ -98,8 +98,9 @@ context (FineWeb-2 test split).
 
 FineWeb-2 `hun_Latn` (about 100M words, no personal text), Hunspell `hu_HU` as the filter.
 Hungarian is agglutinative, so the list keeps up to 500,000 forms, like Czech. The key path comes
-from NFD: á → a, é → e, í → i, ó ö ő → o, ú ü ű → u. HeliBoard's `main_hu.dict` stays the typing
-dictionary; the emoji dictionary is aosp-dictionaries' `emoji_hu.dict`.
+from NFD: á → a, é → e, í → i, ó ö ő → o, ú ü ű → u. `main_hu.dict` (the typing dictionary) is
+built from `hu.combined` and replaces HeliBoard's 2016 list; the emoji dictionary is
+aosp-dictionaries' `emoji_hu.dict`.
 
 ```sh
 .venv/bin/python -I tools/dicts/fetch_corpus.py hun_Latn 280 work/corpus-hu
@@ -107,9 +108,17 @@ python3 -I tools/dicts/build_dicts.py hu work/out work/hunspell/hu_HU work/corpu
 .venv/bin/python -I tools/dicts/count_ngrams.py hu work/out/hu.words.tsv work/ngrams --corpus work/corpus-hu/corpus.txt --min-trigram 2
 python3 -I tools/dicts/pack_swipe_dict.py work/ngrams/hu.words.tsv work/ngrams/hu.bigrams.tsv app/src/main/assets/swipe/hu.kpd \
   --min-bigram=10 --trigrams=work/ngrams/hu.trigrams.tsv --min-trigram=3 --trigram-bytes=4000000
+DRONEBOARD_COMBINED=work/out/hu.combined DRONEBOARD_DICT_OUT=$PWD/app/src/main/assets/dicts/main_hu.dict \
+  ./gradlew :app:testDebugUnitTest --tests helium314.keyboard.latin.BuildDictionaryTool --rerun
 ```
 
-That gives 10.3 MB. Smaller and larger n-gram sets change top-1 on held-out synthetic swipes by
+`main_hu.dict` holds all 493,505 words with 331,587 bigrams in 4.5 MB (3.3 MB compressed), against
+427 KB without bigrams before. Tested with the main dictionary alone (no neural model) on 1500
+held-out FineWeb-2 words with the three words before them, counting a hit when the word is in a
+visible slot of the strip: keystroke savings 13.1 % → 23.7 %, next word without typing 0 % → 13.1 %,
+words the dictionary knows 80.3 % → 92.4 %.
+
+The swipe dictionary is 10.3 MB. Smaller and larger n-gram sets change top-1 on held-out synthetic swipes by
 less than 1 pp: 79.8 % at 7.0 MB (bigrams ≥ 30, trigrams ≥ 5), 80.1 % at 8.6 MB (the German
 thresholds), 80.5 % at 10.3 MB, 80.7 % at 11.9 MB (bigrams ≥ 8, trigrams ≥ 2).
 
