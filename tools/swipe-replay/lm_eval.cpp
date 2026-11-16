@@ -73,6 +73,9 @@ int main(int argc, char** argv) {
     float k3 = -1.0f, lambda = 0.7f;
     int context_n = 3;
     bool use_tokens = false;
+    std::string dump_path;  // --dump: the app's model candidates for every prefix, for the end-to-end eval
+    int max_typed = 3;
+    bool fold_prefix = false;  // --fold: the letters are typed without accents (their key path)
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? std::string(argv[++i]) : std::string(); };
@@ -88,6 +91,9 @@ int main(int argc, char** argv) {
         else if (a == "--mode") mode = next();
         else if (a == "--lambda") lambda = std::stof(next());
         else if (a == "--tokens") use_tokens = true;
+        else if (a == "--dump") dump_path = next();
+        else if (a == "--max-typed") max_typed = std::stoi(next());
+        else if (a == "--fold") fold_prefix = true;
         else inputs.push_back(a);
     }
     if (dicts.empty() || inputs.empty()) {
@@ -124,6 +130,10 @@ int main(int argc, char** argv) {
     double ms = 0;
     long calls = 0;
     std::vector<double> next_ms, completion_ms;  // per call: no letters typed (new context) / letters typed
+    std::ofstream dump;
+    if (!dump_path.empty()) dump.open(dump_path);
+    const int n_out = dump_path.empty() ? 3 : 8;  // the app asks the model for 8 words (DictionaryFacilitatorImpl)
+    const int n_typed = dump_path.empty() ? 4 : max_typed + 1;
     for (auto& path : inputs) {
         std::ifstream in(path);
         std::string line;
@@ -145,10 +155,13 @@ int main(int argc, char** argv) {
             const int target_len = (int)swipe_decoder::utf8_to_codepoints(target).size();
             for (Stats* s : {&all, &by_lang[lang]}) { s->n++; s->chars += target_len + 1; }
             int saved = -1;
-            for (int typed = 0; typed < 4; ++typed) {
-                const std::string prefix = first_chars(target, (size_t)typed);
+            json dump_item = json::array();
+            for (int typed = 0; typed < n_typed; ++typed) {
+                std::string prefix = first_chars(target, (size_t)typed);
+                if (fold_prefix) prefix = droneswipe::key_path_of(prefix);  // typed without accents
                 if (typed > 0 && prefix == target) {  // the word is typed, not predicted
-                    for (Stats* s : {&all, &by_lang[lang]}) { s->hit[typed][0]++; s->hit[typed][1]++; }
+                    if (typed < 4) for (Stats* s : {&all, &by_lang[lang]}) { s->hit[typed][0]++; s->hit[typed][1]++; }
+                    if (!dump_path.empty()) break;
                     continue;
                 }
                 auto t0 = std::chrono::steady_clock::now();
@@ -177,6 +190,12 @@ int main(int argc, char** argv) {
                         pred.push_back(p);
                     }
                     std::sort(pred.begin(), pred.end(), [](const auto& a, const auto& b) { return a.score > b.score; });
+                    if ((int)pred.size() > n_out) pred.resize(n_out);
+                }
+                if (!dump_path.empty()) {
+                    json row = json::array();
+                    for (auto& p : pred) row.push_back({p.word, p.score, dict_langs[p.dict]});
+                    dump_item.push_back({{"t", prefix}, {"p", row}});
                     if (pred.size() > 3) pred.resize(3);
                 }
                 const double dt = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
@@ -186,13 +205,14 @@ int main(int argc, char** argv) {
                 int rank = -1;
                 for (int r = 0; r < (int)pred.size(); ++r)
                     if (droneswipe::to_lower_utf8(pred[r].word) == target) { rank = r; break; }
-                for (Stats* s : {&all, &by_lang[lang]}) {
+                if (typed < 4) for (Stats* s : {&all, &by_lang[lang]}) {
                     if (rank == 0) s->hit[typed][0]++;
                     if (rank >= 0) s->hit[typed][1]++;
                 }
                 if (rank >= 0 && saved < 0) saved = target_len - typed;
             }
             for (Stats* s : {&all, &by_lang[lang]}) s->saved += std::max(saved, 0);
+            if (dump.is_open()) dump << dump_item.dump() << "\n";
         }
     }
     for (auto& [l, s] : by_lang) if (l != "all") s.print(l.c_str());

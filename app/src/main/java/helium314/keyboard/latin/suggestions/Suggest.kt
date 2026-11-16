@@ -23,6 +23,8 @@ import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION
 import helium314.keyboard.latin.define.DecoderSpecificConstants.SHOULD_REMOVE_PREVIOUSLY_REJECTED_SUGGESTION
 import helium314.keyboard.latin.dictionary.Dictionary
+import helium314.keyboard.latin.lm.LanguageModelSuggestions
+import helium314.keyboard.latin.lm.NeuralLanguageModel
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
@@ -43,7 +45,7 @@ import kotlin.math.min
 class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private var mAutoCorrectionThreshold = 0f
     private val mPlausibilityThreshold = 0f
-    private val nextWordSuggestionsCache = HashMap<NgramContext, SuggestionResults>()
+    private val nextWordSuggestionsCache = HashMap<Pair<NgramContext, String>, SuggestionResults>()
 
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() = nextWordSuggestionsCache.clear()
@@ -300,10 +302,11 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     ): SuggestedWords {
         // FUTO Swipe decoder first; the native dictionaries only decode gestures with the
         // proprietary Google library, which Droneboard does not need
-        val suggestionResults = SwipeGestureDecoder.getSuggestions(
+        val swipeResults = SwipeGestureDecoder.getSuggestions(
             wordComposer.composedDataSnapshot.mInputPointers, ngramContext, keyboard,
             Settings.getValues().mSecondaryLocales, inputStyle != InputStyle.UPDATE_BATCH
-        )?.takeIf { it.isNotEmpty() } ?: if (helium314.keyboard.latin.utils.JniUtils.sHaveGestureLib) {
+        )?.takeIf { it.isNotEmpty() }
+        val suggestionResults = swipeResults ?: if (helium314.keyboard.latin.utils.JniUtils.sHaveGestureLib) {
             mDictionaryFacilitator.getSuggestionResults(
                 wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle
@@ -364,7 +367,10 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         // Exception is when using shift to change capitalization of suggestions.
         // Note that because this method is never used to get predictions, there is no need to
         // modify inputType such in getSuggestedWordsForNonBatchInput.
-        val pseudoTypedWordInfo = preferNextWordSuggestion(
+        // Droneboard: not for the FUTO Swipe decoder, which already ranks with the sentence context; promoting a
+        // next-word prediction over its first result lowered top-1 on every swipe set (TapPredictionEval
+        // swipePromotion: synthetic SK 84.9 -> 84.2, EN 93.5 -> 92.1, CS 89.0 -> 87.1, real CS 78.3 -> 77.9)
+        val pseudoTypedWordInfo = if (swipeResults != null) pseudoTypedWord else preferNextWordSuggestion(
             pseudoTypedWord, suggestionsContainer,
             getNextWordSuggestions(ngramContext, keyboard, inputStyle, settingsValuesForSuggestion), rejected
         )
@@ -394,11 +400,17 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     /** get suggestions based on the current ngram context, with an empty typed word (that's what next word suggestions do)  */
     private fun getNextWordSuggestions(ngramContext: NgramContext, keyboard: Keyboard, inputStyle: InputStyle,
                                        settingsValuesForSuggestion: SettingsValuesForSuggestion): SuggestionResults {
-        val cachedResults = nextWordSuggestionsCache[ngramContext]
+        // Droneboard: the language model sees more than the n-gram context (punctuation, earlier words), so the
+        // key includes its context; stand-in answers (model still loading, timeout) are not cached
+        val key = ngramContext to NeuralLanguageModel.contextKey(LanguageModelSuggestions.contextWords(ngramContext))
+        val cachedResults = nextWordSuggestionsCache[key]
         if (cachedResults != null) return cachedResults
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
-        nextWordSuggestionsCache[ngramContext] = newResults
+        if (newResults.cacheable) {
+            if (nextWordSuggestionsCache.size > NEXT_WORD_CACHE_SIZE) nextWordSuggestionsCache.clear()
+            nextWordSuggestionsCache[key] = newResults
+        }
         return newResults
     }
 
@@ -409,6 +421,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         // We are sharing the same ID between typing and gesture to save RAM footprint.
         const val SESSION_ID_TYPING = 0
         const val SESSION_ID_GESTURE = 0
+
+        // Droneboard: keyed on the model's context the cache gains an entry per keystroke context; keep it bounded
+        private const val NEXT_WORD_CACHE_SIZE = 64
 
         // Close to -2**31
         private const val SUPPRESS_SUGGEST_THRESHOLD = -2000000000
@@ -539,7 +554,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             else -> word
         }
 
-        private fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
+        internal fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
             for (i in 0..1) {
                 if (words.size > 2 && words[i].isEmoji) {
                     val relativeIndex = words.subList(2, words.size).indexOfFirst { !it.isEmoji }
@@ -559,7 +574,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
 
         /** Droneboard: the best emoji takes the right slot of the strip (index 3: index 0 is the hidden typed
          *  word, 1 the center, 2 the left slot), as in Gboard */
-        private fun moveEmojiToRightSlot(words: MutableList<SuggestedWordInfo>) {
+        internal fun moveEmojiToRightSlot(words: MutableList<SuggestedWordInfo>) {
             if (words.size <= 3 || words[3].isEmoji) return
             val emojiIndex = words.indexOfFirst { it.isEmoji }
             if (emojiIndex > 3) words.add(3, words.removeAt(emojiIndex))
@@ -584,12 +599,13 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
 
         /** returns new pseudoTypedWordInfo, puts it in suggestionsContainer, modifies nextWordSuggestions */
-        private fun preferNextWordSuggestion(
+        internal fun preferNextWordSuggestion(
             pseudoTypedWordInfo: SuggestedWordInfo?,
             suggestionsContainer: ArrayList<SuggestedWordInfo>,
-            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?
+            nextWordSuggestions: SuggestionResults, rejected: SuggestedWordInfo?,
+            usePersonalizedDicts: Boolean = Settings.getValues().mUsePersonalizedDicts
         ): SuggestedWordInfo? {
-            if (pseudoTypedWordInfo == null || !Settings.getValues().mUsePersonalizedDicts
+            if (pseudoTypedWordInfo == null || !usePersonalizedDicts
                 || pseudoTypedWordInfo.sourceDict.mDictType != Dictionary.TYPE_MAIN || suggestionsContainer.size < 2
             ) return pseudoTypedWordInfo
             val goodNextSuggestions = nextWordSuggestions.filter { it.score >= 170 } // we only want reasonably often typed words, value may require tuning

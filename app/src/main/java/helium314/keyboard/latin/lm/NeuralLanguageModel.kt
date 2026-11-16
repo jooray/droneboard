@@ -70,8 +70,22 @@ object NeuralLanguageModel : LanguageModel {
     @Volatile private var lastSplit = floatArrayOf(0f, 0f)
     private var latencyCount = 0
 
+    /** true when the last [predict] on this thread answered with a stand-in that a later call will improve
+     *  (model still loading, timeout, error): such results must not be cached */
+    @JvmField
+    val lastAnswerTemporary = ThreadLocal<Boolean>()
+
+    /** The context the model sees for next-word prediction. The next-word cache is keyed on it as well as on
+     *  the n-gram context: punctuation and earlier words change the model's answer. */
+    fun contextKey(context: List<String>): String {
+        val (tokens, bos) = tokensBeforeCursor(textBeforeCursor.get(), context, "")
+        return bos.toString() + "|" + tokens.joinToString(" ")
+    }
+
     override fun predict(context: List<String>, prefix: String, locales: List<Locale>, maxResults: Int): List<WordPrediction> {
+        lastAnswerTemporary.set(false)
         val fallback = { NgramLanguageModel.predict(context, prefix, locales, maxResults) }
+        val temporaryFallback = { lastAnswerTemporary.set(true); fallback() }
         // direct boot: no model files before the first unlock, and no predictions from personal data
         if (maxResults <= 0 || !DirectBoot.isUnlocked() || !FutoSwipe.isAvailable) return emptyList()
         if (!Settings.getValues().mNeuralPredictions) return fallback()
@@ -82,7 +96,7 @@ object NeuralLanguageModel : LanguageModel {
         val handles = languages.map { models[it] }
         if (handles.any { it == null }) {
             languages.forEach { requestLoad(app, it) }
-            return fallback()
+            return temporaryFallback()
         }
         val (tokens, bos) = tokensBeforeCursor(textBeforeCursor.get(), context, prefix)
         val key = languages.joinToString(",") + "|" + bos + "|" + tokens.joinToString(" ") + "|" + prefix + "|" + maxResults
@@ -98,10 +112,10 @@ object NeuralLanguageModel : LanguageModel {
             future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
             Log.i(TAG, "no answer within $TIMEOUT_MS ms, using n-grams")
-            fallback()
+            temporaryFallback()
         } catch (e: Exception) {
             Log.w(TAG, "prediction failed", e)
-            fallback()
+            temporaryFallback()
         }
     }
 
