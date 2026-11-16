@@ -61,7 +61,7 @@ class TapPredictionEval {
                 val dump = File(dir, "dump-$lang$variant.jsonl")
                 if (!dump.isFile) continue
                 val r = run(File(dir, "items-$lang.jsonl"), dump, listOf(main, second), pi)
-                out.append("$lang$variant (+$other) ").append(r).append('\n')
+                r.forEachIndexed { ci, s -> out.append("%-8s %-8s ".format(Locale.ROOT, configs[ci].name, "$lang$variant")).append(s).append('\n') }
             }
         }
         println("TAP-EVAL\n$out")
@@ -109,6 +109,7 @@ class TapPredictionEval {
                     val a = nrow.getJSONArray(k)
                     WordPrediction(a.getString(0), a.getDouble(1).toFloat(), Locale.forLanguageTag(a.getString(2)))
                 }
+                configs.last().apply()
                 val next = facilitator("", ngram, groups, pi, preds)
                 val before = container[0].word
                 val after = Suggest.preferNextWordSuggestion(container[0], container, next, null, true)?.word
@@ -122,6 +123,26 @@ class TapPredictionEval {
         }
         println("SWIPE-PROMOTION\n$out")
         File(dir, "swipe-result.txt").writeText(out.toString())
+    }
+
+    /** prints the emoji dictionary's results with their scores for the prefixes of a few keywords */
+    @Test fun emojiScores() {
+        Assume.assumeTrue("TAP_EVAL_DIR not set", dir != null && System.getenv("TAP_EVAL_EMOJI") != null)
+        System.load(File(dir, "libjni_latinime.dylib").absolutePath)
+        val pi = makeProximityInfo()
+        val sb = StringBuilder()
+        for ((lang, words) in listOf("sk" to listOf("raketa", "srdce", "pivo", "mačka", "láska", "auto", "slnko", "smiech"),
+                "en" to listOf("rocket", "heart", "beer", "cat", "love", "car", "sun", "laugh", "the", "this"))) {
+            val g = loadGroup(lang, 1f)
+            val emoji = g.dicts.first { it.mDictType == Dictionary.TYPE_EMOJI }
+            for (w in words) for (k in 2..w.length) {
+                val typed = w.take(k)
+                val r = emoji.getSuggestions(composed(typed), NgramContext.BEGINNING_OF_SENTENCE, pi, settings, 0, 1f,
+                    floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)).orEmpty()
+                sb.append("$lang $typed: ").append(r.take(4).joinToString { "${it.word} ${it.score} k${it.kind}" }).append('\n')
+            }
+        }
+        File(dir, "emoji-scores.txt").writeText(sb.toString())
     }
 
     private fun loadGroup(lang: String, weight: Float): Group {
@@ -193,13 +214,38 @@ class TapPredictionEval {
         return ComposedData(p, false, typed)
     }
 
+
     // ---------------------------------------------------------------- the pipeline
 
     private val settings = SettingsValuesForSuggestion(false, false)
 
-    /** DictionaryFacilitatorImpl.getSuggestionResults with the model's [predictions] */
-    private fun facilitator(typed: String, ngram: NgramContext, groups: List<Group>, pi: Long,
-                            predictions: List<WordPrediction>): SuggestionResults {
+    /** a setting of the merge: name and the fields to set ("rerank=0,modelnext=0,emoji=0,aosp=1.0,gap=1.0") */
+    private class Config(val name: String, val values: Map<String, String>) {
+        fun apply() {
+            LanguageModelSuggestions.rerankCompletions = values["rerank"] != "0"
+            LanguageModelSuggestions.modelFirstNextWord = values["modelnext"] != "0"
+            LanguageModelSuggestions.AOSP_WEIGHT = values["aosp"]?.toDouble() ?: DEFAULT_AOSP
+            LanguageModelSuggestions.FLOOR_GAP = values["gap"]?.toDouble() ?: DEFAULT_GAP
+            DictionaryFacilitatorImpl.emojiNeedsKeywordMatch = values["emoji"] != "0"
+            DictionaryFacilitatorImpl.emojiMinTypedLength = values["emojimin"]?.toInt()
+                ?: if (values["emoji"] == "0") 1 else DEFAULT_EMOJI_MIN
+        }
+        companion object { // the app's settings
+            val DEFAULT_AOSP = LanguageModelSuggestions.AOSP_WEIGHT
+            val DEFAULT_GAP = LanguageModelSuggestions.FLOOR_GAP
+            val DEFAULT_EMOJI_MIN = DictionaryFacilitatorImpl.emojiMinTypedLength
+        }
+    }
+
+    @org.junit.After fun restoreSettings() = Config("app", emptyMap()).apply()
+
+    private val configs = (System.getenv("TAP_EVAL_CONFIGS") ?: "now:").split(";").filter { it.isNotBlank() }.map { c ->
+        val name = c.substringBefore(":")
+        Config(name, c.substringAfter(":", "").split(",").filter { "=" in it }.associate { it.substringBefore("=") to it.substringAfter("=") })
+    }
+
+    /** the dictionaries' part of DictionaryFacilitatorImpl.getSuggestionResults: per group, all their suggestions */
+    private fun nativeSuggestions(typed: String, ngram: NgramContext, groups: List<Group>, pi: Long): Array<List<SuggestedWordInfo>?> {
         val cd = if (typed.isEmpty()) ComposedData(InputPointers(1), false, "") else composed(typed)
         val array = Array<List<SuggestedWordInfo>?>(groups.size) { null }
         groups.forEachIndexed { gi, g ->
@@ -210,8 +256,15 @@ class TapPredictionEval {
             }
             array[gi] = list
         }
+        return array
+    }
+
+    /** the rest of DictionaryFacilitatorImpl.getSuggestionResults with the model's [predictions] */
+    private fun facilitator(typed: String, ngram: NgramContext, groups: List<Group>, array: Array<List<SuggestedWordInfo>?>,
+                            predictions: List<WordPrediction>): SuggestionResults {
         val results = SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, ngram, false)
         array.forEach { it?.let { l -> results.addAll(l) } }
+        DictionaryFacilitatorImpl.dropNonKeywordEmoji(results, typed)
         if (predictions.isNotEmpty() && typed.none { !Character.isLetter(it) && it != '\'' && it != '-' }) {
             val native = results.toList()
             val makeInfo = { p: WordPrediction, score: Int ->
@@ -228,6 +281,10 @@ class TapPredictionEval {
         return results
     }
 
+    private fun facilitator(typed: String, ngram: NgramContext, groups: List<Group>, pi: Long,
+                            predictions: List<WordPrediction>) =
+        facilitator(typed, ngram, groups, nativeSuggestions(typed, ngram, groups, pi), predictions)
+
     /** the visible words of the strip, as Suggest.getSuggestedWordsForNonBatchInput arranges them (no caps,
      *  no autocorrection, typed word in the centre) */
     private fun visible(typed: String, results: SuggestionResults): Pair<List<String>, Boolean> {
@@ -238,7 +295,7 @@ class TapPredictionEval {
         val typedInfo = SuggestedWordInfo(typed, "", SuggestedWordInfo.MAX_SCORE, SuggestedWordInfo.KIND_TYPED,
             Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE)
         c.add(0, typedInfo)
-        if (c.size >= 1) c.add(1, typedInfo)
+        c.add(1, typedInfo)
         Suggest.moveEmojiToRightSlot(c)
         val shown = c.drop(2).take(2)
         return shown.map { it.word } to (shown.getOrNull(1)?.isEmoji == true)
@@ -258,8 +315,8 @@ class TapPredictionEval {
         }
     }
 
-    private fun run(items: File, dump: File, groups: List<Group>, pi: Long): Score {
-        val s = Score()
+    private fun run(items: File, dump: File, groups: List<Group>, pi: Long): List<Score> {
+        val scores = configs.map { Score() }
         val dumps = dump.readLines()
         items.readLines().forEachIndexed { idx, line ->
             if (idx >= dumps.size) return@forEachIndexed
@@ -269,10 +326,10 @@ class TapPredictionEval {
             val ngram = if (ctx.isEmpty()) NgramContext.BEGINNING_OF_SENTENCE
                 else NgramContext(*ctx.reversed().map { NgramContext.WordInfo(it) }.toTypedArray())
             val rows = JSONArray(dumps[idx])
-            s.n++
-            s.chars += target.length + 1
-            var saved = -1
+            val saved = IntArray(configs.size) { -1 }
             var modelSaved = -1
+            val hits = BooleanArray(configs.size)
+            var modelHitAt = BooleanArray(3)
             for (k in 0 until rows.length()) {
                 if (k > target.length) break
                 val row = rows.getJSONObject(k)
@@ -282,23 +339,31 @@ class TapPredictionEval {
                     val a = pa.getJSONArray(i)
                     WordPrediction(a.getString(0), a.getDouble(1).toFloat(), Locale.forLanguageTag(a.getString(2)))
                 }
-                val res = facilitator(typed, ngram, groups, pi, preds)
-                val (shown, emoji) = visible(typed, res)
-                if (typed.isNotEmpty()) { s.states++; if (emoji) s.emojiStates++ }
-                val hit = shown.any { it.lowercase(Locale.ROOT) == target }
+                val native = nativeSuggestions(typed, ngram, groups, pi)
                 val modelHit = preds.filter { it.score >= LanguageModelSuggestions.MIN_SCORE }.take(3)
                     .any { it.word.lowercase(Locale.ROOT) == target }
-                when (k) {
-                    0 -> { if (hit) s.next++; if (modelHit) s.modelNext++ }
-                    1 -> { if (hit) s.l1++; if (modelHit) s.m1++ }
-                    2 -> { if (hit) s.l2++; if (modelHit) s.m2++ }
-                }
-                if (hit && saved < 0) saved = target.length - k
                 if (modelHit && modelSaved < 0) modelSaved = target.length - k
+                configs.forEachIndexed { ci, cfg ->
+                    cfg.apply()
+                    val s = scores[ci]
+                    val (shown, emoji) = visible(typed, facilitator(typed, ngram, groups, native, preds))
+                    if (typed.isNotEmpty()) { s.states++; if (emoji) s.emojiStates++ }
+                    val hit = shown.any { it.lowercase(Locale.ROOT) == target }
+                    when (k) {
+                        0 -> { if (hit) s.next++; if (modelHit) s.modelNext++ }
+                        1 -> { if (hit) s.l1++; if (modelHit) s.m1++ }
+                        2 -> { if (hit) s.l2++; if (modelHit) s.m2++ }
+                    }
+                    if (hit && saved[ci] < 0) saved[ci] = target.length - k
+                }
             }
-            s.saved += maxOf(saved, 0)
-            s.modelSaved += maxOf(modelSaved, 0)
+            scores.forEachIndexed { ci, s ->
+                s.n++
+                s.chars += target.length + 1
+                s.saved += maxOf(saved[ci], 0)
+                s.modelSaved += maxOf(modelSaved, 0)
+            }
         }
-        return s
+        return scores
     }
 }

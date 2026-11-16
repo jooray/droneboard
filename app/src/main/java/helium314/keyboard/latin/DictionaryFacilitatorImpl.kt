@@ -29,6 +29,7 @@ import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.dictionary.history.UserHistoryDictionary
 import helium314.keyboard.latin.lm.LanguageModelSuggestions
 import helium314.keyboard.latin.lm.LanguageModels
+import helium314.keyboard.latin.lm.NeuralLanguageModel
 import helium314.keyboard.latin.lm.WordPrediction
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
@@ -541,6 +542,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             if (it == null) return@forEach
             suggestionResults.addAll(it)
         }
+        dropNonKeywordEmoji(suggestionResults, composedData.mTypedWord)
 
         if (useLanguageModel && !composedData.mIsBatchMode) addLanguageModelSuggestions(suggestionResults, composedData, ngramContext)
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
@@ -556,12 +558,15 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return
         val locales = dictionaryGroups.map { it.locale }.filter { it.language.isNotEmpty() }
         if (locales.isEmpty()) return
+        NeuralLanguageModel.lastAnswerTemporary.set(false)
         val predictions = try {
             model.predict(LanguageModelSuggestions.contextWords(ngramContext), typed, locales, 8)
         } catch (e: Exception) {
             Log.w(TAG, "language model failed", e)
+            results.cacheable = false
             return
         }
+        if (NeuralLanguageModel.lastAnswerTemporary.get() == true) results.cacheable = false
         if (predictions.isEmpty()) return
         val native = results.toList()
         val makeInfo = { p: WordPrediction, score: Int ->
@@ -574,7 +579,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE
             )
         }
-        val merged = LanguageModelSuggestions.merge(native, predictions, typed, makeInfo)
+        // with autocorrection on, its candidate (the dictionaries' first suggestion) stays first
+        val merged = LanguageModelSuggestions.merge(native, predictions, typed, makeInfo,
+            Settings.getValues()?.mAutoCorrectEnabled == true)
         if (merged === native) return
         results.clear()
         merged.forEach { results.add(it) }
@@ -760,6 +767,32 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             }
         }
 
+        /**
+         * Droneboard: while typing, an emoji is suggested only when the typed word is one of its keywords (case
+         * and accents aside), as in Gboard. Otherwise the emoji dictionary matches every keyword the typed
+         * letters begin, and an emoji took the right slot of the strip in 82-89 % of typing states on held-out
+         * text (TapPredictionEval), leaving a single slot for words.
+         */
+        @JvmField
+        @Volatile
+        var emojiNeedsKeywordMatch = true
+
+        /** The dictionaries score an exact match (case and accents aside) above 1.1 × 10⁶ and a completion or
+         *  correction below 10⁶ (TYPING_BASE_OUTPUT_SCORE, EXACT_MATCH_PROMOTION); an emoji shortcut carries its
+         *  keyword's score. [SuggestedWordInfo.originalScore] has no language weight. */
+        private const val EMOJI_KEYWORD_MIN_SCORE = 1_050_000
+
+        /** no emoji for typed words shorter than this */
+        @JvmField
+        var emojiMinTypedLength = 3
+
+        internal fun isKeywordEmoji(info: SuggestedWordInfo) = info.isEmoji && info.originalScore >= EMOJI_KEYWORD_MIN_SCORE
+
+        internal fun dropNonKeywordEmoji(results: SuggestionResults, typedWord: String) {
+            if (!emojiNeedsKeywordMatch || typedWord.isEmpty()) return
+            results.removeAll { it.isEmoji && (typedWord.length < emojiMinTypedLength || !isKeywordEmoji(it)) }
+        }
+
         /** Droneboard: like Gboard, a matching emoji keeps a place even when many word forms outrank it
          *  (e.g. Slovak "raketa" has many inflections that push the rocket out of the capped results) */
         internal fun keepBestEmoji(
@@ -768,7 +801,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             typedWord: String
         ) {
             if (typedWord.length < 3 || suggestionResults.any { it.isEmoji }) return
-            val bestEmoji = suggestionsArray.filterNotNull().flatten().filter { it.isEmoji }.maxByOrNull { it.score } ?: return
+            val bestEmoji = suggestionsArray.filterNotNull().flatten()
+                .filter { it.isEmoji && (!emojiNeedsKeywordMatch || isKeywordEmoji(it)) }.maxByOrNull { it.score } ?: return
             if (suggestionResults.size >= SuggestedWords.MAX_SUGGESTIONS) suggestionResults.remove(suggestionResults.last())
             suggestionResults.add(bestEmoji)
         }

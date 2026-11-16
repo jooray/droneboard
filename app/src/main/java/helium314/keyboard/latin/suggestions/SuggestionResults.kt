@@ -19,6 +19,10 @@ class SuggestionResults(
 ) : TreeSet<SuggestedWordInfo>(suggestedWordInfoComparator) {
     val rawSuggestions = if (ProductionFlags.INCLUDE_RAW_SUGGESTIONS) mutableListOf<SuggestedWordInfo>() else null
 
+    /** Droneboard: false when the language model answered with a stand-in (n-gram fallback while the neural
+     *  model loads or times out), so the next-word cache must not keep these results */
+    var cacheable = true
+
     override fun add(wordInfo: SuggestedWordInfo): Boolean {
         rawSuggestions?.add(wordInfo)
         if (size < capacity) return super.add(wordInfo)
