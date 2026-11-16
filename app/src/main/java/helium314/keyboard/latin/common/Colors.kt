@@ -284,9 +284,11 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else if (!isNight) pressedStateList(gesture, accent)
                 else pressedStateList(doubleAdjustedAccent, accent)
 
+            // Droneboard: the space bar keeps its color when pressed. Letter keys show a key preview over
+            // their pressed color, the space bar has none, so its pressed color flashed on every tap.
             spaceBarStateList =
                 if (themeStyle == STYLE_HOLO) pressedStateList(spaceBar, spaceBar)
-                else keyStateList
+                else pressedStateList(keyBackground, keyBackground)
 
         } else {
             // need to set color to background if key borders are disabled, or there will be ugly keys
@@ -307,9 +309,11 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 else if (!isNight) pressedStateList(gesture, accent)
                 else pressedStateList(doubleAdjustedAccent, accent)
 
+            // Droneboard: the space bar keeps its color when pressed (it flashed grey on every tap,
+            // most visibly in pitch-black themes)
             spaceBarStateList =
-                if (!isNight) pressedStateList(gesture, adjustedFunctionalKey)
-                else pressedStateList(adjustedKeyBackground, spaceBar)
+                if (!isNight) pressedStateList(adjustedFunctionalKey, adjustedFunctionalKey)
+                else pressedStateList(spaceBar, spaceBar)
         }
         keyTextFilter = colorFilter(keyText)
 
