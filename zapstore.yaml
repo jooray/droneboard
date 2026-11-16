@@ -7,7 +7,7 @@ summary: An offline keyboard that feels like Gboard, with multilingual swipe, on
 description: |
   Droneboard is an open-source Android keyboard with no INTERNET permission. Everything it does happens on the phone.
 
-  You can swipe in several languages at once without switching: Czech, Slovak, English, German, Spanish and Dutch, plus Slovak and Czech without diacritics. Swipe runs on the FUTO Swipe encoder with Droneboard's own decoder, which also learns the words you type. Next-word suggestions come from a small neural network that runs on the phone and predicts only in the languages you enabled.
+  You can swipe in several languages at once without switching: Czech, Slovak, English, German, Spanish, Dutch and Hungarian, plus Slovak and Czech without diacritics. Swipe runs on the FUTO Swipe encoder with Droneboard's own decoder, which also learns the words you type. Next-word suggestions come from a small neural network that runs on the phone and predicts only in the languages you enabled.
 
   The microphone at the right end of the suggestion strip starts dictation. The keyboard records the audio itself, also from Bluetooth headsets, LE Audio and hearing aids, and Offline Speech to Text turns it into text on the phone. Long dictation is split, so it keeps going past one minute.
 
@@ -28,6 +28,7 @@ tags:
     - german
     - spanish
     - dutch
+    - hungarian
 license: GPL-3.0-only
 website: https://cypherpunk.today/droneboard/
 icon: ./art/droneboard-icon-512.png

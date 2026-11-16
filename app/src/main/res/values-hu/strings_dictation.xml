@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="voice_starting">Mikrofon indítása…</string>
+    <string name="voice_waiting_bluetooth">Várakozás a headset mikrofonjára…</string>
+    <string name="voice_speak_now">Most beszéljen</string>
+    <string name="voice_silent">A mikrofon nem hall semmit. Nincs lenémítva?</string>
+    <string name="voice_transcribing">Leírás folyamatban…</string>
+    <string name="voice_stop">Diktálás leállítása</string>
+    <string name="voice_cancel">Diktálás megszakítása</string>
+    <string name="voice_mic_phone">Telefon mikrofonja</string>
+    <string name="voice_mic_phone_fallback">Telefon mikrofonja (a headset nem válaszolt)</string>
+    <string name="voice_mic_headset">Mikrofon: %s</string>
+    <string name="voice_mic_bluetooth">Bluetooth-headset</string>
+    <string name="voice_mic_failed">Nem sikerült elindítani a mikrofont</string>
+    <string name="voice_transcription_failed">Nem sikerült szöveggé alakítani</string>
+    <string name="voice_ostt_missing">A diktáláshoz az Offline Speech to Text kell</string>
+    <string name="voice_ostt_missing_detail">Ingyenes alkalmazás, amely internet nélkül, magán a telefonon alakítja szöveggé a beszédet. Telepítse, nyissa meg egyszer, hogy letöltsön egy beszédmodellt, aztán koppintson újra a mikrofonra.</string>
+    <string name="voice_install_ostt">Letöltés a Zapstore-ból</string>
+    <string name="voice_dictation_help">Hogyan működik a diktálás</string>
+    <string name="voice_open_ostt">Alkalmazás megnyitása</string>
+    <string name="voice_ostt_unavailable">Az Offline Speech to Text nem áll készen</string>
+    <string name="voice_ostt_unavailable_detail">Telepítve van, de a billentyűzet nem éri el a beszédfelismerő szolgáltatását. Frissítse a Zapstore-ból, vagy nézze meg, nincs-e kikapcsolva.</string>
+    <string name="voice_ostt_no_model">Az Offline Speech to Text még nem töltött le beszédmodellt</string>
+    <string name="voice_ostt_no_model_detail">Nyissa meg, töltsön le egy modellt, aztán koppintson újra a mikrofonra.</string>
+    <string name="voice_ostt_permission">Az Offline Speech to Textnek hiányzik egy engedélye</string>
+    <string name="voice_ostt_permission_detail">Nyissa meg, adja meg, amit kér, aztán koppintson újra a mikrofonra.</string>
+    <string name="voice_mic_permission_settings">Az Engedélyek között engedélyezze a mikrofont a Droneboard számára.</string>
+</resources>

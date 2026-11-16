@@ -56,7 +56,7 @@ T["en"] = dict(
     side_a="side a — today",
     feats=[
         ("multilingual swipe",
-         "Swipe in several languages in the same sentence without touching a language key. Today that means Czech, Slovak, English, German, Spanish and Dutch, plus Slovak and Czech without diacritics. FUTO Swipe reads the gesture; our decoder adds the accents and lets the previous word choose between candidates."),
+         "Swipe in several languages in the same sentence without touching a language key. Today that means Czech, Slovak, English, German, Spanish, Dutch and Hungarian, plus Slovak and Czech without diacritics. FUTO Swipe reads the gesture; our decoder adds the accents and lets the previous word choose between candidates."),
         ("the next word, predicted on the phone",
          "A small neural network guesses your next word from what you have written so far. It runs on the phone; there is no server to send anything to."),
         ("dictation without leaving the keyboard",
@@ -147,7 +147,7 @@ T["sk"] = dict(
     side_a="strana a — dnes",
     feats=[
         ("viacjazyčné písanie potiahnutím",
-         "V jednej vete potiahnete slová v niekoľkých jazykoch a jazyk neprepínate. Dnes je to slovenčina, čeština, angličtina, nemčina, španielčina a holandčina a k tomu slovenčina a čeština bez diakritiky. Gesto číta FUTO Swipe, náš dekodér doplní diakritiku a podľa predchádzajúceho slova vyberie správneho kandidáta."),
+         "V jednej vete potiahnete slová v niekoľkých jazykoch a jazyk neprepínate. Dnes je to slovenčina, čeština, angličtina, nemčina, španielčina, holandčina a maďarčina a k tomu slovenčina a čeština bez diakritiky. Gesto číta FUTO Swipe, náš dekodér doplní diakritiku a podľa predchádzajúceho slova vyberie správneho kandidáta."),
         ("ďalšie slovo odhadne telefón",
          "Malá neurónová sieť odhadne ďalšie slovo podľa toho, čo ste už napísali. Beží v telefóne, nie je žiadny server, kam by sa čokoľvek posielalo."),
         ("diktovanie bez opustenia klávesnice",
@@ -238,7 +238,7 @@ T["cs"] = dict(
     side_a="strana a — dnes",
     feats=[
         ("vícejazyčné psaní tažením",
-         "V jedné větě přejedete slova v několika jazycích a jazyk nepřepínáte. Dnes je to čeština, slovenština, angličtina, němčina, španělština a nizozemština a k tomu čeština a slovenština bez diakritiky. Gesto čte FUTO Swipe, náš dekodér doplní diakritiku a podle předchozího slova vybere správného kandidáta."),
+         "V jedné větě přejedete slova v několika jazycích a jazyk nepřepínáte. Dnes je to čeština, slovenština, angličtina, němčina, španělština, nizozemština a maďarština a k tomu čeština a slovenština bez diakritiky. Gesto čte FUTO Swipe, náš dekodér doplní diakritiku a podle předchozího slova vybere správného kandidáta."),
         ("další slovo odhadne telefon",
          "Malá neuronová síť odhadne další slovo podle toho, co jste už napsali. Běží v telefonu, žádný server, kam by se cokoli posílalo, neexistuje."),
         ("diktování, aniž byste opustili klávesnici",
@@ -329,7 +329,7 @@ T["de"] = dict(
     side_a="seite a — heute",
     feats=[
         ("mehrsprachig wischen",
-         "Wischen Sie Wörter aus mehreren Sprachen im selben Satz, ohne eine Sprachtaste anzufassen. Heute sind das Tschechisch, Slowakisch, Englisch, Deutsch, Spanisch und Niederländisch, dazu Slowakisch und Tschechisch ohne diakritische Zeichen. FUTO Swipe liest die Geste, unser Decoder ergänzt die Akzente und lässt das vorherige Wort zwischen den Kandidaten entscheiden."),
+         "Wischen Sie Wörter aus mehreren Sprachen im selben Satz, ohne eine Sprachtaste anzufassen. Heute sind das Tschechisch, Slowakisch, Englisch, Deutsch, Spanisch, Niederländisch und Ungarisch, dazu Slowakisch und Tschechisch ohne diakritische Zeichen. FUTO Swipe liest die Geste, unser Decoder ergänzt die Akzente und lässt das vorherige Wort zwischen den Kandidaten entscheiden."),
         ("das nächste Wort, auf dem Telefon berechnet",
          "Ein kleines neuronales Netz errät Ihr nächstes Wort aus dem, was Sie schon geschrieben haben. Es läuft auf dem Telefon; es gibt keinen Server, an den etwas gehen könnte."),
         ("diktieren, ohne die Tastatur zu verlassen",
@@ -420,7 +420,7 @@ T["es"] = dict(
     side_a="cara a — hoy",
     feats=[
         ("deslizar en varios idiomas",
-         "Desliza palabras de varios idiomas en la misma frase sin tocar ninguna tecla de idioma. Hoy son el checo, el eslovaco, el inglés, el alemán, el español y el neerlandés, además del eslovaco y el checo sin diacríticos. FUTO Swipe lee el gesto; nuestro decodificador añade los acentos y deja que la palabra anterior elija entre los candidatos."),
+         "Desliza palabras de varios idiomas en la misma frase sin tocar ninguna tecla de idioma. Hoy son el checo, el eslovaco, el inglés, el alemán, el español, el neerlandés y el húngaro, además del eslovaco y el checo sin diacríticos. FUTO Swipe lee el gesto; nuestro decodificador añade los acentos y deja que la palabra anterior elija entre los candidatos."),
         ("la siguiente palabra, calculada en el teléfono",
          "Una pequeña red neuronal adivina tu siguiente palabra a partir de lo que ya has escrito. Funciona en el teléfono; no hay ningún servidor al que enviar nada."),
         ("dictar sin salir del teclado",

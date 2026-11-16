@@ -94,6 +94,25 @@ That gives 7.7 MB (de), 6.6 MB (es) and 7.7 MB (nl). Against the Slovak threshol
 4.6 MB) the larger n-gram sets add 0.3–0.6 pp top-1 on synthetic swipes with held-out sentence
 context (FineWeb-2 test split).
 
+### Hungarian
+
+FineWeb-2 `hun_Latn` (about 100M words, no personal text), Hunspell `hu_HU` as the filter.
+Hungarian is agglutinative, so the list keeps up to 500,000 forms, like Czech. The key path comes
+from NFD: á → a, é → e, í → i, ó ö ő → o, ú ü ű → u. HeliBoard's `main_hu.dict` stays the typing
+dictionary; the emoji dictionary is aosp-dictionaries' `emoji_hu.dict`.
+
+```sh
+.venv/bin/python -I tools/dicts/fetch_corpus.py hun_Latn 280 work/corpus-hu
+python3 -I tools/dicts/build_dicts.py hu work/out work/hunspell/hu_HU work/corpus-hu/corpus.txt
+.venv/bin/python -I tools/dicts/count_ngrams.py hu work/out/hu.words.tsv work/ngrams --corpus work/corpus-hu/corpus.txt --min-trigram 2
+python3 -I tools/dicts/pack_swipe_dict.py work/ngrams/hu.words.tsv work/ngrams/hu.bigrams.tsv app/src/main/assets/swipe/hu.kpd \
+  --min-bigram=10 --trigrams=work/ngrams/hu.trigrams.tsv --min-trigram=3 --trigram-bytes=4000000
+```
+
+That gives 10.3 MB. Smaller and larger n-gram sets change top-1 on held-out synthetic swipes by
+less than 1 pp: 79.8 % at 7.0 MB (bigrams ≥ 30, trigrams ≥ 5), 80.1 % at 8.6 MB (the German
+thresholds), 80.5 % at 10.3 MB, 80.7 % at 11.9 MB (bigrams ≥ 8, trigrams ≥ 2).
+
 The script produces three outputs:
 
 - **`<lang>.words.tsv`** feeds the swipe engine. Its columns are `surface`, `keypath`, `freq`, `count`:

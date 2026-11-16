@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="swipe_recorder_title">Csúsztatások rögzítése a hangoláshoz</string>
+    <string name="swipe_recorder_summary">Csúsztassa be a megjelenő szavakat vagy mondatokat; a mozdulatok csak ezen a telefonon maradnak</string>
+    <string name="swipe_recorder_intro">Csúsztassa be a mezőbe azt, ami lent látható, úgy, ahogy szokott. A mozdulatok csak ezen a telefonon, a lent megadott mappában maradnak, és sosem töltjük fel őket. Amit ezen a képernyőn kívül gépel, azt nem rögzítjük.</string>
+    <string name="swipe_recorder_progress">%1$d. szó / %2$d</string>
+    <string name="swipe_recorder_last">Utolsó csúsztatás: %1$s</string>
+    <string name="swipe_recorder_skip">Szó kihagyása</string>
+    <string name="swipe_recorder_done">Kész, köszönjük!</string>
+    <string name="swipe_recorder_file">Jelenlegi fájl: %1$s</string>
+    <string name="swipe_recorder_no_storage">Nem sikerült létrehozni a felvételi fájlt.</string>
+    <string name="swipe_recorder_mode_words">Szavak</string>
+    <string name="swipe_recorder_mode_sentences">Mondatok</string>
+    <string name="swipe_recorder_style_normal">Normál</string>
+    <string name="swipe_recorder_style_sloppy">Gyors és pontatlan</string>
+    <string name="swipe_recorder_style_hint_normal">Csúsztasson a megszokott tempójában.</string>
+    <string name="swipe_recorder_style_hint_sloppy">Csúsztasson, amilyen gyorsan csak tud, és ne célozzon gondosan.</string>
+    <string name="swipe_recorder_sentence_hint">Csúsztassa be a mondatot szóról szóra. Ha egy szó rossz, javítsa úgy, ahogy szokta (a javaslatsávban vagy új csúsztatással), aztán nyomja meg az Entert vagy a Következő mondat gombot.</string>
+    <string name="swipe_recorder_sentence_progress">%1$d. mondat / %2$d · %3$d. szó / %4$d</string>
+    <string name="swipe_recorder_next_sentence">Következő mondat</string>
+    <string name="swipe_recorder_skip_sentence">Kihagyás</string>
+    <string name="swipe_recorder_languages">A mondatok nyelve</string>
+    <string name="swipe_recorder_counter">Most %1$d rögzítve · összesen %2$d a fájlokban</string>
+    <string name="swipe_recorder_export_title">A felvételek kimentése</string>
+    <string name="swipe_recorder_export_text">A fájlok ebben a mappában maradnak a telefonon (az alkalmazásnak nincs internet-hozzáférése). Számítógépre ezzel a paranccsal másolhatók át:</string>
+    <string name="swipe_recorder_copy">Parancs másolása</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="capitalize_english_i">Angol „I” nagybetűvel</string>
+    <string name="capitalize_english_i_summary">Az „i think” helyett „I think” lesz, ugyanígy az i’m, i’ll, i’d és i’ve is. Csak akkor, ha a körülötte lévő szöveg angol. Ha közvetlenül utána töröl, a javítás visszavonódik</string>
+</resources>

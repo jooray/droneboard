@@ -74,7 +74,7 @@ object SwipeGestureDecoder {
         return words
     }
 
-    /** gamma, beta, lambda, capital-letter penalty, bigram weight (tuned in bench-swipe; de/es/nl on
+    /** gamma, beta, lambda, capital-letter penalty, bigram weight (tuned in bench-swipe; de/es/nl/hu on
      *  synthetic swipes with held-out sentence context in tools/swipe-replay). German has no capital-letter
      *  penalty: its nouns are capitalized (+2.1 pp top-1 against -2). */
     private val LANGUAGE_PARAMS = mapOf(
@@ -84,6 +84,8 @@ object SwipeGestureDecoder {
         "de" to floatArrayOf(0.5f, 0.9866f, 0.025f, 0f, 0.1f),
         "es" to floatArrayOf(0.5f, 0.9866f, 0.025f, -2f, 0.1f),
         "nl" to floatArrayOf(0.6f, 0.9866f, 0.025f, -2f, 0.2f),
+        // Hungarian: gamma 0.4 / 0.6 and bigram weight 0.05 / 0.15 / 0.2 were 0.4-1.9 pp top-1 worse or equal
+        "hu" to floatArrayOf(0.5f, 0.9866f, 0.025f, -2f, 0.1f),
     )
 
     /** parameters of a dictionary; sk_nd (Slovak without diacritics) uses those of sk */

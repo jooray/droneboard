@@ -21,7 +21,7 @@ import java.util.Locale
  */
 object AppLanguage {
     /** language tags offered in the picker; "" is the system default. Keep in sync with res/xml/locales_config.xml */
-    val LANGUAGES = listOf("", "en", "sk", "cs", "de", "es", "nl")
+    val LANGUAGES = listOf("", "en", "sk", "cs", "de", "es", "nl", "hu")
 
     fun displayNameRes(tag: String) = when (tag) {
         "en" -> R.string.app_language_name_en
@@ -30,6 +30,7 @@ object AppLanguage {
         "de" -> R.string.app_language_name_de
         "es" -> R.string.app_language_name_es
         "nl" -> R.string.app_language_name_nl
+        "hu" -> R.string.app_language_name_hu
         else -> R.string.app_language_system
     }
 

@@ -10,7 +10,7 @@ The name comes from drone ambient music. A swipe across the keys feels like some
 
 ## Languages
 
-Czech, Slovak, English, German, Spanish and Dutch, plus Slovak and Czech without diacritics (for people who type "dakujem" and "muze"). Each has swipe typing, neural next-word prediction and emoji search, and any of them can be mixed in one keyboard. German uses QWERTZ, Spanish has the ñ key, as in Gboard. HeliBoard's layouts and tap-typing dictionaries for other languages are still there.
+Czech, Slovak, English, German, Spanish, Dutch and Hungarian, plus Slovak and Czech without diacritics (for people who type "dakujem" and "muze"). Each has swipe typing, neural next-word prediction and emoji search, and any of them can be mixed in one keyboard. German and Hungarian use QWERTZ, Spanish has the ñ key, as in Gboard. HeliBoard's layouts and tap-typing dictionaries for other languages are still there.
 
 ## What works today
 
@@ -64,7 +64,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"  
 ./gradlew assembleDebug
 ```
 
-You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Droneboard dictionaries (Slovak, Czech, English, German, Spanish, Dutch) are rebuilt from open data with the scripts in `tools/dicts`.
+You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Droneboard dictionaries (Slovak, Czech, English, German, Spanish, Dutch, Hungarian) are rebuilt from open data with the scripts in `tools/dicts`.
 
 ## Privacy
 

@@ -9,7 +9,7 @@ Never feed SNK / CNK (Slovak / Czech national corpus) data into this script: the
 do not allow redistribution.
 
 usage: build_dicts.py <lang> <out_dir> <hunspell_dict_prefix> <corpus.txt>...
-  lang: sk | en | cs | de | es | nl
+  lang: sk | en | cs | de | es | nl | hu
 writes:
   <out_dir>/<lang>.words.tsv    surface \t keypath \t freq(0-255) \t count (swipe engine)
   <out_dir>/<lang>.bigrams.tsv  prev_lower \t word_lower \t count         (swipe rescoring)
@@ -39,6 +39,10 @@ LANG = {
                description="Español"),
     "nl": dict(alphabet="abcdefghijklmnopqrstuvwxyzáéíóúàèëïöüâêîôû'", top=300_000, one_letter="u", min_count=4,
                description="Nederlands"),
+    # Hungarian is agglutinative: many forms are kept (like Czech). Key path through NFD:
+    # á -> a, é -> e, í -> i, ó ö ő -> o, ú ü ű -> u
+    "hu": dict(alphabet="aábcdeéfghiíjklmnoóöőpqrstuúüűvwxyz", top=500_000, one_letter="a s e", min_count=4,
+               description="Magyar"),
 }
 
 # letters without an NFD decomposition to a-z: German ß is swiped as "ss" ("straße" -> "strasse");

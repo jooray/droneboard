@@ -121,3 +121,16 @@ targets are compounds that the 300,000-word list lacks.
 
 Beam 100 → 200: recordings (106, sk + en) top-3 92.5 → 94.3, sink-or-swipe Czech 78.2 / 92.1 →
 78.6 / 92.6.
+
+## Hungarian, 16 Nov 2026
+
+Synthetic swipes on plain QWERTZ with held-out sentence context (FineWeb-2 `hun_Latn` test split),
+with English as second language, beam 200:
+
+| Set | top-1 | top-3 |
+|---|---|---|
+| Hungarian, QWERTZ (hu + en), 1500 | 80.5 | 89.7 |
+| Hungarian words with á é í ó ö ő ú ü ű (hu + en), 580 | 79.7 | 86.7 |
+
+Most errors are targets the encoder never proposed (7.7 %, 12.1 % for words with accents, which
+are longer on average); accents alone are wrong in under 2 %.

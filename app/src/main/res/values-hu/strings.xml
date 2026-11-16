@@ -550,4 +550,12 @@
     <string name="recent_emojis_cleared">Legutóbbi emodzsik törlése</string>
     <string name="prefs_enable_hardware_keyboard">Hardveres billentyűzet-támogatás</string>
     <string name="accent_shifted_icon">Kiemelt Shift billentyűikon</string>
+    <string name="delete_swipe_letters">Betűk</string>
+    <string name="delete_swipe_words">Szavak</string>
+    <string name="number_row_for_passwords">Számsor jelszavakhoz</string>
+    <string name="number_row_for_passwords_summary">Jelszó beírásakor megjelenik a számsor</string>
+    <string name="space_long_press">A szóköz hosszú lenyomása</string>
+    <string name="space_long_press_trackpad">Érintőpad</string>
+    <string name="space_long_press_language">Nyelv vagy billentyűzet váltása</string>
+    <string name="gesture_data_single_instance_per_word">Szavanként csak egy bejegyzés</string>
 </resources>

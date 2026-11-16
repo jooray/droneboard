@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- toolbar key, the name must be the lowercase ToolbarKey name -->
+    <string name="size_position" tools:keep="@string/size_position">Méret és elhelyezés</string>
+    <string name="resize_mode_one_handed">Egykezes</string>
+    <string name="resize_mode_floating">Lebegő</string>
+    <string name="resize_mode_split">Osztott</string>
+    <string name="resize_reset">Visszaállítás</string>
+    <string name="resize_done">Kész</string>
+    <!-- shown while resizing: width and height in percent of the default size -->
+    <string name="resize_size_label">Szélesség %1$d %% · Magasság %2$d %%</string>
+    <string name="resize_hint">Húzza a széleket vagy a sarkokat</string>
+    <string name="resize_handle_top">Billentyűzet átméretezése a felső szélénél</string>
+    <string name="resize_handle_bottom">Billentyűzet átméretezése az alsó szélénél</string>
+    <string name="resize_handle_left">Billentyűzet átméretezése a bal szélénél</string>
+    <string name="resize_handle_right">Billentyűzet átméretezése a jobb szélénél</string>
+    <string name="resize_handle_top_left">Billentyűzet átméretezése a bal felső sarkánál</string>
+    <string name="resize_handle_top_right">Billentyűzet átméretezése a jobb felső sarkánál</string>
+    <string name="resize_handle_bottom_left">Billentyűzet átméretezése a bal alsó sarkánál</string>
+    <string name="resize_handle_bottom_right">Billentyűzet átméretezése a jobb alsó sarkánál</string>
+    <string name="floating_drag_handle">A lebegő billentyűzet áthelyezése</string>
+    <string name="floating_release_to_dock">Engedje el a rögzítéshez</string>
+    <string name="resize_mode_full">Teljes szélesség</string>
+    <string name="resize_mode_compact">Kompakt</string>
+    <string name="resize_position_left">Bal</string>
+    <string name="resize_position_center">Közép</string>
+    <string name="resize_position_right">Jobb</string>
+    <string name="compact_large_screens">Kompakt billentyűzet nagy kijelzőn</string>
+    <string name="compact_large_screens_summary">Táblagépen és kihajtott összecsukható telefonon a billentyűzet nagyjából olyan széles, mint egy telefonon, és jobbra lent van, a hüvelykujj alatt. A méretét és az oldalát a Méret és elhelyezés gombbal lehet módosítani.</string>
+</resources>
