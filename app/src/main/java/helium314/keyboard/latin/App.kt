@@ -9,6 +9,7 @@ import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dictionary.ExpandableDictionaryUtils
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.FoldableUtils
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.Log
@@ -27,6 +28,7 @@ class App : Application() {
         app = this
         val ctx: Context = this
         DebugFlags.init(this) // needed by several other inits, so do it first
+        DirectBoot.init(this) // Droneboard: minimal keyboard before the first unlock
 
         val scope = CoroutineScope(Dispatchers.Default)
         // other inits can be in parallel, except what depends on SubtypeSettings
@@ -34,7 +36,15 @@ class App : Application() {
             scope.launch {
                 SubtypeSettings.init(ctx)
                 RichInputMethodManager.init(ctx)
-                checkVersionUpgrade(ctx)
+                // Droneboard: upgrades also clean files in credential-encrypted storage, so they wait for the
+                // first unlock (the process restarts then); run while locked they would be marked done without effect
+                if (DirectBoot.isUnlocked(ctx)) {
+                    try {
+                        checkVersionUpgrade(ctx)
+                    } catch (e: Throwable) {
+                        Log.e("startup", "version upgrade failed", e) // a failed migration must not stop the keyboard
+                    }
+                }
             },
             scope.launch { FoldableUtils.init(ctx) },
             scope.launch { Settings.init(ctx) },
@@ -46,9 +56,16 @@ class App : Application() {
         runBlocking { jobs.joinAll() } // word should be finished before anything else is started
 
         scope.launch { // do some uncritical work in background for faster startup
-            SupportedEmojis.load(this@App)
-            ExpandableDictionaryUtils.initUpToDateDicts(this@App)
-            LayoutUtilsCustom.removeMissingLayouts(this@App)
+            // Droneboard: an exception in this coroutine kills the whole process (also the keyboard on the lock
+            // screen), and none of this is needed to type, so each step fails on its own
+            fun uncritical(name: String, block: () -> Unit) = try {
+                block()
+            } catch (e: Throwable) {
+                Log.e("startup", "$name failed", e)
+            }
+            uncritical("SupportedEmojis.load") { SupportedEmojis.load(this@App) }
+            uncritical("initUpToDateDicts") { ExpandableDictionaryUtils.initUpToDateDicts(this@App) }
+            uncritical("removeMissingLayouts") { LayoutUtilsCustom.removeMissingLayouts(this@App) }
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             @Suppress("DEPRECATION")
             Log.i(

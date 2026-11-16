@@ -128,8 +128,13 @@ class StuffReceiver(latinIME: LatinIME) {
 
     private fun registerPersonalDictObserver(context: Context) {
         if (personalDictObserver != null) return
-        personalDictObserver = Companion.personalDictObserver
-        context.contentResolver.registerContentObserver(Words.CONTENT_URI, true, Companion.personalDictObserver)
+        // Droneboard: the user dictionary provider may be missing before the first unlock (SecurityException)
+        try {
+            context.contentResolver.registerContentObserver(Words.CONTENT_URI, true, Companion.personalDictObserver)
+            personalDictObserver = Companion.personalDictObserver
+        } catch (e: Exception) {
+            Log.w(TAG, "could not observe the personal dictionary", e)
+        }
     }
 
     private fun unregisterPersonalDictObserver(context: Context) {
@@ -141,8 +146,13 @@ class StuffReceiver(latinIME: LatinIME) {
     private fun registerContactsObserver(context: Context) {
         if (contactsObserver != null || !PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.READ_CONTACTS))
             return
-        contactsObserver = ContactsObserver(context)
-        context.contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, contactsObserver!!)
+        val observer = ContactsObserver(context)
+        try {
+            context.contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
+            contactsObserver = observer
+        } catch (e: Exception) {
+            Log.w(TAG, "could not observe contacts", e)
+        }
     }
 
     private fun unregisterContactsObserver(context: Context) {

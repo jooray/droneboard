@@ -35,6 +35,7 @@ import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.suggestions.SuggestedWords
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo
 import helium314.keyboard.latin.suggestions.SuggestionResults
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
@@ -551,6 +552,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     /** Next-word predictions and completions of the language model, restricted to this keyboard's languages. */
     private fun addLanguageModelSuggestions(results: SuggestionResults, composedData: ComposedData, ngramContext: NgramContext) {
+        if (!DirectBoot.isUnlocked()) return // direct boot: plain keyboard until the first unlock
         val model = LanguageModels.current ?: return
         val typed = composedData.mTypedWord
         if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return
@@ -558,7 +560,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         if (locales.isEmpty()) return
         val predictions = try {
             model.predict(LanguageModelSuggestions.contextWords(ngramContext), typed, locales, 8)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "language model failed", e)
             return
         }
@@ -651,6 +653,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     override fun getUserWordsForSwipe(maxWords: Int): Map<String, Int> {
         val out = HashMap<String, Int>()
+        if (!DirectBoot.isUnlocked()) return out // typing history is personal data, not used before unlock
         for (group in dictionaryGroups) {
             for (type in arrayOf(Dictionary.TYPE_USER, Dictionary.TYPE_USER_HISTORY)) {
                 val dict = group.getSubDict(type) ?: continue

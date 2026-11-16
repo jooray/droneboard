@@ -14,6 +14,7 @@ import helium314.keyboard.latin.suggestions.SuggestionResults
 import helium314.keyboard.latin.lm.NeuralLanguageModel
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
@@ -136,8 +137,11 @@ object SwipeGestureDecoder {
      *  dictionaries of every language a swipe can use, so that the first swipe does not wait. */
     @JvmStatic
     fun init(context: Context) {
-        val app = context.applicationContext
+        val app = context.applicationContext ?: context
         appContext = app
+        // direct boot: the models and dictionaries are extracted into credential-encrypted storage, so nothing
+        // loads before the first unlock (the keyboard process restarts on unlock and calls this again)
+        if (!DirectBoot.isUnlocked(app)) return
         if (!FutoSwipe.isAvailable) return
         // secondary (multilingual) locales live in the subtype's extra value, e.g. EN keyboard + SK
         val locales = runCatching {
@@ -149,7 +153,7 @@ object SwipeGestureDecoder {
 
     @JvmStatic
     fun isAvailable(context: Context): Boolean =
-        FutoSwipe.isAvailable && languagesWithDictionary(context).isNotEmpty()
+        DirectBoot.isUnlocked(context) && FutoSwipe.isAvailable && languagesWithDictionary(context).isNotEmpty()
 
     /** Languages with a .kpd swipe dictionary in the APK. */
     fun languagesWithDictionary(context: Context): Set<String> = availableLanguages ?: run {
@@ -160,6 +164,8 @@ object SwipeGestureDecoder {
 
     /** Copies the model and dictionaries out of the APK once per app version (native code needs files). */
     internal fun extract(context: Context, name: String): File = synchronized(extractLock) {
+        // fail closed before touching storage: no_backup is credential-encrypted
+        if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked, not extracting $name")
         // keyed by install time, so that every update (also with the same version code) re-extracts
         val installed = runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
@@ -190,6 +196,7 @@ object SwipeGestureDecoder {
     /** Reloads the user's words on the loader thread every few minutes; the next layout update picks them up. */
     private fun maybeRefreshUserWords() {
         val provider = userWordsProvider ?: return
+        if (!DirectBoot.isUnlocked()) return // the user's words are personal data, not read before unlock
         val now = System.currentTimeMillis()
         if (session == 0L || now - userWordsLoadedAt < USER_WORDS_REFRESH_MS) return
         userWordsLoadedAt = now
@@ -210,8 +217,10 @@ object SwipeGestureDecoder {
     }
 
     /** Starts loading [language] on the loader thread unless it is loaded or already loading. */
-    private fun requestLoad(context: Context, language: String): CountDownLatch =
-        loading.computeIfAbsent(language) {
+    private fun requestLoad(context: Context, language: String): CountDownLatch {
+        // while locked nothing is requested, so a failed attempt is never remembered as "loaded"
+        if (!DirectBoot.isUnlocked(context)) return CountDownLatch(0)
+        return loading.computeIfAbsent(language) {
             val latch = CountDownLatch(1)
             loader.execute {
                 try {
@@ -220,7 +229,7 @@ object SwipeGestureDecoder {
                     val handle = FutoSwipe.nativeLoadDictionary(file.absolutePath, params)
                     if (handle != 0L) dictionaries[language] = handle
                     else Log.w(TAG, "could not load swipe dictionary $language")
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.w(TAG, "could not load swipe dictionary $language", e)
                 } finally {
                     latch.countDown()
@@ -228,6 +237,7 @@ object SwipeGestureDecoder {
             }
             latch
         }
+    }
 
     /**
      * Loaded .kpd dictionaries of [languages] (in that order; languages without a dictionary or still
@@ -236,7 +246,7 @@ object SwipeGestureDecoder {
     @JvmStatic
     fun loadedDictionaries(languages: List<String>): List<Pair<String, Long>> {
         val context = appContext ?: return emptyList()
-        if (!FutoSwipe.isAvailable) return emptyList()
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return emptyList()
         val available = languagesWithDictionary(context)
         return languages.distinct().filter { it in available }.mapNotNull { lang ->
             val handle = dictionaries[lang] ?: run { requestLoad(context, lang); null }
@@ -274,7 +284,7 @@ object SwipeGestureDecoder {
     /** Starts loading dictionaries in the background (returns at once), so that the first swipe does not wait. */
     @JvmStatic
     fun preload(context: Context, locales: List<Locale>) {
-        if (!FutoSwipe.isAvailable) return
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return
         try {
             val available = languagesWithDictionary(context)
             locales.map { it.engineKey }.distinct().filter { it in available }.forEach { requestLoad(context, it) }
@@ -360,11 +370,11 @@ object SwipeGestureDecoder {
         secondaryLocales: List<Locale>, isFinal: Boolean
     ): SuggestionResults? {
         val context = appContext ?: return null
-        if (!FutoSwipe.isAvailable || !keyboard.mId.element.isAlphabet) return null
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable || !keyboard.mId.element.isAlphabet) return null
         try {
             if (!ensureSession(context) || !updateLayout(context, keyboard, secondaryLocales, if (isFinal) FINAL_WAIT_MS else 0L))
                 return null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.w(TAG, "could not set up swipe decoder", e)
             return null
         }

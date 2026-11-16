@@ -488,6 +488,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onCreate() {
+        // Droneboard: before the first unlock (direct boot) only a minimal keyboard runs, see DirectBoot
+        helium314.keyboard.latin.utils.DirectBoot.init(this);
         mSettings.startListener();
         KeyboardIconsSet.Companion.getInstance().loadIcons(this);
         mRichImm = RichInputMethodManager.getInstance();
@@ -499,7 +501,12 @@ public class LatinIME extends InputMethodService implements
         super.onCreate();
 
         loadSettings();
-        helium314.keyboard.latin.swipe.SwipeGestureDecoder.init(this);
+        // Droneboard features never stop the keyboard from starting (fail closed: the feature is just off)
+        try {
+            helium314.keyboard.latin.swipe.SwipeGestureDecoder.init(this);
+        } catch (Throwable t) {
+            Log.e(TAG, "swipe decoder init failed", t);
+        }
         // swipe ranks words the user has written (typing history, personal dictionary) higher
         helium314.keyboard.latin.swipe.SwipeGestureDecoder.setUserWordsProvider(
                 max -> mDictionaryFacilitator.getUserWordsForSwipe(max));
@@ -1548,8 +1555,14 @@ public class LatinIME extends InputMethodService implements
 
     public void launchEmojiSearch() {
         Log.d(EmojiSearchActivityKt.TAG, "before activity launch");
-        startActivity(new Intent().setClass(this, EmojiSearchActivity.class)
-                          .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_MULTIPLE_TASK));
+        // Droneboard: the search activity is not direct boot aware, it can't start before the first unlock
+        if (!helium314.keyboard.latin.utils.DirectBoot.isUnlocked(this)) return;
+        try {
+            startActivity(new Intent().setClass(this, EmojiSearchActivity.class)
+                              .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_MULTIPLE_TASK));
+        } catch (Exception e) {
+            Log.w(TAG, "could not start emoji search", e);
+        }
     }
 
     public boolean isEmojiSearch() {

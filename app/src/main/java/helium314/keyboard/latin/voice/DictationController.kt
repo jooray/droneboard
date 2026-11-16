@@ -16,6 +16,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.utils.DirectBoot
 
 private const val TAG = "DroneboardDictation"
 
@@ -55,6 +56,15 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     /** The mic key or toolbar button. Returns false when dictation can't run here (old Android). */
     fun onMicKey(): Boolean {
         if (!supported) return false
+        // no dictation on the lock screen, and none before the first unlock (direct boot): the permission screen,
+        // Offline Speech to Text and the help page can't open there; the key does nothing instead of crashing
+        val locked = runCatching {
+            !DirectBoot.isUnlocked(ime) || helium314.keyboard.compat.isDeviceLocked(ime)
+        }.getOrDefault(true)
+        if (locked) {
+            if (state != State.IDLE || panel != null) runCatching { cancel() }
+            return true
+        }
         when (state) {
             State.RECORDING -> stopRecording()
             State.TRANSCRIBING -> Unit // still typing out the last words

@@ -55,7 +55,8 @@ class RichInputMethodManager private constructor() {
     private var shortcuts = listOf<Shortcut>()
 
     // Droneboard dictates itself on Android 13+, so the mic key works without a voice IME
-    val isShortcutImeReady get() = shortcuts.isNotEmpty() || helium314.keyboard.latin.voice.DictationController.supported
+    val isShortcutImeReady get() = shortcuts.isNotEmpty() || (helium314.keyboard.latin.voice.DictationController.supported
+            && helium314.keyboard.latin.utils.DirectBoot.isUnlocked()) // no dictation before the first unlock
 
     fun getEnabledInputMethodSubtypes(imi: InputMethodInfo, allowsImplicitlySelectedSubtypes: Boolean) =
         inputMethodInfoCache.getEnabledInputMethodSubtypeList(imi, allowsImplicitlySelectedSubtypes)

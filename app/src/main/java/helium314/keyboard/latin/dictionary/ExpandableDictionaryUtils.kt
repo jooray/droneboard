@@ -7,6 +7,7 @@ import helium314.keyboard.latin.dictionary.contacts.ContactsBinaryDictionary
 import helium314.keyboard.latin.dictionary.history.UserHistoryDictionary
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 
@@ -15,9 +16,13 @@ object ExpandableDictionaryUtils {
 
     /** fill with dicts from file system, so we don't recreate on app start (misses changes that were made while different keyboard were active) */
     fun initUpToDateDicts(context: Context) {
-        val files = context.filesDir.listFiles {
+        // Droneboard fix: before the first unlock (direct boot) filesDir is credential-encrypted and listFiles()
+        // returns null. The former `!!` threw a NullPointerException in App.onCreate's background coroutine,
+        // which killed the keyboard process on every start, so there was no keyboard for the PIN / password.
+        if (!DirectBoot.isUnlocked(context)) return
+        val files = context.filesDir?.listFiles {
             it.isDirectory && it.name.endsWith(".dict") && !it.name.startsWith(UserHistoryDictionary.NAME)
-        }!!
+        } ?: return
         val prefs = context.prefs() // SettingsValues not initialized at this point on app start
         if (!prefs.getBoolean(Settings.PREF_USE_CONTACTS, Defaults.PREF_USE_CONTACTS))
             files.forEach { if (it.name.startsWith(ContactsBinaryDictionary.NAME)) it.deleteRecursively() }

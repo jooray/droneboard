@@ -11,6 +11,7 @@ import helium314.keyboard.latin.common.LocaleUtils
 import helium314.keyboard.latin.common.LocaleUtils.privateUse
 import helium314.keyboard.latin.common.LocaleUtils.withoutPrivateUse
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import java.io.File
 import java.util.LinkedList
@@ -33,6 +34,7 @@ object DictionaryFactory {
     }
 
     fun createEmojiDictionaryCollection(context: Context, locale: Locale, otherLocales: Collection<Locale>): DictionaryCollection? {
+        if (!DirectBoot.isUnlocked(context)) return null // direct boot: emoji dictionaries are in credential-encrypted storage
         val locales = listOf(locale) + otherLocales
         val dicts = locales.mapNotNull { locale ->
             (DictionaryInfoUtils.getCachedDictForLocaleAndType(locale, Dictionary.TYPE_EMOJI, context)
@@ -45,6 +47,7 @@ object DictionaryFactory {
 
     /** Droneboard bundles emoji dictionaries in assets; extract the best match for [locale] on demand. */
     fun extractBuiltInEmojiDict(context: Context, locale: Locale): File? {
+        if (!DirectBoot.isUnlocked(context)) return null // extracted into credential-encrypted storage
         val candidates = DictionaryInfoUtils.getAssetsDictionaryList(context).orEmpty()
             .filter { it.startsWith(Dictionary.TYPE_EMOJI + "_") }
         val best = bestAssetMatch(locale, candidates, Dictionary.TYPE_EMOJI) ?: return null
@@ -53,6 +56,8 @@ object DictionaryFactory {
 
     fun getMainDictsForLocale(context: Context, locale: Locale, useEmojiDict: Boolean): List<Dictionary> {
         val dictList = LinkedList<Dictionary>()
+        // direct boot: dictionaries are extracted into credential-encrypted storage; plain keys until unlock
+        if (!DirectBoot.isUnlocked(context)) return dictList
         val (extracted, nonExtracted) = getAvailableDictsForLocale(locale, context, useEmojiDict)
         extracted.sortedBy { !it.name.endsWith(DictionaryInfoUtils.USER_DICTIONARY_SUFFIX) }.forEach {
             // we sort to have user dicts first, so they have priority over internal dicts of the same type

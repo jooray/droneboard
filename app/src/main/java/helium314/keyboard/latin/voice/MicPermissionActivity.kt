@@ -35,10 +35,12 @@ class MicPermissionActivity : Activity() {
             context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
         fun start(context: Context) {
-            context.startActivity(
-                Intent(context, MicPermissionActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-            )
+            runCatching {
+                context.startActivity(
+                    Intent(context, MicPermissionActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
+                )
+            }
         }
     }
 
@@ -52,9 +54,11 @@ class MicPermissionActivity : Activity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         val mic = permissions.indexOf(Manifest.permission.RECORD_AUDIO)
         val denied = mic >= 0 && grantResults.getOrNull(mic) != PackageManager.PERMISSION_GRANTED
-        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-        val askedBefore = prefs.getBoolean(ASKED, false)
-        prefs.edit().putBoolean(ASKED, true).apply()
+        // credential-encrypted prefs: they throw before the first unlock, so this fails closed
+        val askedBefore = runCatching {
+            val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+            prefs.getBoolean(ASKED, false).also { prefs.edit().putBoolean(ASKED, true).apply() }
+        }.getOrDefault(false)
         // asked before and no rationale now: the dialog won't come back, only the settings can
         // grant it (the first request is skipped, since dismissing the dialog also gives no rationale)
         if (denied && askedBefore && !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {

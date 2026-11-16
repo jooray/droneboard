@@ -6,6 +6,7 @@ import com.android.inputmethod.latin.BinaryDictionary
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.dictionary.DictionaryFactory
 import helium314.keyboard.latin.dictionary.DictionaryInfoUtils
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import java.io.File
 import java.text.Normalizer
@@ -30,6 +31,8 @@ object EmojiSearchIndex {
     private fun indexFor(context: Context, locale: Locale): List<Entry> {
         val language = locale.language
         indexes[language]?.let { return it }
+        // direct boot: the dictionaries are in credential-encrypted storage; don't cache the empty result
+        if (!DirectBoot.isUnlocked(context)) return emptyList()
         val file = DictionaryInfoUtils.getCachedDictForLocaleAndType(locale, Dictionary.TYPE_EMOJI, context)
             ?: DictionaryFactory.extractBuiltInEmojiDict(context, locale)
         val entries = file?.let { load(it, locale) } ?: emptyList()

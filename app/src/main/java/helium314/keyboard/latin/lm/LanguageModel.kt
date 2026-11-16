@@ -4,6 +4,7 @@ package helium314.keyboard.latin.lm
 import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.swipe.FutoSwipe
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import java.util.Locale
 
@@ -37,7 +38,7 @@ object NgramLanguageModel : LanguageModel {
     private const val TAG = "NgramLanguageModel"
 
     override fun predict(context: List<String>, prefix: String, locales: List<Locale>, maxResults: Int): List<WordPrediction> {
-        if (maxResults <= 0 || !FutoSwipe.isAvailable) return emptyList()
+        if (maxResults <= 0 || !DirectBoot.isUnlocked() || !FutoSwipe.isAvailable) return emptyList()
         val byLanguage = locales.associateBy { it.engineKey }
         val dicts = SwipeGestureDecoder.loadedDictionaries(locales.map { it.engineKey })
         if (dicts.isEmpty()) return emptyList()

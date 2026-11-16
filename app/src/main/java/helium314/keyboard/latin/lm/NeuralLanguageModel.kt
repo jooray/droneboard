@@ -7,6 +7,7 @@ import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.swipe.FutoSwipe
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
@@ -71,7 +72,8 @@ object NeuralLanguageModel : LanguageModel {
 
     override fun predict(context: List<String>, prefix: String, locales: List<Locale>, maxResults: Int): List<WordPrediction> {
         val fallback = { NgramLanguageModel.predict(context, prefix, locales, maxResults) }
-        if (maxResults <= 0 || !FutoSwipe.isAvailable) return emptyList()
+        // direct boot: no model files before the first unlock, and no predictions from personal data
+        if (maxResults <= 0 || !DirectBoot.isUnlocked() || !FutoSwipe.isAvailable) return emptyList()
         if (!Settings.getValues().mNeuralPredictions) return fallback()
         val app = SwipeGestureDecoder.appContext ?: return fallback()
         val languages = locales.map { it.engineKey }.distinct()
@@ -153,12 +155,12 @@ object NeuralLanguageModel : LanguageModel {
 
     /** Loads the models of [languages] in the background (called when the keyboard starts). */
     fun preload(context: Context, languages: Collection<String>) {
-        if (!FutoSwipe.isAvailable || !Settings.getValues().mNeuralPredictions) return
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable || !Settings.getValues().mNeuralPredictions) return
         languages.filter { it in neuralLanguages(context) }.forEach { requestLoad(context, it) }
     }
 
     private fun requestLoad(context: Context, language: String) {
-        if (models.containsKey(language) || !loading.add(language)) return
+        if (!DirectBoot.isUnlocked(context) || models.containsKey(language) || !loading.add(language)) return
         loader.execute {
             try {
                 val start = SystemClock.elapsedRealtime()
@@ -171,7 +173,7 @@ object NeuralLanguageModel : LanguageModel {
                 } else {
                     Log.w(TAG, "could not load the neural model for $language")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "could not load the neural model for $language", e)
             } finally {
                 loading.remove(language)

@@ -15,6 +15,7 @@ import helium314.keyboard.latin.define.DecoderSpecificConstants
 import helium314.keyboard.latin.makedict.DictionaryHeader
 import helium314.keyboard.latin.makedict.UnsupportedFormatException
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
+import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.locale
@@ -111,7 +112,7 @@ object DictionaryInfoUtils {
             .map { it.locale() }.filter { getCachedDictForLocaleAndType(it, Dictionary.TYPE_EMOJI, context) != null || hasAssetsEmojiDict(it, context) }
 
     // Droneboard bundles emoji dictionaries; they are only extracted on first use, but search should be available right away
-    private fun hasAssetsEmojiDict(locale: Locale, context: Context): Boolean =
+    private fun hasAssetsEmojiDict(locale: Locale, context: Context): Boolean = DirectBoot.isUnlocked(context) &&
         getAssetsDictionaryList(context).orEmpty().any {
             it.startsWith(Dictionary.TYPE_EMOJI + "_") && extractLocaleFromAssetsDictionaryFile(it).language == locale.language
         }
