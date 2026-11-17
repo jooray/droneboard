@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
     std::string dump_path;  // --dump: the app's model candidates for every prefix, for the end-to-end eval
     int max_typed = 3;
     bool fold_prefix = false;  // --fold: the letters are typed without accents (their key path)
+    std::string typed_path;  // --typed: one {"typed": "..."} line per item; the candidates for that typed word only
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? std::string(argv[++i]) : std::string(); };
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
         else if (a == "--dump") dump_path = next();
         else if (a == "--max-typed") max_typed = std::stoi(next());
         else if (a == "--fold") fold_prefix = true;
+        else if (a == "--typed") typed_path = next();
         else inputs.push_back(a);
     }
     if (dicts.empty() || inputs.empty()) {
@@ -134,11 +136,19 @@ int main(int argc, char** argv) {
     if (!dump_path.empty()) dump.open(dump_path);
     const int n_out = dump_path.empty() ? 3 : 8;  // the app asks the model for 8 words (DictionaryFacilitatorImpl)
     const int n_typed = dump_path.empty() ? 4 : max_typed + 1;
+    std::vector<std::string> typed_list;  // the noisy-typing eval: what was typed (with typos) for each item
+    if (!typed_path.empty()) {
+        std::ifstream tin(typed_path);
+        std::string tl;
+        while (std::getline(tin, tl)) typed_list.push_back(tl.empty() ? std::string() : std::string(json::parse(tl)["typed"]));
+    }
+    size_t item_index = 0;
     for (auto& path : inputs) {
         std::ifstream in(path);
         std::string line;
         while (std::getline(in, line)) {
             if (line.empty()) continue;
+            const size_t this_item = item_index++;
             json j = json::parse(line);
             std::vector<std::string> ctx;
             if (j.contains("context")) for (auto& w : j["context"]) ctx.push_back(droneswipe::to_lower_utf8(w));
@@ -157,9 +167,11 @@ int main(int argc, char** argv) {
             int saved = -1;
             json dump_item = json::array();
             for (int typed = 0; typed < n_typed; ++typed) {
+                if (!typed_list.empty() && typed != 1) continue;  // only the word as typed
                 std::string prefix = first_chars(target, (size_t)typed);
                 if (fold_prefix) prefix = droneswipe::key_path_of(prefix);  // typed without accents
-                if (typed > 0 && prefix == target) {  // the word is typed, not predicted
+                if (!typed_list.empty()) prefix = this_item < typed_list.size() ? typed_list[this_item] : std::string();
+                else if (typed > 0 && prefix == target) {  // the word is typed, not predicted
                     if (typed < 4) for (Stats* s : {&all, &by_lang[lang]}) { s->hit[typed][0]++; s->hit[typed][1]++; }
                     if (!dump_path.empty()) break;
                     continue;

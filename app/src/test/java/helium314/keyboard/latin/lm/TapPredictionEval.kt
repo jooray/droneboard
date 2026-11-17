@@ -9,7 +9,9 @@ import helium314.keyboard.latin.common.ComposedData
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.dictionary.Dictionary
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
+import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.suggestions.Suggest
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo
 import helium314.keyboard.latin.suggestions.SuggestedWords
@@ -44,6 +46,8 @@ class TapPredictionEval {
     private val dir = System.getenv("TAP_EVAL_DIR")?.let { File(it) }
     private val dictDir = File(System.getenv("TAP_EVAL_DICTS") ?: "src/main/assets/dicts")
 
+    /** knob "nativefirst=1": the dictionaries' first suggestion stays first in the strip too (not only with autocorrection on) */
+    private companion object { var forceNativeFirst = false }
     private class Group(val locale: Locale, val dicts: List<BinaryDictionary>, var weight: Float)
 
 
@@ -145,6 +149,161 @@ class TapPredictionEval {
         File(dir, "emoji-scores.txt").writeText(sb.toString())
     }
 
+    // ---------------------------------------------------------------- noisy typing
+
+    private class TypoScore {
+        var n = 0; var strip = 0; var ac = 0; var acModel = 0; var wrongAc = 0; var wrongAcModel = 0
+        var typedValid = 0; var typedValidCorrected = 0
+        fun p(k: Int) = "%5.1f".format(Locale.ROOT, 100.0 * k / maxOf(n, 1))
+        override fun toString() = "n=%4d  strip %s  autocorrect=target %s (neural may rank first: %s)  autocorrect=other word %s (%s)  typed word valid %s, of those replaced %s"
+            .format(Locale.ROOT, n, p(strip), p(ac), p(acModel), p(wrongAc), p(wrongAcModel), p(typedValid),
+                "%5.1f".format(Locale.ROOT, 100.0 * typedValidCorrected / maxOf(typedValid, 1)))
+    }
+
+    private val autoCorrectConfidence = Defaults.PREF_AUTO_CORRECT_CONFIDENCE
+    private val autoCorrectThreshold = 0.5f - 0.5f * Math.pow(autoCorrectConfidence.toDouble(), 0.33).toFloat() // SettingsValues
+    private val scoreLimitForAutocorrect = ((1.14 - 0.2 * Math.pow(autoCorrectConfidence + 0.47, 3.5)) * 900000).toInt()
+
+    /**
+     * The word the app would commit on space with autocorrection on (default confidence), or null. Follows
+     * Suggest.shouldBeAutoCorrected for typed words that are not in the dictionary and for valid ones: the first
+     * suggestion (after the typed word is removed and emoji moved down) has to exceed the normalized-score
+     * threshold; a typed word that is valid with a good score is only replaced for a whitelisted suggestion. The
+     * app additionally replaces a valid typed word when the suggestion's next-word score is clearly higher in this
+     * context (+20), which this eval has no scores for: its false-correction numbers are a lower bound.
+     */
+    private fun autocorrectChoice(typed: String, results: SuggestionResults, modelMayRankFirst: Boolean): String? {
+        val all = ArrayList(results.map { if (modelMayRankFirst && it.isKindOf(SuggestedWordInfo.KIND_COMPLETION))
+            it.copy(kindAndFlags = it.kindAndFlags or SuggestedWordInfo.KIND_FLAG_APPROPRIATE_FOR_AUTO_CORRECTION) else it })
+        val typedInfo = all.firstOrNull { it.word == typed }
+        SuggestedWordInfo.removeDupsAndTypedWord(typed, all)
+        Suggest.makeFirstTwoSuggestionsNonEmoji(all)
+        val first = all.firstOrNull() ?: return null
+        if (first.isEmoji) return null
+        val allows = if (typedInfo == null) typed.length > 1 else first.score > scoreLimitForAutocorrect
+        if (!allows) return null
+        if (!AutoCorrectionUtils.suggestionExceedsThreshold(first, typed, autoCorrectThreshold)) return null
+        if (typedInfo != null && typedInfo.score > scoreLimitForAutocorrect) {
+            return if (first.isKindOf(SuggestedWordInfo.KIND_WHITELIST)) first.word else null
+        }
+        return first.word
+    }
+
+    /**
+     * Typing with neighbouring-key errors: noisy-<lang>-<cond>.jsonl (tools/swipe-replay/make_tap_typos.py: typed letters
+     * and the touch points), noisydump-<lang>-<cond>.jsonl (lm-eval --typed ... --dump: the model's candidates for the
+     * typed word). Per condition, per group of words (typo = a typed letter differs from the target's base letters;
+     * correct = typed as the target, split into words without and with accents, which are typed without them).
+     */
+    @Test fun typos() {
+        Assume.assumeTrue("TAP_EVAL_DIR not set", dir != null)
+        System.load(File(dir, "libjni_latinime.dylib").absolutePath)
+        val pi = makeProximityInfo()
+        val out = StringBuilder()
+        val examples = StringBuilder()
+        val only = System.getenv("TAP_EVAL_LANGS")?.split(",")
+        val conds = (System.getenv("TAP_EVAL_TYPO_CONDS") ?: "s25,s35,s45,struct").split(",")
+        for ((lang, other) in listOf("sk" to "en", "en" to "sk", "cs" to "en")) {
+            if (only != null && lang !in only) continue
+            val groups = listOf(loadGroup(lang, 1f), loadGroup(other, 0.7f))
+            val items = File(dir, "items-$lang.jsonl").readLines()
+            for (cond in conds) {
+                val noisy = File(dir, "noisy-$lang-$cond.jsonl").readLines()
+                val dumps = File(dir, "noisydump-$lang-$cond.jsonl").readLines()
+                // [config][group] with group 0 typo words, 1 correct without accents, 2 correct with accents (typed unaccented)
+                val scores = configs.map { Array(4) { TypoScore() } }
+                val failures = ArrayList<String>()
+                val failClasses = HashMap<String, Int>()
+                var skipped = 0
+                for (idx in items.indices) {
+                    val nz = JSONObject(noisy[idx])
+                    if (nz.getBoolean("skip")) { skipped++; continue }
+                    val item = JSONObject(items[idx])
+                    val target = item.getString("target").lowercase(Locale.ROOT)
+                    val ctx = item.getJSONArray("context").let { a -> (0 until a.length()).map { a.getString(it) } }
+                    val ngram = if (ctx.isEmpty()) NgramContext.BEGINNING_OF_SENTENCE
+                        else NgramContext(*ctx.reversed().map { NgramContext.WordInfo(it) }.toTypedArray())
+                    val typed = nz.getString("typed")
+                    val pts = nz.getJSONArray("pts")
+                    val ip = InputPointers(48)
+                    for (i in 0 until pts.length()) {
+                        val xy = pts.getJSONArray(i)
+                        ip.addPointer(xy.getDouble(0).toInt().coerceIn(0, 999), xy.getDouble(1).toInt().coerceIn(0, 449), 0, i * 200)
+                    }
+                    val cd = ComposedData(ip, false, typed)
+                    val drow = JSONArray(dumps[idx]).getJSONObject(0)
+                    check(drow.getString("t") == typed) { "misaligned dump $lang $cond $idx" }
+                    val pa = drow.getJSONArray("p")
+                    val preds = (0 until pa.length()).map { i ->
+                        val a = pa.getJSONArray(i)
+                        WordPrediction(a.getString(0), a.getDouble(1).toFloat(), Locale.forLanguageTag(a.getString(2)))
+                    }
+                    val native = nativeSuggestions(typed, ngram, groups, pi, cd)
+                    val group = if (nz.getBoolean("wrong")) 0 else if (target.all { it < '\u0080' }) 1 else 2
+                    configs.forEachIndexed { ci, cfg ->
+                        cfg.apply()
+                        val s = scores[ci][group]
+                        val s4 = if (group == 0 && target.length >= 4) scores[ci][3] else null
+                        s.n++; s4?.let { it.n++ }
+                        val strip = facilitator(typed, ngram, groups, native, preds, forceNativeFirst)
+                        val (shown, _) = visible(typed, strip)
+                        // the typed word itself sits in the centre slot, so it counts as shown
+                        val hit = typed == target || shown.any { it.lowercase(Locale.ROOT) == target }
+                        if (hit) { s.strip++; s4?.let { it.strip++ } }
+                        val acNative = autocorrectChoice(typed, facilitator(typed, ngram, groups, native, preds, true), false)
+                        val acModel = autocorrectChoice(typed, strip, true)
+                        // a change of case only ("i" -> "I") leaves the letters as typed: not a correction
+                        fun count(ac: String?, right: (TypoScore) -> Unit, wrong: (TypoScore) -> Unit) {
+                            if (ac == null || ac.lowercase(Locale.ROOT) == typed) return
+                            for (t in listOfNotNull(s, s4)) if (ac.lowercase(Locale.ROOT) == target) right(t) else wrong(t)
+                        }
+                        count(acNative, { it.ac++ }, { it.wrongAc++ })
+                        count(acModel, { it.acModel++ }, { it.wrongAcModel++ })
+                        val valid = strip.any { it.word == typed }
+                        if (valid) for (t in listOfNotNull(s, s4)) {
+                            t.typedValid++; if (acNative != null && acNative.lowercase(Locale.ROOT) != typed) t.typedValidCorrected++
+                        }
+                        if (ci == 0 && group == 0 && !hit) {
+                            val sorted = native.flatMap { it ?: emptyList() }.sortedByDescending { it.score }
+                                .map { it.word.lowercase(Locale.ROOT) }.distinct()
+                            val nativeRank = sorted.indexOf(target)
+                            val inDict = groups.any { g -> g.dicts.any { d -> d.isValidWord(target) } }
+                            val modelHas = preds.any { it.word.lowercase(Locale.ROOT) == target }
+                            val foldedOffered = target.any { it >= '\u0080' } && sorted.take(8).contains(LanguageModelSuggestions.fold(target))
+                            val cls = when {
+                                !inDict -> "A target not in the dictionary"
+                                foldedOffered -> "B accent-folded word offered, accented target missing"
+                                nativeRank < 0 && !modelHas -> "C in dictionary, not among the candidates"
+                                nativeRank < 0 -> "D only the model has it (outvoted)"
+                                nativeRank < 5 -> "E candidate rank ${nativeRank + 1}, but pushed out of the 2 slots by the merge"
+                                else -> "F candidate at rank 6 or lower"
+                            }
+                            failClasses.merge(cls, 1, Int::plus)
+                            failures.add("%-12s <- typed %-12s shown %-34s ac(native first) %-12s model: %-26s %s".format(Locale.ROOT, target, typed,
+                                shown.joinToString(" | "), acNative ?: "-", preds.take(2).joinToString(",") { it.word }, cls))
+                        }
+                    }
+                }
+                configs.forEachIndexed { ci, cfg ->
+                    val g = scores[ci]
+                    out.append("%-4s %-6s config %-10s typo words \n".format(Locale.ROOT, lang, cond, cfg.name)).append(g[0]).append('\n')
+                    out.append("%-4s %-6s config %-10s correct, ascii \n".format(Locale.ROOT, lang, cond, cfg.name)).append(g[1]).append('\n')
+                    out.append("%-4s %-6s config %-10s correct, accent \n".format(Locale.ROOT, lang, cond, cfg.name)).append(g[2]).append('\n')
+                    out.append("%-4s %-6s config %-10s typo words, target 4+ letters \n".format(Locale.ROOT, lang, cond, cfg.name)).append(g[3]).append('\n')
+                }
+                out.append("   (skipped $skipped items with characters outside a-z; typo words: ${scores[0][0].n} of ${items.size - skipped})\n")
+                out.append("   failure classes (first config, typo words not in the strip): ${failClasses.toSortedMap()}\n")
+                if (cond == "s25" || cond == "struct") {
+                    examples.append("== $lang $cond: typo words where the target was not in the strip (${failures.size}), 15 sampled ==\n")
+                    failures.shuffled(java.util.Random(7)).take(15).forEach { examples.append(it).append('\n') }
+                }
+            }
+        }
+        println("TAP-TYPOS\n$out\n$examples")
+        File(dir, "typo-result.txt").writeText(out.toString())
+        File(dir, "typo-examples.txt").writeText(examples.toString())
+    }
+
     private fun loadGroup(lang: String, weight: Float): Group {
         val files = dictDir.listFiles()!!.filter {
             val n = it.name.substringBeforeLast(".")
@@ -222,6 +381,7 @@ class TapPredictionEval {
     /** a setting of the merge: name and the fields to set ("rerank=0,modelnext=0,emoji=0,aosp=1.0,gap=1.0") */
     private class Config(val name: String, val values: Map<String, String>) {
         fun apply() {
+            TapPredictionEval.forceNativeFirst = values["nativefirst"] == "1"
             LanguageModelSuggestions.rerankCompletions = values["rerank"] != "0"
             LanguageModelSuggestions.modelFirstNextWord = values["modelnext"] != "0"
             LanguageModelSuggestions.AOSP_WEIGHT = values["aosp"]?.toDouble() ?: DEFAULT_AOSP
@@ -245,8 +405,9 @@ class TapPredictionEval {
     }
 
     /** the dictionaries' part of DictionaryFacilitatorImpl.getSuggestionResults: per group, all their suggestions */
-    private fun nativeSuggestions(typed: String, ngram: NgramContext, groups: List<Group>, pi: Long): Array<List<SuggestedWordInfo>?> {
-        val cd = if (typed.isEmpty()) ComposedData(InputPointers(1), false, "") else composed(typed)
+    private fun nativeSuggestions(typed: String, ngram: NgramContext, groups: List<Group>, pi: Long,
+                                  composedData: ComposedData? = null): Array<List<SuggestedWordInfo>?> {
+        val cd = composedData ?: if (typed.isEmpty()) ComposedData(InputPointers(1), false, "") else composed(typed)
         val array = Array<List<SuggestedWordInfo>?>(groups.size) { null }
         groups.forEachIndexed { gi, g ->
             val list = ArrayList<SuggestedWordInfo>()
@@ -261,7 +422,7 @@ class TapPredictionEval {
 
     /** the rest of DictionaryFacilitatorImpl.getSuggestionResults with the model's [predictions] */
     private fun facilitator(typed: String, ngram: NgramContext, groups: List<Group>, array: Array<List<SuggestedWordInfo>?>,
-                            predictions: List<WordPrediction>): SuggestionResults {
+                            predictions: List<WordPrediction>, keepNativeFirst: Boolean = forceNativeFirst): SuggestionResults {
         val results = SuggestionResults(SuggestedWords.MAX_SUGGESTIONS, ngram, false)
         array.forEach { it?.let { l -> results.addAll(l) } }
         DictionaryFacilitatorImpl.dropNonKeywordEmoji(results, typed)
@@ -273,7 +434,7 @@ class TapPredictionEval {
                     (groups.firstOrNull { it.locale.language == p.locale.language } ?: groups[0]).dicts[0],
                     SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE)
             }
-            val merged = LanguageModelSuggestions.merge(native, predictions, typed, makeInfo)
+            val merged = LanguageModelSuggestions.merge(native, predictions, typed, makeInfo, keepNativeFirst)
             if (merged !== native) { results.clear(); merged.forEach { results.add(it) } }
         }
         DictionaryFacilitatorImpl.includeAtLeastTwoWordSuggestions(results, array, typed)

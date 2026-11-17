@@ -238,3 +238,20 @@ build/swipe-replay/swipe-replay --encoder $A/honorable_sturgeon/model_int8.pte \
   --dict sk:$A/sk.kpd --dict en:$A/en.kpd --neural sk:$A --neural en:$A ... set.jsonl
 python3 -I tools/swipe-replay/synth.py fineweb2-slk-test.txt sk 1500 s1.jsonl --tokens --sloppy 1
 ```
+
+## Typos in tap typing (noisy touches), 17 Nov 2026
+
+`TapPredictionEval.typos` types every item's target word with touch points scattered around the QWERTY key
+centres (`make_tap_typos.py`; Gaussian, sigma 0.25 / 0.35 / 0.45 key widths and the same fraction of key
+height, plus "struct": exact keys, 1 word in 12 with one transposition, omission or doubling). The letter of the
+key under the touch is typed, the real coordinates go to the native lookup. Accented letters are typed as their
+base letter. The model's candidates for the typed (wrong) word come from `lm-eval --typed`.
+
+```sh
+for l in sk en cs; do .venv/bin/python -I tools/swipe-replay/make_tap_typos.py $T/items-$l.jsonl $T/noisy-$l; done
+# per language l (dicts as in the table above) and condition c in s25 s35 s45 struct:
+build/swipe-replay/lm-eval --dict ... --neural ... --mode interp --tokens --typed $T/noisy-$l-$c.jsonl \
+  --dump $T/noisydump-$l-$c.jsonl --max-typed 1 $T/items-$l.jsonl
+TAP_EVAL_CONFIGS="now:;aosp10:aosp=1.0;norerank:rerank=0;nf:nativefirst=1" TAP_EVAL_DIR=$T \
+  ./gradlew --no-configuration-cache :app:testDebugUnitTest --tests 'helium314.keyboard.latin.lm.TapPredictionEval.typos' -i
+```
