@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: the same whitelist as data_extraction_rules.xml, for Android 11 and older. -->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <include domain="device_sharedpref" path="." />
+    <include domain="device_file" path="." />
+    <include domain="file" path="blacklists/" />
+    <include domain="file" path="dicts/" />
+</full-backup-content>

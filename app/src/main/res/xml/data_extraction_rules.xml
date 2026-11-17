@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: what Android's own backup (cloud backup, Seedvault, device transfer) may take.
+     Only settings, custom layouts, fonts, the background image, blacklists and added dictionaries.
+     Everything else stays on the device: the clipboard history (database and clipboard/ files),
+     learned words (UserHistoryDictionary.*) and recorded gesture data. Naming an include turns the
+     list into a whitelist, which is needed because the learned-words folders have per-language names.
+     The app's own backup file (Settings, Backup and restore) is not affected. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="." />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+        <include domain="file" path="blacklists/" />
+        <include domain="file" path="dicts/" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="." />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+        <include domain="file" path="blacklists/" />
+        <include domain="file" path="dicts/" />
+    </device-transfer>
+</data-extraction-rules>
