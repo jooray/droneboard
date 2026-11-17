@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">Offline Speech to Text is missing a permission</string>
     <string name="voice_ostt_permission_detail">Open it, allow what it asks for, then tap the mic again.</string>
     <string name="voice_mic_permission_settings">Under Permissions, allow the microphone for Droneboard.</string>
+    <string name="settings_category_dictation">Dictation</string>
+    <string name="dictation_use_bluetooth_mic">Use the headset microphone</string>
+    <string name="dictation_use_bluetooth_mic_summary">With a Bluetooth headset connected, dictation records from its microphone. Turn this off to always record from the phone\'s microphone.</string>
 </resources>

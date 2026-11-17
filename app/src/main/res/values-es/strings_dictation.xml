@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">A Offline Speech to Text le falta un permiso</string>
     <string name="voice_ostt_permission_detail">Ábrela, concede lo que te pide y vuelve a tocar el micrófono.</string>
     <string name="voice_mic_permission_settings">En Permisos, permite que Droneboard use el micrófono.</string>
+    <string name="settings_category_dictation">Dictado</string>
+    <string name="dictation_use_bluetooth_mic">Usar el micrófono de los auriculares</string>
+    <string name="dictation_use_bluetooth_mic_summary">Con unos auriculares Bluetooth conectados, el dictado graba con su micrófono. Si lo desactivas, siempre se graba con el micrófono del teléfono.</string>
 </resources>

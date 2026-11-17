@@ -1,0 +1,2 @@
+- New setting for dictation: Settings → Preferences → Dictation → "Use the headset microphone". It is on by default, so a connected Bluetooth headset records as before. Turn it off and dictation always records from the phone's microphone, without waiting for the headset.
+- Backup now includes your personal dictionary. Android keeps it separately in every profile, so the backup file did not contain it. Restore adds the words that are missing and leaves the rest alone.

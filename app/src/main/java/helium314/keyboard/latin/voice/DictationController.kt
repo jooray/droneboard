@@ -16,7 +16,10 @@ import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DirectBoot
+import helium314.keyboard.latin.utils.prefs
 
 private const val TAG = "DroneboardDictation"
 
@@ -92,7 +95,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             sources = AndroidSources(ime),
             sink = chunker,
             sampleRate = SAMPLE_RATE,
-            preferBluetooth = true,
+            preferBluetooth = ime.prefs().getBoolean(Settings.PREF_DICTATION_USE_BLUETOOTH_MIC, Defaults.PREF_DICTATION_USE_BLUETOOTH_MIC),
             bluetoothAvailable = { BluetoothMics.available(ime) },
             listener = engineListener,
         )

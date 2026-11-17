@@ -87,6 +87,8 @@ fun PreferencesScreen(
         Settings.PREF_SHOW_EMOJI_KEY,
         Settings.PREF_SHOW_DPAD_KEY,
         Settings.PREF_REMOVE_REDUNDANT_POPUPS,
+        R.string.settings_category_dictation,
+        Settings.PREF_DICTATION_USE_BLUETOOTH_MIC,
         R.string.settings_category_clipboard_history,
         Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME else null,
@@ -204,6 +206,11 @@ fun createPreferencesSettings(context: Context) = listOf(
         R.string.remove_redundant_popups, R.string.remove_redundant_popups_summary)
     {
         SwitchPreference(it, Defaults.PREF_REMOVE_REDUNDANT_POPUPS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_DICTATION_USE_BLUETOOTH_MIC,
+        R.string.dictation_use_bluetooth_mic, R.string.dictation_use_bluetooth_mic_summary)
+    {
+        SwitchPreference(it, Defaults.PREF_DICTATION_USE_BLUETOOTH_MIC)
     },
     Setting(context, Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         R.string.enable_clipboard_history, R.string.enable_clipboard_history_summary)

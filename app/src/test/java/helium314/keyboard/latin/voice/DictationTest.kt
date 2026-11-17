@@ -51,6 +51,27 @@ class DictationTest {
     }
 
     @Test
+    fun `with the headset microphone turned off a connected headset is never opened`() {
+        val clock = FakeClock()
+        val sink = FakeSink()
+        val listener = RecordingListener()
+        lateinit var engine: RecordingEngine
+        val opened = mutableListOf<Source>()
+        var asked = false
+        val sources = PcmSourceFactory { kind, _, _ ->
+            opened += kind
+            FakeSource(kind, clock, emptyList(), onRead = { if (it == 9) engine.stop() })
+        }
+        engine = RecordingEngine(sources, sink, 16_000, preferBluetooth = false, bluetoothAvailable = { asked = true; true }, listener = listener, clock = clock::get)
+        engine.runLoop()
+        assertEquals(listOf(Source.PHONE), opened)
+        assertTrue(!asked)
+        assertTrue(listener.cues.isEmpty())
+        assertTrue(listener.statuses.none { it.waitingForBluetooth || it.fallbackReason != null })
+        assertEquals(10 * 1600L, sink.samplesWritten)
+    }
+
+    @Test
     fun `cancel drops the audio`() {
         val clock = FakeClock()
         val sink = FakeSink()

@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">Offline Speech to Text fehlt eine Berechtigung</string>
     <string name="voice_ostt_permission_detail">Öffnen Sie die App, erlauben Sie, worum sie bittet, und tippen Sie dann wieder auf das Mikrofon.</string>
     <string name="voice_mic_permission_settings">Erlauben Sie Droneboard unter „Berechtigungen“ das Mikrofon.</string>
+    <string name="settings_category_dictation">Diktat</string>
+    <string name="dictation_use_bluetooth_mic">Mikrofon des Headsets verwenden</string>
+    <string name="dictation_use_bluetooth_mic_summary">Ist ein Bluetooth-Headset verbunden, nimmt das Diktat über dessen Mikrofon auf. Ausgeschaltet wird immer über das Mikrofon des Smartphones aufgenommen.</string>
 </resources>

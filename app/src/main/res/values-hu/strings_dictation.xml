@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">Az Offline Speech to Textnek hiányzik egy engedélye</string>
     <string name="voice_ostt_permission_detail">Nyissa meg, adja meg, amit kér, aztán koppintson újra a mikrofonra.</string>
     <string name="voice_mic_permission_settings">Az Engedélyek között engedélyezze a mikrofont a Droneboard számára.</string>
+    <string name="settings_category_dictation">Diktálás</string>
+    <string name="dictation_use_bluetooth_mic">A headset mikrofonjának használata</string>
+    <string name="dictation_use_bluetooth_mic_summary">Ha Bluetooth-headset csatlakozik, a diktálás annak mikrofonjáról vesz fel. Kikapcsolva mindig a telefon mikrofonja vesz fel.</string>
 </resources>

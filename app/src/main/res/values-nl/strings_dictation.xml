@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">Offline Speech to Text mist een toestemming</string>
     <string name="voice_ostt_permission_detail">Open de app, geef de toestemming die hij vraagt en tik dan opnieuw op de microfoon.</string>
     <string name="voice_mic_permission_settings">Sta onder Rechten de microfoon toe voor Droneboard.</string>
+    <string name="settings_category_dictation">Dicteren</string>
+    <string name="dictation_use_bluetooth_mic">Microfoon van de headset gebruiken</string>
+    <string name="dictation_use_bluetooth_mic_summary">Met een Bluetooth-headset verbonden neemt dicteren op via de microfoon daarvan. Zet dit uit om altijd met de telefoonmicrofoon op te nemen.</string>
 </resources>

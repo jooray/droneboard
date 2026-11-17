@@ -26,4 +26,7 @@
     <string name="voice_ostt_permission">Aplikácii Offline Speech to Text chýba povolenie</string>
     <string name="voice_ostt_permission_detail">Otvorte ju, povoľte, o čo žiada, a potom znova ťuknite na mikrofón.</string>
     <string name="voice_mic_permission_settings">V časti Povolenia povoľte Droneboardu mikrofón.</string>
+    <string name="settings_category_dictation">Diktovanie</string>
+    <string name="dictation_use_bluetooth_mic">Používať mikrofón v slúchadlách</string>
+    <string name="dictation_use_bluetooth_mic_summary">Keď sú pripojené Bluetooth slúchadlá, diktovanie nahráva z ich mikrofónu. Po vypnutí sa vždy nahráva mikrofónom v telefóne.</string>
 </resources>
