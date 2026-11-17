@@ -1,0 +1,7 @@
+- Dictation no longer loses text. When the keyboard is hidden or you move to another field while it is recording, the recording stops and is still transcribed. Text that can no longer be typed into the original field goes to the clipboard, with a short notice.
+- Clipboard history skips items that the source app marks as sensitive, such as passwords copied from a password manager. They never reach the history or a backup.
+- Android's own backup (cloud backup, Seedvault, device transfer) now takes only settings, custom layouts, fonts, blacklists and added dictionaries. Clipboard history, learned words and recorded gestures stay on the device. The backup file made in Settings is not affected.
+- Restore from a backup file is safer: when it fails or the file is damaged, the previous settings and data come back instead of a half-restored state.
+- Suggestions while typing give a little more weight to the dictionary, so the intended word shows up more often after a typo.
+- Slovak is now offered in Android's spell checker settings.
+- The swipe engine catches internal errors instead of crashing the keyboard.
