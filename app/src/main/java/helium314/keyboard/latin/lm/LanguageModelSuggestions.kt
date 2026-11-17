@@ -29,7 +29,7 @@ object LanguageModelSuggestions {
     /** words before the cursor given to the model */
     const val CONTEXT_WORDS = 3
     /** weight of the dictionaries' rank, -ln(1 + rank), against the model's log probability (completions) */
-    @JvmField var AOSP_WEIGHT = 0.35
+    @JvmField var AOSP_WEIGHT = 0.5
     /** a dictionary word the model did not return counts as this much less likely than the model's last word */
     @JvmField var FLOOR_GAP = 1.0
     /** log-probability bonus of next-word predictions from the user's history */

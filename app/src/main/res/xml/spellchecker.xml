@@ -136,6 +136,9 @@
         android:subtypeLocale="ru" />
     <subtype
         android:label="@string/subtype_generic"
+        android:subtypeLocale="sk" />
+    <subtype
+        android:label="@string/subtype_generic"
         android:subtypeLocale="sl" />
     <subtype
         android:label="@string/subtype_generic"

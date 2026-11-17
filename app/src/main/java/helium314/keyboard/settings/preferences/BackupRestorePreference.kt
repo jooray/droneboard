@@ -181,10 +181,14 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
             val oldProtectedPrefs = ctx.protectedPrefs().all.toMap()
             val filesDir = ctx.filesDir!!
             val deviceProtectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
-            val filesDir2 = File(filesDir.absolutePath + "2")
-            val deviceProtectedFilesDir2 = File(deviceProtectedFilesDir.absolutePath + "2")
-            filesDir.renameTo(filesDir2)
-            deviceProtectedFilesDir2.renameTo(deviceProtectedFilesDir2)
+            // the current files are set aside and come back when the restore fails; both names can be the
+            // same directory, which must be moved (and put back) only once
+            val setAside = listOf(filesDir, deviceProtectedFilesDir).distinctBy { it.canonicalPath }
+                .map { it to File(it.absolutePath + "2") }
+            setAside.forEach { (dir, kept) ->
+                kept.deleteRecursively() // left over from a restore that was killed
+                if (dir.exists() && !dir.renameTo(kept)) Log.w("AdvancedScreen", "could not set aside ${dir.name}")
+            }
             try {
                 var anyMatch = false
                 ctx.getActivity()?.contentResolver?.openInputStream(uri)?.use { inputStream ->
@@ -219,12 +223,14 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                                 val prefs = ctx.prefs()
                                 prefs.edit { clear() }
                                 anyMatch = true
-                                readJsonLinesToSettings(prefLines, prefs)
+                                // a damaged settings file fails the restore (the old settings come back below)
+                                // instead of leaving everything at its default
+                                if (!readJsonLinesToSettings(prefLines, prefs)) throw Exception("the settings in the backup can't be read")
                             } else if (entry.name == PROTECTED_PREFS_FILE_NAME) {
                                 val prefLines = String(zip.readBytes()).split("\n")
                                 val protectedPrefs = ctx.protectedPrefs()
                                 protectedPrefs.edit { clear() }
-                                readJsonLinesToSettings(prefLines, protectedPrefs)
+                                if (!readJsonLinesToSettings(prefLines, protectedPrefs)) throw Exception("the settings in the backup can't be read")
                                 anyMatch = true
                             }
                             zip.closeEntry()
@@ -236,16 +242,18 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                     throw Exception("nothing to restore in the given file")
 
                 Database.copyFromDb(restoredDb, ctx)
-                filesDir2.deleteRecursively()
-                deviceProtectedFilesDir2.deleteRecursively()
+                setAside.forEach { (_, kept) -> kept.deleteRecursively() }
                 if (Looper.myLooper() == null)
                     Looper.prepare()
                 Toast.makeText(ctx, ctx.getString(R.string.backup_restored), Toast.LENGTH_LONG).show()
             } catch (t: Throwable) {
-                filesDir.deleteRecursively()
-                filesDir2.renameTo(filesDir)
-                deviceProtectedFilesDir.deleteRecursively()
-                deviceProtectedFilesDir2.renameTo(deviceProtectedFilesDir)
+                // only a directory that was really set aside is replaced; anything else stays as it is
+                setAside.forEach { (dir, kept) ->
+                    if (kept.exists()) {
+                        dir.deleteRecursively()
+                        kept.renameTo(dir)
+                    }
+                }
                 ctx.prefs().edit {
                     clear()
                     oldPrefs.forEach { (key, value) ->

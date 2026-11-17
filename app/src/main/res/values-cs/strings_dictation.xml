@@ -29,4 +29,5 @@
     <string name="settings_category_dictation">Diktování</string>
     <string name="dictation_use_bluetooth_mic">Používat mikrofon ve sluchátkách</string>
     <string name="dictation_use_bluetooth_mic_summary">Když jsou připojená Bluetooth sluchátka, diktování nahrává z jejich mikrofonu. Po vypnutí se vždy nahrává mikrofonem v telefonu.</string>
+    <string name="voice_text_in_clipboard">Nadiktovaný text je ve schránce</string>
 </resources>

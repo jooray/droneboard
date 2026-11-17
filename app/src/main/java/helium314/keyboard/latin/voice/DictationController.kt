@@ -2,6 +2,8 @@
 package helium314.keyboard.latin.voice
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -14,6 +16,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
+import android.widget.Toast
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -53,6 +56,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private var field: Pair<String?, Int>? = null
     private var lastStatus: EngineStatus? = null
     private var errorShown = false
+    /** dictated text that could not be typed because its field went away; see [deliverUntyped] */
+    private val untyped = StringBuilder()
 
     val isActive get() = state != State.IDLE || panel != null
 
@@ -88,6 +93,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         val editor = ime.currentInputEditorInfo
         field = editor?.packageName to (editor?.fieldId ?: 0)
         errorShown = false
+        untyped.setLength(0)
         val t = OsttTranscriber(ime, this)
         transcriber = t
         val chunker = Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) }
@@ -118,13 +124,18 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         engine = null
         transcriber?.cancel()
         transcriber = null
+        untyped.setLength(0)
         state = State.IDLE
         hidePanel()
     }
 
-    /** The keyboard went away: a running recording is dropped, a finished one still gets typed if the field comes back. */
+    /**
+     * The keyboard went away (screen off, a notification, another app): a running recording is not dropped, it
+     * ends here and is written down. The text is typed when the field is still there, else it goes to the clipboard.
+     */
     fun onFinishInputView() {
-        if (state == State.RECORDING) cancel() else hidePanel()
+        if (state == State.RECORDING) stopRecording()
+        hidePanel()
     }
 
     // ---- recording ----
@@ -204,25 +215,41 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         if (last) {
             transcriber = null
             state = State.IDLE
+            deliverUntyped()
         }
     }
 
     private fun finished() {
         transcriber = null
         state = State.IDLE
+        deliverUntyped()
         if (!errorShown) hidePanel()
     }
 
     private fun type(text: String) {
         val editor: EditorInfo? = ime.currentInputEditorInfo
-        if (editor == null || field != (editor.packageName to editor.fieldId)) {
-            Log.i(TAG, "field changed, dropping ${text.length} dictated characters")
+        val ic = ime.currentInputConnection
+        // once a piece could not be typed, the rest follows it, so the text stays whole and in order
+        if (untyped.isNotEmpty() || editor == null || ic == null || field != (editor.packageName to editor.fieldId)) {
+            Log.i(TAG, "the field is gone, keeping ${text.length} dictated characters for the clipboard")
+            untyped.append(TextJoiner.join(untyped, text))
             return
         }
-        val ic = ime.currentInputConnection ?: return
         val before = ic.getTextBeforeCursor(64, 0) ?: ""
         val joined = TextJoiner.join(before, text)
         if (joined.isNotEmpty()) ime.onTextInput(joined)
+    }
+
+    /** Dictated text that had no field to go to is never thrown away: it lands in the clipboard, with a message. */
+    private fun deliverUntyped() {
+        val text = untyped.toString().trim()
+        untyped.setLength(0)
+        if (text.isEmpty()) return
+        val copied = runCatching {
+            ime.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("", text))
+        }
+        if (copied.isFailure) Log.w(TAG, "could not copy the dictated text", copied.exceptionOrNull())
+        else runCatching { Toast.makeText(ime, R.string.voice_text_in_clipboard, Toast.LENGTH_LONG).show() }
     }
 
     // ---- panel ----

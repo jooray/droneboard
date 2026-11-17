@@ -68,7 +68,6 @@ class ClipboardHistoryManager(
     }
 
     // todo for later
-    //  setting whether to store sensitive clip data?
     //  care about other clip items than first?
     private fun fetchPrimaryClip() {
         if (tempPrimaryClip) return // avoid updating history
@@ -77,6 +76,9 @@ class ClipboardHistoryManager(
         val clipItem = clipData.getItemAt(0) ?: return
         val description = clipData.description ?: return
         val timeStamp = ClipboardManagerCompat.getClipTimestamp(clipData)
+        // Droneboard: what the copying app marked as sensitive (password managers do) never enters the
+        // history, so it is in neither the clipboard view nor a backup; it can still be pasted from the chip
+        if (ClipboardManagerCompat.getClipSensitivity(description) == true) return
 
         if (description.hasMimeType("text/*")) {
             val content = clipItem.coerceToText(latinIME)

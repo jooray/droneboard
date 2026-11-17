@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <exception>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -71,24 +72,43 @@ std::string utf8_of(const std::vector<int>& cps) {
     return out;
 }
 
+// A C++ exception must never cross into the JVM (that aborts the keyboard process): every JNI entry
+// point is a function-try-block that logs and returns an empty result instead.
+jobjectArray empty_strings(JNIEnv* env) {
+    jclass cls = env->FindClass("java/lang/String");
+    return cls ? env->NewObjectArray(0, cls, nullptr) : nullptr;
+}
+
 }  // namespace
 
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeCreate(JNIEnv* env, jclass, jstring encoderPath) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeCreate(JNIEnv* env, jclass, jstring encoderPath) try {
     auto* s = new Session();
     s->encoder_path = jstr(env, encoderPath);
     return (jlong)(uintptr_t)s;
+} catch (const std::exception& e) {
+    LOGE("nativeCreate: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeCreate: unknown exception");
+    return 0;
 }
 
 JNIEXPORT void JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeDestroy(JNIEnv*, jclass, jlong h) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeDestroy(JNIEnv*, jclass, jlong h) try {
     delete (Session*)(uintptr_t)h;
+} catch (const std::exception& e) {
+    LOGE("nativeDestroy: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeDestroy: unknown exception");
+    return;
 }
 
 JNIEXPORT jlong JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionary(JNIEnv* env, jclass, jstring path, jfloatArray params) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionary(JNIEnv* env, jclass, jstring path, jfloatArray params) try {
     auto t0 = std::chrono::steady_clock::now();
     auto* d = new KpDictionary();
     if (!d->load_kpd(jstr(env, path))) {
@@ -100,12 +120,18 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionary(JNIEnv* env, 
     LOGI("dictionary %s: %zu words in %.0f ms", jstr(env, path).c_str(), d->word_count(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)d;
+} catch (const std::exception& e) {
+    LOGE("nativeLoadDictionary: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeLoadDictionary: unknown exception");
+    return 0;
 }
 
 // The user's words with weights 0..255 (null or empty clears them); takes effect with the next nativeSetLayout.
 JNIEXPORT void JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetUserWords(JNIEnv* env, jclass, jlong h, jobjectArray words,
-                                                                 jintArray weights, jfloatArray params) {
+                                                                 jintArray weights, jfloatArray params) try {
     auto* s = (Session*)(uintptr_t)h;
     if (!s) return;
     std::vector<std::pair<std::string, int>> list;
@@ -129,22 +155,40 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetUserWords(JNIEnv* env, jc
     set_params(env, d.get(), params);
     LOGI("user words: %zu", d->word_count());
     s->user = d->word_count() ? std::move(d) : nullptr;
+} catch (const std::exception& e) {
+    LOGE("nativeSetUserWords: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeSetUserWords: unknown exception");
+    return;
 }
 
 JNIEXPORT void JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeFreeDictionary(JNIEnv*, jclass, jlong d) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeFreeDictionary(JNIEnv*, jclass, jlong d) try {
     delete (KpDictionary*)(uintptr_t)d;
+} catch (const std::exception& e) {
+    LOGE("nativeFreeDictionary: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeFreeDictionary: unknown exception");
+    return;
 }
 
 JNIEXPORT void JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetDictionaryParams(JNIEnv* env, jclass, jlong dh, jfloatArray params) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetDictionaryParams(JNIEnv* env, jclass, jlong dh, jfloatArray params) try {
     set_params(env, (KpDictionary*)(uintptr_t)dh, params);
+} catch (const std::exception& e) {
+    LOGE("nativeSetDictionaryParams: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeSetDictionaryParams: unknown exception");
+    return;
 }
 
 // letters: code points of the letter keys; xs/ys: normalized key centers; dicts: KpDictionary handles
 JNIEXPORT jboolean JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetLayout(JNIEnv* env, jclass, jlong h, jintArray letters,
-                                                             jfloatArray xs, jfloatArray ys, jlongArray dicts) {
+                                                             jfloatArray xs, jfloatArray ys, jlongArray dicts) try {
     auto* s = (Session*)(uintptr_t)h;
     if (!s) return JNI_FALSE;
     jsize n = env->GetArrayLength(letters);
@@ -201,6 +245,12 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetLayout(JNIEnv* env, jclas
     }
     s->retired_user.reset();  // the engine no longer refers to it
     return JNI_TRUE;
+} catch (const std::exception& e) {
+    LOGE("nativeSetLayout: %s", e.what());
+    return JNI_FALSE;
+} catch (...) {
+    LOGE("nativeSetLayout: unknown exception");
+    return JNI_FALSE;
 }
 
 // Returns the best words (surface forms) and writes their scores and dictionary indices.
@@ -217,7 +267,7 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeRecognize(JNIEnv* env, jclas
                                                              jfloatArray jprior, jfloat kappa, jfloat cap,
                                                              jint beam, jint maxResults, jfloatArray outScores,
                                                              jintArray outDict, jlongArray models, jobjectArray jtokens,
-                                                             jboolean bos, jfloatArray jfusion) {
+                                                             jboolean bos, jfloatArray jfusion) try {
     auto* s = (Session*)(uintptr_t)h;
     jclass strCls = env->FindClass("java/lang/String");
     if (!s || !s->initialized || s->dicts.empty()) return env->NewObjectArray(0, strCls, nullptr);
@@ -306,24 +356,48 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeRecognize(JNIEnv* env, jclas
         env->SetIntArrayRegion(outDict, 0, m, dicts.data());
     }
     return out;
+} catch (const std::exception& e) {
+    LOGE("nativeRecognize: %s", e.what());
+    return empty_strings(env);
+} catch (...) {
+    LOGE("nativeRecognize: unknown exception");
+    return empty_strings(env);
 }
 
 JNIEXPORT jfloat JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastMillis(JNIEnv*, jclass, jlong h) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastMillis(JNIEnv*, jclass, jlong h) try {
     auto* s = (Session*)(uintptr_t)h;
     return s ? s->last_ms : 0.0f;
+} catch (const std::exception& e) {
+    LOGE("nativeLastMillis: %s", e.what());
+    return 0.0f;
+} catch (...) {
+    LOGE("nativeLastMillis: unknown exception");
+    return 0.0f;
 }
 
 JNIEXPORT jfloat JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastNeuralMillis(JNIEnv*, jclass, jlong h) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLastNeuralMillis(JNIEnv*, jclass, jlong h) try {
     auto* s = (Session*)(uintptr_t)h;
     return s ? s->neural_ms : 0.0f;
+} catch (const std::exception& e) {
+    LOGE("nativeLastNeuralMillis: %s", e.what());
+    return 0.0f;
+} catch (...) {
+    LOGE("nativeLastNeuralMillis: unknown exception");
+    return 0.0f;
 }
 
 JNIEXPORT void JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetTieMargin(JNIEnv*, jclass, jlong h, jfloat margin) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetTieMargin(JNIEnv*, jclass, jlong h, jfloat margin) try {
     auto* s = (Session*)(uintptr_t)h;
     if (s) s->tie_margin = margin;
+} catch (const std::exception& e) {
+    LOGE("nativeSetTieMargin: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeSetTieMargin: unknown exception");
+    return;
 }
 
 // Next-word prediction / completion for tap typing over the given dictionaries (the enabled
@@ -334,7 +408,7 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeSetTieMargin(JNIEnv*, jclass
 JNIEXPORT jobjectArray JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePredict(JNIEnv* env, jclass, jlongArray dicts, jobjectArray jcontext,
                                                            jstring prefix, jint maxResults, jfloatArray outScores,
-                                                           jintArray outDict) {
+                                                           jintArray outDict) try {
     jclass strCls = env->FindClass("java/lang/String");
     std::vector<KpDictionary*> ds;
     if (dicts) {
@@ -367,11 +441,17 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePredict(JNIEnv* env, jclass,
     if (outScores) env->SetFloatArrayRegion(outScores, 0, std::min((jsize)scores.size(), env->GetArrayLength(outScores)), scores.data());
     if (outDict) env->SetIntArrayRegion(outDict, 0, std::min((jsize)idx.size(), env->GetArrayLength(outDict)), idx.data());
     return out;
+} catch (const std::exception& e) {
+    LOGE("nativePredict: %s", e.what());
+    return empty_strings(env);
+} catch (...) {
+    LOGE("nativePredict: unknown exception");
+    return empty_strings(env);
 }
 
 // Neural next-word model (neural_lm.hpp): <lang>.lmb + <lang>.lmv. Returns 0 on failure.
 JNIEXPORT jlong JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jclass, jstring lmbPath, jstring lmvPath) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jclass, jstring lmbPath, jstring lmvPath) try {
     std::string err;
     auto t0 = std::chrono::steady_clock::now();
     auto lm = droneswipe::NeuralLm::load(jstr(env, lmbPath), jstr(env, lmvPath), &err);
@@ -382,11 +462,23 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jcla
     LOGI("neural LM loaded: %d words, %s kernel, %.0f ms", lm->vocab(), droneswipe::neural_kernel_name(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)lm.release();
+} catch (const std::exception& e) {
+    LOGE("nativeLoadNeural: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeLoadNeural: unknown exception");
+    return 0;
 }
 
 JNIEXPORT void JNICALL
-Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeFreeNeural(JNIEnv*, jclass, jlong h) {
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeFreeNeural(JNIEnv*, jclass, jlong h) try {
     delete (droneswipe::NeuralLm*)(uintptr_t)h;
+} catch (const std::exception& e) {
+    LOGE("nativeFreeNeural: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativeFreeNeural: unknown exception");
+    return;
 }
 
 // Next-word prediction / completion with the neural models of the enabled languages (models[i]
@@ -397,7 +489,7 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeFreeNeural(JNIEnv*, jclass, 
 JNIEXPORT jobjectArray JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePredictNeural(JNIEnv* env, jclass, jlongArray models, jlongArray dicts,
                                                                  jobjectArray jcontext, jboolean bos, jstring prefix,
-                                                                 jint maxResults, jfloatArray outScores, jintArray outLang) {
+                                                                 jint maxResults, jfloatArray outScores, jintArray outLang) try {
     jclass strCls = env->FindClass("java/lang/String");
     std::vector<droneswipe::NeuralLanguageInput> langs;
     if (models) {
@@ -439,6 +531,12 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePredictNeural(JNIEnv* env, j
     if (outScores) env->SetFloatArrayRegion(outScores, 0, std::min((jsize)scores.size(), env->GetArrayLength(outScores)), scores.data());
     if (outLang) env->SetIntArrayRegion(outLang, 0, std::min((jsize)idx.size(), env->GetArrayLength(outLang)), idx.data());
     return out;
+} catch (const std::exception& e) {
+    LOGE("nativePredictNeural: %s", e.what());
+    return empty_strings(env);
+} catch (...) {
+    LOGE("nativePredictNeural: unknown exception");
+    return empty_strings(env);
 }
 
 }  // extern "C"

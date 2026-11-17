@@ -29,4 +29,5 @@
     <string name="settings_category_dictation">Dicteren</string>
     <string name="dictation_use_bluetooth_mic">Microfoon van de headset gebruiken</string>
     <string name="dictation_use_bluetooth_mic_summary">Met een Bluetooth-headset verbonden neemt dicteren op via de microfoon daarvan. Zet dit uit om altijd met de telefoonmicrofoon op te nemen.</string>
+    <string name="voice_text_in_clipboard">De gedicteerde tekst staat op het klembord</string>
 </resources>
