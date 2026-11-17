@@ -386,6 +386,7 @@ class TapPredictionEval {
             LanguageModelSuggestions.modelFirstNextWord = values["modelnext"] != "0"
             LanguageModelSuggestions.AOSP_WEIGHT = values["aosp"]?.toDouble() ?: DEFAULT_AOSP
             LanguageModelSuggestions.FLOOR_GAP = values["gap"]?.toDouble() ?: DEFAULT_GAP
+            LanguageModelSuggestions.correctionFirst = values["corrfirst"]?.toInt() ?: DEFAULT_CORRFIRST
             DictionaryFacilitatorImpl.emojiNeedsKeywordMatch = values["emoji"] != "0"
             DictionaryFacilitatorImpl.emojiMinTypedLength = values["emojimin"]?.toInt()
                 ?: if (values["emoji"] == "0") 1 else DEFAULT_EMOJI_MIN
@@ -393,6 +394,7 @@ class TapPredictionEval {
         companion object { // the app's settings
             val DEFAULT_AOSP = LanguageModelSuggestions.AOSP_WEIGHT
             val DEFAULT_GAP = LanguageModelSuggestions.FLOOR_GAP
+            val DEFAULT_CORRFIRST = LanguageModelSuggestions.correctionFirst
             val DEFAULT_EMOJI_MIN = DictionaryFacilitatorImpl.emojiMinTypedLength
         }
     }

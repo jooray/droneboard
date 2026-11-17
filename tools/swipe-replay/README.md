@@ -255,3 +255,22 @@ build/swipe-replay/lm-eval --dict ... --neural ... --mode interp --tokens --type
 TAP_EVAL_CONFIGS="now:;aosp10:aosp=1.0;norerank:rerank=0;nf:nativefirst=1" TAP_EVAL_DIR=$T \
   ./gradlew --no-configuration-cache :app:testDebugUnitTest --tests 'helium314.keyboard.latin.lm.TapPredictionEval.typos' -i
 ```
+
+### Correction first for typed non-words (`corrfirst`), 17 Nov 2026
+
+Knob `LanguageModelSuggestions.correctionFirst` (eval config `corrfirst=1|2`): when the typed letters are not a
+word and the dictionaries' first suggestion is a correction of them (1: same length, 2: also one letter longer
+or shorter), it keeps the first slot ("rhe" shows "the" before "rhetoric"). Measured against the app's merge
+(aosp 0.5), same items and seeds as above:
+
+| config | typo words in the strip, sigma 0.25 sk / en / cs | sigma 0.35 sk / en / cs | exact-letters visible KSS sk / en / cs |
+|---|---|---|---|
+| app | 85.8 / 91.8 / 89.6 | 82.3 / 84.6 / 84.9 | 51.2 / 52.8 / 54.1 |
+| corrfirst=1 | 86.8 / 93.2 / 90.3 | 83.9 / 87.4 / 85.6 | 51.0 / 52.2 / 53.6 |
+| corrfirst=2 | same as 1 | same as 1 | 51.0 / 52.2 / 53.6 |
+| nativefirst=1 | 86.8 / 93.2 / 90.3 | 83.9 / 87.6 / 85.6 | 49.8 / 51.1 / 52.4 |
+
+It gets all of `nativefirst`'s gain for about a third of its price, and structural typos do not change. Still
+not a clear win: +0.7 to +1.4 pp of typo words (about 30 % of words at sigma 0.25, so 0.2 to 0.4 pp of all
+words) for -0.2 to -0.6 KSS on correctly typed words, lost at two typed letters, where a non-word prefix is
+usually the start of a longer word. Left off (0). The knob stays for later measurements.

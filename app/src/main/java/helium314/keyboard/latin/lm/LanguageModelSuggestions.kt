@@ -37,6 +37,12 @@ object LanguageModelSuggestions {
     /** false: the 0.1.14 merges (for the evaluation's before/after) */
     @JvmField var rerankCompletions = true
     @JvmField var modelFirstNextWord = true
+    /**
+     * Typed letters that are not a word, and the dictionaries' first suggestion is a correction of them (not a
+     * completion): that correction keeps the first place, the model's completions of the wrong letters follow
+     * ("rhe" shows "the" before "rhetoric"). 0 off, 1 corrections of the same length, 2 also one letter longer or shorter.
+     */
+    @JvmField var correctionFirst = 0
 
     fun contextWords(ngramContext: NgramContext): List<String> {
         val words = ArrayList<String>()
@@ -144,11 +150,23 @@ object LanguageModelSuggestions {
         }
         val floor = lm.last().score - FLOOR_GAP
         fun score(e: Entry) = (e.prediction?.score?.toDouble() ?: floor) - AOSP_WEIGHT * ln(1.0 + e.nativeRank)
-        val first = if (keepNativeFirst) native.firstOrNull { !isPinned(it) } else null
+        val nativeFirst = native.firstOrNull { !isPinned(it) }
+        val first = if (keepNativeFirst || isCorrectionOfNonWord(nativeFirst, native, typedLower, typedFold)) nativeFirst else null
         val ranked = entries.values.asSequence().filter { first == null || it.info !== first }
             .sortedByDescending { score(it) }.map { it.info ?: makeInfo(it.prediction!!, 0) }.toList()
         val top = native.firstOrNull()?.score ?: BASE_SCORE
         return assemble(native, if (first != null) listOf(first) + ranked else ranked, top)
+    }
+
+    /** see [correctionFirst]; the typed letters count as a word when the dictionaries return them as a suggestion */
+    private fun isCorrectionOfNonWord(
+        first: SuggestedWordInfo?, native: List<SuggestedWordInfo>, typedLower: String, typedFold: String
+    ): Boolean {
+        if (correctionFirst == 0 || first == null) return false
+        val firstFold = fold(first.word)
+        if (firstFold.startsWith(typedFold) || ' ' in first.word) return false
+        if (kotlin.math.abs(firstFold.length - typedFold.length) > correctionFirst - 1) return false
+        return native.none { !isPinned(it) && it.word.lowercase(Locale.ROOT) == typedLower }
     }
 
     // ---- 0.1.14, kept for the evaluation's comparison
