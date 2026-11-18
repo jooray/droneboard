@@ -2,6 +2,10 @@
 
 package helium314.keyboard.latin
 
+import android.widget.TextView
+import android.widget.LinearLayout
+import android.view.Gravity
+import android.util.TypedValue
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -223,6 +227,33 @@ class ClipboardHistoryManager(
         }
         textView.setOnClickListener(onClickListener)
 
+        // Droneboard quick clips: an e-mail address, a link or a one-time code from the copied text get their own chips
+        val quickClips = if (hasText && !isClipSensitive(inputType) && !InputTypeUtils.isNumberInputType(inputType))
+            QuickClips.extract(content) else emptyList()
+        val quickClipViews = quickClips.mapIndexed { index, clip ->
+            TextView(latinIME).apply {
+                text = QuickClips.label(clip)
+                contentDescription = clip.text
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, textView.textSize)
+                typeface = textView.typeface
+                gravity = Gravity.CENTER
+                isSingleLine = true
+                isHapticFeedbackEnabled = false
+                isSoundEffectsEnabled = false
+                val pad = (12 * resources.displayMetrics.density).toInt()
+                setPaddingRelative(pad, 0, pad, 0)
+                setOnClickListener {
+                    dontShowCurrentSuggestion = true
+                    latinIME.onTextInput(clip.text)
+                    AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
+                    binding.root.isGone = true
+                }
+                binding.root.addView(this, index, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+            }
+        }
+        if (quickClipViews.isNotEmpty()) // the whole clip stays available, but the pieces come first and it gets what is left
+            textView.maxWidth = (120 * latinIME.resources.displayMetrics.density).toInt()
+
         if (hasImage) {
             if (InputTypeUtils.isNumberInputType(inputType)) return null
             val imageView = binding.clipboardSuggestionImage
@@ -248,6 +279,7 @@ class ClipboardHistoryManager(
 
         val colors = latinIME.mSettings.current.mColors
         textView.setTextColor(colors.get(ColorType.KEY_TEXT))
+        quickClipViews.forEach { it.setTextColor(colors.get(ColorType.KEY_TEXT)) }
         clipIcon?.let { colors.setColor(it, ColorType.CLIPBOARD_SUGGESTION_ICON) }
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
         colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
