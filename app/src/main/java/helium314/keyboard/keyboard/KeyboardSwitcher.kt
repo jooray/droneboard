@@ -7,7 +7,6 @@ package helium314.keyboard.keyboard
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
 import android.os.Build
@@ -15,7 +14,6 @@ import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup.MarginLayoutParams
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodSubtype
@@ -52,7 +50,6 @@ import helium314.keyboard.latin.utils.RecapitalizeMode
 import helium314.keyboard.latin.utils.ResourceUtils
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional.createDefaultSubtype
 import helium314.keyboard.latin.utils.ToolbarMode
-import helium314.keyboard.latin.utils.dpToPx
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.updateSoftInputWindowLayoutParameters
 
@@ -310,7 +307,6 @@ class KeyboardSwitcher private constructor() {
             setFloatingKeyboardEnabled(themeContext, enabled)
         if (enabled) placeFloatingWhenSettled(inputView.root)
         else FloatingKeyboardUtils.disableFloating(inputView.root)
-        setBackgroundGatheringIndicatorPosition()
         reloadKeyboard()
         inputView.resizeOverlay.refresh()
     }
@@ -489,29 +485,6 @@ class KeyboardSwitcher private constructor() {
             fakeToast.startAnimation(AnimationUtils.loadAnimation(latinIME, R.anim.fade_out))
             fakeToast.isGone = true
         }, timeMillis.toLong())
-    }
-
-    fun setBackgroundGatheringIndicator(enabled: Boolean, hasData: Boolean, saving: Boolean) {
-        val backgroundGatheringIndicator = inputView?.mainKeyboardFrame?.backgroundGatheringIndicator ?: return
-        backgroundGatheringIndicator.isVisible = enabled
-        if (!enabled) return
-        backgroundGatheringIndicator.setImageResource(if (hasData) R.drawable.btn_keyboard_key_action_normal_lxx_base else R.drawable.ring)
-        setBackgroundGatheringIndicatorPosition()
-        if (!saving) return
-        backgroundGatheringIndicator.imageTintList = ColorStateList.valueOf(-0xff6000)
-        backgroundGatheringIndicator.postDelayed(
-            { backgroundGatheringIndicator.imageTintList = ColorStateList.valueOf(-0x600000) },
-            1500
-        )
-    }
-
-    private fun setBackgroundGatheringIndicatorPosition() {
-        val backgroundGatheringIndicator = inputView?.mainKeyboardFrame?.backgroundGatheringIndicator ?: return
-        if (!backgroundGatheringIndicator.isVisible) return
-        val margin = backgroundGatheringIndicator.layoutParams as? MarginLayoutParams ?: return
-            val kb = keyboard
-            if (kb != null) margin.topMargin = kb.mOccupiedHeight - 16.dpToPx(backgroundGatheringIndicator.resources)
-            backgroundGatheringIndicator.layoutParams = backgroundGatheringIndicator.layoutParams
     }
 
     fun isShowingKeyboardId(vararg keyboardElements: KeyboardElement): Boolean {
@@ -695,7 +668,6 @@ class KeyboardSwitcher private constructor() {
                 setFloatingKeyboardEnabled(themeContext, enabled)
             if (enabled) FloatingKeyboardUtils.setFloating(inputView.root)
             else FloatingKeyboardUtils.disableFloating(inputView.root)
-            setBackgroundGatheringIndicatorPosition()
         }
 
         override fun popDoubleTapShiftKeyTimer(): Boolean {
