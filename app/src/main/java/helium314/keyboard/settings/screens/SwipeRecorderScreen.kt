@@ -258,7 +258,6 @@ private fun ExportNote(ctx: Context, dir: String, fileName: String) {
 
 private const val STYLE_NORMAL = "normal"
 private const val STYLE_SLOPPY = "sloppy"
-private const val RECORD_VERSION = 2
 
 private val SENTENCE_FILES = linkedMapOf(
     "sk" to R.raw.recorder_sentences_sk,
@@ -352,7 +351,7 @@ private class RecorderSession(private val context: Context) {
         val touch = json.optJSONObject("touch")
         val down = touch?.optLong("down_time") ?: json.optLong("time")
         val end = if (touch != null && touch.has("duration_ms")) down + touch.optLong("duration_ms") else json.optLong("time")
-        json.put("record_version", RECORD_VERSION)
+        json.put("record_version", SwipeRecorder.RECORD_VERSION)
         json.put("session", sessionId)
         json.put("mode", if (sentenceMode) "sentence" else "word")
         json.put("style", style)

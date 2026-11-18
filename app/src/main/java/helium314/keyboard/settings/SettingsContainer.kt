@@ -81,6 +81,7 @@ object SettingsWithoutKey {
     const val BACKUP_RESTORE = "backup_restore"
     const val DEBUG_SETTINGS = "screen_debug"
     const val SWIPE_RECORDER = "screen_swipe_recorder"
+    const val TYPING_SWIPES = "screen_typing_swipes"
     const val LOAD_GESTURE_LIB = "load_gesture_library"
     const val BACKGROUND_IMAGE = "background_image"
     const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"

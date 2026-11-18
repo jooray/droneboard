@@ -24,4 +24,23 @@
     <string name="swipe_recorder_export_title">Ako získať nahrávky</string>
     <string name="swipe_recorder_export_text">Súbory zostávajú v tomto priečinku v telefóne (aplikácia nemá prístup na internet). Do počítača ich skopírujete príkazom:</string>
     <string name="swipe_recorder_copy">Kopírovať príkaz</string>
+    <string name="typing_swipes_switch">Nahrávať moje ťahy pri písaní</string>
+    <string name="typing_swipes_switch_summary">Ukladá vaše ťahy iba v tomto telefóne, aby sa písanie potiahnutím dalo merať a zlepšovať. Nikdy v poliach na heslo ani v režime inkognito. Nahrané ťahy si nižšie môžete pozrieť, vymazať a exportovať.</string>
+    <string name="typing_swipes_data_title">Nahrané ťahy</string>
+    <string name="typing_swipes_data_summary">Pozrieť, vymazať alebo exportovať to, čo sa nahralo pri písaní</string>
+    <string name="typing_swipes_count">Nahrané ťahy: %1$d (%2$s)</string>
+    <string name="typing_swipes_intro">Toto je všetko, čo je o vašom písaní uložené: každé slovo napísané potiahnutím, slová pred ním a čo ste urobili potom. Najnovšie sú hore. Zostáva to v tomto telefóne a nie je to súčasťou žiadnej zálohy.</string>
+    <string name="typing_swipes_limit">Nahrávanie sa zastaví pri %1$d ťahoch alebo pri %2$d MB, podľa toho, čo nastane skôr.</string>
+    <string name="typing_swipes_full">Limit je dosiahnutý. Kým údaje nevymažete, nič ďalšie sa nenahráva.</string>
+    <string name="typing_swipes_empty">Zatiaľ nie je nahrané nič.</string>
+    <string name="typing_swipes_export">Exportovať</string>
+    <string name="typing_swipes_export_choose">Vybrať, kam uložiť</string>
+    <string name="typing_swipes_export_message">Počet ťahov v súbore: %1$d. Súbor obsahuje slová, ktoré ste napísali potiahnutím, slová pred každým z nich (najviac %2$d), súradnice a časy dotykov každého ťahu, rozloženie a jazyk klávesnice a slová, ktoré klávesnica ponúkla. Neobsahuje názvy aplikácií ani nič iné z polí, do ktorých ste písali. Droneboard ho nikam neposiela, miesto uloženia si vyberiete sami.</string>
+    <string name="typing_swipes_exported">Súbor je uložený</string>
+    <string name="typing_swipes_export_failed">Súbor sa nepodarilo uložiť</string>
+    <string name="typing_swipes_delete_all">Vymazať všetko</string>
+    <string name="typing_swipes_delete_confirm">Vymazať všetky nahrané ťahy (%1$d)? Nedá sa to vrátiť späť.</string>
+    <string name="typing_swipes_accepted">ponechané</string>
+    <string name="typing_swipes_replaced">nahradené slovom %1$s</string>
+    <string name="typing_swipes_deleted">vymazané</string>
 </resources>

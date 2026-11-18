@@ -152,6 +152,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GESTURE_FAST_TYPING_COOLDOWN = "gesture_fast_typing_cooldown";
     public static final String PREF_GESTURE_TRAIL_FADEOUT_DURATION = "gesture_trail_fadeout_duration";
     public static final String PREF_SWIPE_BEAM_WIDTH = "swipe_beam_width";
+    public static final String PREF_RECORD_TYPING_SWIPES = "record_typing_swipes";
     public static final String PREF_APP_LANGUAGE = "app_language";
     public static final String PREF_SHOW_SETUP_WIZARD_ICON = "show_setup_wizard_icon";
     public static final String PREF_USE_CONTACTS = "use_contacts";
@@ -315,6 +316,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
             Log.i(TAG, "loadSettings");
             mSettingsValues = RunInLocaleKt.runInLocale(context, locale,
                     ctx -> new SettingsValues(ctx, prefs, ctx.getResources(), inputAttributes));
+            helium314.keyboard.latin.swipe.TypingSwipeRecorder.onSettingsLoaded(context,
+                    mSettingsValues.mRecordTypingSwipesSetting, mSettingsValues.mRecordTypingSwipes);
         } finally {
             mSettingsValuesLock.unlock();
         }

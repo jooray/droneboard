@@ -25,7 +25,11 @@ import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
+import android.text.format.Formatter
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import helium314.keyboard.latin.swipe.FutoSwipe
+import helium314.keyboard.latin.swipe.TypingSwipeRecorder
 import helium314.keyboard.latin.utils.NextScreenIcon
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.SettingsWithoutKey
@@ -60,6 +64,9 @@ fun GestureTypingScreen(
             Settings.PREF_GESTURE_TRAIL_FADEOUT_DURATION else null,
         if (gestureEnabled && FutoSwipe.isAvailable) Settings.PREF_SWIPE_BEAM_WIDTH else null,
         if (gestureEnabled && FutoSwipe.isAvailable) SettingsWithoutKey.SWIPE_RECORDER else null,
+        if (gestureEnabled && FutoSwipe.isAvailable) Settings.PREF_RECORD_TYPING_SWIPES else null,
+        // the recorded data stays reachable (to view, delete or export it) when gesture typing is switched off
+        if (FutoSwipe.isAvailable) SettingsWithoutKey.TYPING_SWIPES else null,
         )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -142,6 +149,20 @@ fun createGestureTypingSettings(context: Context) = listOf(
             name = it.title,
             description = it.description,
             onClick = { SettingsDestination.navigateTo(SettingsDestination.SwipeRecorder) }
+        ) { NextScreenIcon() }
+    },
+    Setting(context, Settings.PREF_RECORD_TYPING_SWIPES, R.string.typing_swipes_switch, R.string.typing_swipes_switch_summary) {
+        SwitchPreference(it, Defaults.PREF_RECORD_TYPING_SWIPES)
+    },
+    Setting(context, SettingsWithoutKey.TYPING_SWIPES, R.string.typing_swipes_data_title, R.string.typing_swipes_data_summary) {
+        val ctx = LocalContext.current
+        val stats by TypingSwipeRecorder.stats.collectAsState()
+        LaunchedEffect(Unit) { TypingSwipeRecorder.refresh(ctx) }
+        Preference(
+            name = it.title,
+            description = stringResource(R.string.typing_swipes_count, stats.count, Formatter.formatShortFileSize(ctx, stats.bytes))
+                + ". " + it.description,
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.TypingSwipes) }
         ) { NextScreenIcon() }
     },
 )

@@ -455,6 +455,11 @@ object SwipeGestureDecoder {
                 keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, words, activeLanguages,
                 words.indices.map { activeLanguages.getOrElse(dicts[it]) { "" } }, lastMillis
             )
+        } else if (isFinal && TypingSwipeRecorder.armed) {
+            TypingSwipeRecorder.onFinalDecode(
+                keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, words, activeLanguages,
+                words.indices.map { activeLanguages.getOrElse(dicts[it]) { "" } }, lastMillis
+            )
         }
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "swipe ${if (isFinal) "final" else "preview"} ${lastMillis}ms (neural ${FutoSwipe.nativeLastNeuralMillis(session)}ms," +

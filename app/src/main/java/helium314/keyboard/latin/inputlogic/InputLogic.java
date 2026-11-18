@@ -36,6 +36,8 @@ import helium314.keyboard.keyboard.emoji.EmojiSearchActivity;
 import helium314.keyboard.keyboard.emoji.RecentEmojis;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.lm.NeuralLanguageModel;
+import helium314.keyboard.latin.swipe.TypingSwipePolicy;
+import helium314.keyboard.latin.swipe.TypingSwipeRecorder;
 import helium314.keyboard.latin.CapsMode;
 import helium314.keyboard.latin.InputStyle;
 import helium314.keyboard.latin.common.CoordinateUtils;
@@ -157,6 +159,7 @@ public final class InputLogic {
      * @param settingsValues the current settings values
      */
     public void startInput(String combiningSpec, SettingsValues settingsValues) {
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         mConnection.onStartInput();
         if (!mWordComposer.getTypedWord().isEmpty()) {
             // For messaging apps that offer send button, the IME does not get the opportunity
@@ -230,6 +233,7 @@ public final class InputLogic {
     }
 
     public void finishInput() {
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText();
             StatsUtils.onWordCommitUserTyped(mWordComposer.getTypedWord(), mWordComposer.isBatchMode());
@@ -250,6 +254,7 @@ public final class InputLogic {
      * @return the complete transaction object
      */
     public InputTransaction onTextInput(SettingsValues settingsValues, Event event, CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.TEXT, null);
         String rawText = event.getTextToCommit().toString();
         InputTransaction inputTransaction = new InputTransaction(settingsValues, event,
                 SystemClock.uptimeMillis(), mSpaceState,
@@ -308,6 +313,11 @@ public final class InputLogic {
             // Rely on onCodeInput to do the complicated swapping/stripping logic consistently.
             Event event = Event.createPunctuationSuggestionPickedEvent(suggestionInfo);
             return onCodeInput(settingsValues, event, keyboardCapsMode, handler);
+        }
+        if (TypingSwipeRecorder.hasPending) {
+            // a pick while the swiped word is still the composing word replaces it; otherwise it comes after it
+            TypingSwipeRecorder.settle(TypingSwipePolicy.Event.PICK,
+                    mWordComposer.isComposingWord() && mWordComposer.isBatchMode() ? suggestion : null);
         }
         Event event = Event.createSuggestionPickedEvent(suggestionInfo);
         InputTransaction inputTransaction = new InputTransaction(settingsValues, event,
@@ -404,6 +414,7 @@ public final class InputLogic {
             // note that arrow keys are not considered, because for them isBelatedExpectedUpdate returns false
             return expectCursorMove;
         }
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.onSelection(newSelStart, newSelEnd);
 
         // TODO: the following is probably better done in resetEntireInputState().
         // it should only happen when the cursor moved, and the very purpose of the
@@ -482,6 +493,7 @@ public final class InputLogic {
     public InputTransaction onCodeInput(SettingsValues settingsValues, @NonNull Event event,
             CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
         mJustRevertedACommit = false;
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.onKey(event.getKeyCode());
 
         Event processedEvent = mWordComposer.processEvent(event);
         InputTransaction inputTransaction = new InputTransaction(settingsValues,
@@ -527,6 +539,7 @@ public final class InputLogic {
 
     public void onStartBatchInput(SettingsValues settingsValues, KeyboardSwitcher keyboardSwitcher, LatinIME.UIHandler handler) {
         mInputLogicHandler.onStartBatchInput();
+        if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.SWIPE, null);
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         handler.cancelUpdateSuggestionStrip();
         ++mAutoCommitSequenceNumber;
@@ -2268,6 +2281,8 @@ public final class InputLogic {
         enterInlineEmojiSearchIfNeeded(batchInputText.codePointAt(0), settingsValues);
         setComposingTextInternal(batchInputText, 1);
         mConnection.endBatchEdit();
+        if (TypingSwipeRecorder.armed)
+            TypingSwipeRecorder.onSwipeCommitted(batchInputText, mConnection.getExpectedSelectionEnd());
         // Space state must be updated before calling updateShiftState
         if (settingsValues.mAutospaceAfterGestureTyping)
             mSpaceState = SpaceState.PHANTOM;

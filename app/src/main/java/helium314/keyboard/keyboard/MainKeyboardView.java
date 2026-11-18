@@ -46,6 +46,7 @@ import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.swipe.SwipeRecorder;
+import helium314.keyboard.latin.swipe.TypingSwipeRecorder;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Colors;
@@ -603,6 +604,10 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             final Keyboard keyboard = getKeyboard();
             if (keyboard != null && SwipeRecorder.isRecording(keyboard.mId.getEditorInfo()))
                 SwipeRecorder.onTouchEvent(event, mKeyDetector.getTouchX(0), mKeyDetector.getTouchY(0));
+        } else if (TypingSwipeRecorder.armed) {
+            // optional recording of swipes while typing (off by default): the points stay in memory and are
+            // only used when the stroke turns out to be a swipe in a field that may be recorded
+            SwipeRecorder.onTouchEvent(event, mKeyDetector.getTouchX(0), mKeyDetector.getTouchY(0));
         }
         final int index = event.getActionIndex();
         final int id = event.getPointerId(index);

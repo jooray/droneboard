@@ -137,6 +137,16 @@ public final class InputAttributes {
             mNoLearning = false;
     }
 
+    /** the field's IME options as the app set them, 0 without a field */
+    public int getImeOptions() {
+        return mEditorInfo == null ? 0 : mEditorInfo.imeOptions;
+    }
+
+    /** the field's private IME options as the app set them */
+    public String getPrivateImeOptions() {
+        return mEditorInfo == null ? null : mEditorInfo.privateImeOptions;
+    }
+
     public boolean isTypeNull() {
         return InputType.TYPE_NULL == mInputType;
     }

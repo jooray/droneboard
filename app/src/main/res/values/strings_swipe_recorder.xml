@@ -24,4 +24,23 @@
     <string name="swipe_recorder_export_title">Getting the recordings</string>
     <string name="swipe_recorder_export_text">The files stay in this folder on the phone (the app has no internet access). Copy them to a computer with:</string>
     <string name="swipe_recorder_copy">Copy command</string>
+    <string name="typing_swipes_switch">Record my swipes while typing</string>
+    <string name="typing_swipes_switch_summary">Saves your swipes on this phone only, so that swipe typing can be measured and improved. Never in password fields or in incognito mode. You can view, delete and export them below.</string>
+    <string name="typing_swipes_data_title">Recorded swipes</string>
+    <string name="typing_swipes_data_summary">View, delete or export what was recorded while typing</string>
+    <string name="typing_swipes_count">Recorded swipes: %1$d (%2$s)</string>
+    <string name="typing_swipes_intro">This is everything that is stored about your typing: each swiped word, the words before it and what you did next. Newest first. It stays on this phone and is not part of any backup.</string>
+    <string name="typing_swipes_limit">Recording stops at %1$d swipes or %2$d MB, whichever comes first.</string>
+    <string name="typing_swipes_full">The limit is reached. Nothing more is recorded until you delete the data.</string>
+    <string name="typing_swipes_empty">Nothing is recorded yet.</string>
+    <string name="typing_swipes_export">Export</string>
+    <string name="typing_swipes_export_choose">Choose where to save</string>
+    <string name="typing_swipes_export_message">Swipes in the file: %1$d. The file contains the words you swiped, the words before each of them (%2$d at most), the touch coordinates and timing of each gesture, the keyboard layout and language, and the words the keyboard offered. It contains no app names and nothing else from the fields you typed in. Droneboard sends it nowhere; you choose where the file is saved.</string>
+    <string name="typing_swipes_exported">File saved</string>
+    <string name="typing_swipes_export_failed">The file could not be saved</string>
+    <string name="typing_swipes_delete_all">Delete all</string>
+    <string name="typing_swipes_delete_confirm">Delete all recorded swipes (%1$d)? This cannot be undone.</string>
+    <string name="typing_swipes_accepted">kept</string>
+    <string name="typing_swipes_replaced">replaced by %1$s</string>
+    <string name="typing_swipes_deleted">deleted</string>
 </resources>

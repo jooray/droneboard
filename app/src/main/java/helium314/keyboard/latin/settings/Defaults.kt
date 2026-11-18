@@ -151,6 +151,7 @@ object Defaults {
     const val PREF_GESTURE_TRAIL_FADEOUT_DURATION = 800
     /** beam width of the final swipe decode (the live preview always uses 32) */
     const val PREF_SWIPE_BEAM_WIDTH = 200
+    const val PREF_RECORD_TYPING_SWIPES = false
     /** language of the app (settings) UI; empty = system default. Not the typing languages. */
     const val PREF_APP_LANGUAGE = ""
     const val PREF_SHOW_SETUP_WIZARD_ICON = true

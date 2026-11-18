@@ -780,6 +780,8 @@ public class LatinIME extends InputMethodService implements
 
     void onStartInputViewInternal(EditorInfo editorInfo, boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
+        // the settings are not reloaded when the same field restarts with other options (e.g. incognito)
+        helium314.keyboard.latin.swipe.TypingSwipeRecorder.onStartInputView(editorInfo);
 
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for which we
