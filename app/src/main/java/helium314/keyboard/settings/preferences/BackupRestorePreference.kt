@@ -22,6 +22,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.Database
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.swipe.TypingSwipeRecorder
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
@@ -242,6 +243,8 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                     throw Exception("nothing to restore in the given file")
 
                 Database.copyFromDb(restoredDb, ctx)
+                // recorded typing swipes are in no backup, so a restore must not delete them
+                TypingSwipeRecorder.keepAcrossRestore(File(filesDir.absolutePath + "2"), filesDir)
                 setAside.forEach { (_, kept) -> kept.deleteRecursively() }
                 if (Looper.myLooper() == null)
                     Looper.prepare()
@@ -359,7 +362,8 @@ private fun restoreEntryToDir(zip: ZipInputStream, baseDir: File, entryName: Str
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
 
-private val backupFilePatterns by lazy { listOf(
+/** what the app's own backup file takes from the files directories (a whitelist) */
+internal val backupFilePatterns by lazy { listOf(
     "blacklists${File.separator}.*\\.txt".toRegex(),
     "layouts${File.separator}.*${LayoutUtilsCustom.CUSTOM_LAYOUT_PREFIX}+\\..{0,4}".toRegex(), // can't expect a period at the end, as this would break restoring older backups
     "dicts${File.separator}.*${File.separator}.*user\\.dict".toRegex(),

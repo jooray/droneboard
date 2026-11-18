@@ -24,4 +24,23 @@
     <string name="swipe_recorder_export_title">Aufzeichnungen abrufen</string>
     <string name="swipe_recorder_export_text">Die Dateien bleiben in diesem Ordner auf dem Smartphone (die App hat keinen Internetzugriff). Mit diesem Befehl kopieren Sie sie auf einen Computer:</string>
     <string name="swipe_recorder_copy">Befehl kopieren</string>
+    <string name="typing_swipes_switch">Meine Wischgesten beim Tippen aufzeichnen</string>
+    <string name="typing_swipes_switch_summary">Speichert Ihre Wischgesten nur auf diesem Smartphone, damit sich das Wischen messen und verbessern lässt. Nie in Passwortfeldern oder im Inkognito-Modus. Sie können die Aufzeichnungen unten ansehen, löschen und exportieren.</string>
+    <string name="typing_swipes_data_title">Aufgezeichnete Wischgesten</string>
+    <string name="typing_swipes_data_summary">Ansehen, löschen oder exportieren, was beim Tippen aufgezeichnet wurde</string>
+    <string name="typing_swipes_count">Aufgezeichnete Wischgesten: %1$d (%2$s)</string>
+    <string name="typing_swipes_intro">Das ist alles, was über Ihr Tippen gespeichert ist: jedes gewischte Wort, die Wörter davor und was Sie danach getan haben. Das Neueste steht oben. Es bleibt auf diesem Smartphone und ist in keiner Sicherung enthalten.</string>
+    <string name="typing_swipes_limit">Die Aufzeichnung endet bei %1$d Wischgesten oder %2$d MB, je nachdem, was zuerst erreicht wird.</string>
+    <string name="typing_swipes_full">Die Grenze ist erreicht. Bis Sie die Daten löschen, wird nichts mehr aufgezeichnet.</string>
+    <string name="typing_swipes_empty">Noch nichts aufgezeichnet.</string>
+    <string name="typing_swipes_export">Exportieren</string>
+    <string name="typing_swipes_export_choose">Speicherort wählen</string>
+    <string name="typing_swipes_export_message">Wischgesten in der Datei: %1$d. Die Datei enthält die Wörter, die Sie gewischt haben, die Wörter vor jedem davon (höchstens %2$d), die Berührungskoordinaten und Zeiten jeder Geste, Layout und Sprache der Tastatur und die Wörter, die die Tastatur angeboten hat. Sie enthält keine App-Namen und nichts anderes aus den Feldern, in die Sie geschrieben haben. Droneboard sendet sie nirgendwohin; Sie wählen, wo die Datei gespeichert wird.</string>
+    <string name="typing_swipes_exported">Datei gespeichert</string>
+    <string name="typing_swipes_export_failed">Die Datei konnte nicht gespeichert werden</string>
+    <string name="typing_swipes_delete_all">Alles löschen</string>
+    <string name="typing_swipes_delete_confirm">Alle aufgezeichneten Wischgesten (%1$d) löschen? Das lässt sich nicht rückgängig machen.</string>
+    <string name="typing_swipes_accepted">behalten</string>
+    <string name="typing_swipes_replaced">ersetzt durch %1$s</string>
+    <string name="typing_swipes_deleted">gelöscht</string>
 </resources>

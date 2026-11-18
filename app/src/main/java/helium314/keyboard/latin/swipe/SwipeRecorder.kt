@@ -30,11 +30,16 @@ import java.util.concurrent.Executors
  * output, the raw touch points of the stroke at full rate) and passes it to the screen's [listener] on
  * the main thread. The screen adds what only it knows (prompt, target word, committed word, session
  * style) and saves it with [write].
+ *
+ * [TypingSwipeRecorder] (optional, off by default) uses the same touch capture ([onTouchEvent]), the same
+ * record ([buildRecord]) and the same writer thread ([append]) for swipes made while typing.
  */
 object SwipeRecorder {
     private const val TAG = "SwipeRecorder"
     const val IME_OPTION = "${BuildConfig.APPLICATION_ID}.swipeRecorder"
     const val DIR = "swipe-recordings"
+    /** version of the record format, see tools/swipe-replay/README.md */
+    const val RECORD_VERSION = 2
     /** a stroke that ended longer ago than this does not belong to the decode being recorded */
     private const val STROKE_MAX_AGE_MS = 3000L
     private const val MAX_STROKE_POINTS = 20_000
@@ -68,6 +73,11 @@ object SwipeRecorder {
     fun stop() {
         listener = null
         file = null
+        clearStroke()
+    }
+
+    /** forgets the touch points kept in memory */
+    fun clearStroke() {
         synchronized(strokeLock) { current = null; finished = null }
     }
 
@@ -146,8 +156,19 @@ object SwipeRecorder {
         wordLanguages: List<String>, millis: Float
     ) {
         if (file == null || !isRecording(runCatching { keyboard.mId.editorInfo }.getOrNull())) return
+        val json = buildRecord(keyboard, pointers, input, layoutKeys, words, languages, wordLanguages, millis) ?: return
+        lastResult.value = words.take(3)
+        main.post { listener?.invoke(json) }
+    }
+
+    /** The record of a final decode: decoder input and output, the touch points of the stroke, the keyboard. */
+    fun buildRecord(
+        keyboard: Keyboard, pointers: InputPointers, input: SwipeGestureDecoder.LastInput,
+        layoutKeys: List<Triple<String, Float, Float>>, words: Array<String>, languages: List<String>,
+        wordLanguages: List<String>, millis: Float
+    ): JSONObject? {
         val stroke = takeStroke()
-        val json = try {
+        return try {
             JSONObject().apply {
                 put("context", JSONArray(input.context))
                 put("layout", JSONArray().apply {
@@ -185,10 +206,8 @@ object SwipeRecorder {
             }
         } catch (e: Exception) {
             Log.w(TAG, "could not serialize swipe", e)
-            return
+            null
         }
-        lastResult.value = words.take(3)
-        main.post { listener?.invoke(json) }
     }
 
     private fun strokeJson(s: Stroke) = JSONObject().apply {
@@ -210,14 +229,19 @@ object SwipeRecorder {
     fun write(json: JSONObject) {
         val out = file ?: return
         val line = json.toString()
-        io.execute {
-            try {
-                out.appendText(line + "\n")
-                recorded.value = recorded.value + 1
-            } catch (e: Exception) {
-                Log.w(TAG, "could not write ${out.path}", e)
-            }
-        }
+        io.execute { if (append(out, line)) recorded.value = recorded.value + 1 }
+    }
+
+    /** Runs [task] on the writer thread, after the writes queued before it. */
+    fun onWriterThread(task: Runnable) = io.execute(task)
+
+    /** Appends one record line to [out]; call on the writer thread. */
+    fun append(out: File, line: String): Boolean = try {
+        out.appendText(line + "\n")
+        true
+    } catch (e: Exception) {
+        Log.w(TAG, "could not write ${out.path}", e)
+        false
     }
 
     /** Number of records in all recording files (blocking; call off the main thread). */

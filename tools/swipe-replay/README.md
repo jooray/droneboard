@@ -14,7 +14,31 @@ Every line holds:
 
 - the target word, the context words and the normalized points (`x`, `y`, `t`) and letter layout exactly as fed to the decoder;
 - the keyboard's own top predictions (`pred`);
-- the raw pointer coordinates (`raw`) and the key boxes (`keyboard`), for re-normalizing later.
+- the raw pointer coordinates (`raw`) and the key boxes (`keyboard`), for re-normalizing later;
+- every touch sample of the stroke at full rate (`touch`), `record_version` (2) and `mode`: `word`, `sentence` (with `sentence`, `word_index`, `prev_words`, `committed`) or `typing`.
+
+### Swipes recorded while typing (`"mode": "typing"`)
+
+Settings → Gesture typing → **Record my swipes while typing** (off by default) records the swipes of normal typing. They go to one file in the app's internal storage, `files/typing-swipes/typing-swipes.jsonl`, which `adb pull` cannot reach and no backup includes. Get it with Settings → Gesture typing → **Recorded swipes** → Export. Recording stops at 10,000 swipes or 20 MB. Nothing is recorded in password, e-mail address, URL and non-text fields, in incognito fields or with the keyboard's incognito mode on, on the lock screen, or in the prompted recorder. The app and the text field are not recorded.
+
+The record is the same as a prompted one (same `record_version`, same decoder input, `pred`, `raw`, `touch`, `keyboard`), so `swipe-replay` reads the file as it is. A record is written once the user's next action is known, and has in addition:
+
+| Field | Meaning |
+|---|---|
+| `committed` | the word the swipe put into the text |
+| `prev_words` | up to 3 words before the cursor, punctuation stripped (`context` stays what the decoder got) |
+| `outcome` | `accepted` (the user went on), `replaced` (picked another suggestion while the word was still underlined) or `deleted` (backspace right after the swipe) |
+| `outcome_event` | what decided it: `swipe`, `key`, `text`, `pick`, `backspace`, `cursor`, `finish` (left the field) |
+| `target` | `accepted`: the committed word; `replaced`: the picked word; missing for `deleted` (then `"deleted": true`) and when an emoji was picked |
+| `chosen` | `replaced` only: what was picked |
+| `top1_hit`, `committed_hit` | `pred[0]` / `committed` equals `target`, ignoring case |
+| `settled_ms` | time from the decode to the action that decided the outcome |
+
+`swipe-replay` skips records without a `target`. An `accepted` word is only probably right: the user may have left a wrong word, fixed it later by hand, or the app may restart the input after every word (`outcome_event` `finish` is the weakest evidence). To measure on the firmest part, filter first:
+
+```sh
+jq -c 'select(.mode == "typing" and .outcome == "accepted" and .outcome_event != "finish")' typing-swipes.jsonl > accepted.jsonl
+```
 
 ## Building
 

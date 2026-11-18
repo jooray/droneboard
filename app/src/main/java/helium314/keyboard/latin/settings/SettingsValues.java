@@ -6,6 +6,8 @@
 
 package helium314.keyboard.latin.settings;
 
+import helium314.keyboard.latin.swipe.TypingSwipePolicy;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -167,6 +169,10 @@ public class SettingsValues {
     private final boolean mOverrideShowingSuggestions;
     public final boolean mSuggestClipboardContent;
     public final boolean mIncognitoModeEnabled;
+    /** the user's switch "record my swipes while typing" */
+    public final boolean mRecordTypingSwipesSetting;
+    /** the switch is on and this text field may be recorded */
+    public final boolean mRecordTypingSwipes;
     public final boolean mLongPressSymbolsForNumpad;
 
     // From the input box
@@ -293,6 +299,10 @@ public class SettingsValues {
             && (mInputAttributes.mShouldShowSuggestions || mOverrideShowingSuggestions) && !mSuggestionStripHiddenPerUserSettings;
         mIncognitoModeEnabled = prefs.getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE) || mInputAttributes.mNoLearning
                 || mInputAttributes.mIsPasswordField || mIsUserLocked;
+        mRecordTypingSwipesSetting = prefs.getBoolean(Settings.PREF_RECORD_TYPING_SWIPES, Defaults.PREF_RECORD_TYPING_SWIPES);
+        mRecordTypingSwipes = TypingSwipePolicy.mayRecord(mRecordTypingSwipesSetting, mInputAttributes.mInputType,
+                mInputAttributes.getImeOptions(), mInputAttributes.getPrivateImeOptions(),
+                mIncognitoModeEnabled, !mIsUserLocked, mIsLocked);
         mBottomRowScale = Settings.readBottomRowScale(prefs, isLandscape, isFolded);
         mSpaceSwipeHorizontal = Settings.readHorizontalSpaceSwipe(prefs);
         mSpaceSwipeVertical = Settings.readVerticalSpaceSwipe(prefs);

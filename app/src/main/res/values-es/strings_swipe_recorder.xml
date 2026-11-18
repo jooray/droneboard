@@ -24,4 +24,23 @@
     <string name="swipe_recorder_export_title">Cómo obtener las grabaciones</string>
     <string name="swipe_recorder_export_text">Los archivos permanecen en esta carpeta del teléfono (la aplicación no tiene acceso a internet). Cópialos a un ordenador con:</string>
     <string name="swipe_recorder_copy">Copiar comando</string>
+    <string name="typing_swipes_switch">Grabar mis deslizamientos al escribir</string>
+    <string name="typing_swipes_switch_summary">Guarda tus deslizamientos solo en este teléfono, para poder medir y mejorar la escritura deslizando. Nunca en campos de contraseña ni en modo incógnito. Puedes verlos, borrarlos y exportarlos más abajo.</string>
+    <string name="typing_swipes_data_title">Deslizamientos grabados</string>
+    <string name="typing_swipes_data_summary">Ver, borrar o exportar lo que se ha grabado al escribir</string>
+    <string name="typing_swipes_count">Deslizamientos grabados: %1$d (%2$s)</string>
+    <string name="typing_swipes_intro">Esto es todo lo que se guarda sobre lo que escribes: cada palabra escrita deslizando, las palabras anteriores y lo que hiciste después. Lo más reciente aparece primero. Se queda en este teléfono y no forma parte de ninguna copia de seguridad.</string>
+    <string name="typing_swipes_limit">La grabación se detiene al llegar a %1$d deslizamientos o a %2$d MB, lo que ocurra primero.</string>
+    <string name="typing_swipes_full">Se ha alcanzado el límite. No se graba nada más hasta que borres los datos.</string>
+    <string name="typing_swipes_empty">Todavía no hay nada grabado.</string>
+    <string name="typing_swipes_export">Exportar</string>
+    <string name="typing_swipes_export_choose">Elegir dónde guardar</string>
+    <string name="typing_swipes_export_message">Deslizamientos en el archivo: %1$d. El archivo contiene las palabras que escribiste deslizando, las palabras anteriores a cada una (%2$d como máximo), las coordenadas y los tiempos de los toques de cada gesto, la distribución y el idioma del teclado y las palabras que el teclado ofreció. No contiene nombres de aplicaciones ni nada más de los campos en los que escribiste. Droneboard no lo envía a ningún sitio; tú eliges dónde se guarda el archivo.</string>
+    <string name="typing_swipes_exported">Archivo guardado</string>
+    <string name="typing_swipes_export_failed">No se pudo guardar el archivo</string>
+    <string name="typing_swipes_delete_all">Borrar todo</string>
+    <string name="typing_swipes_delete_confirm">¿Borrar todos los deslizamientos grabados (%1$d)? No se puede deshacer.</string>
+    <string name="typing_swipes_accepted">conservado</string>
+    <string name="typing_swipes_replaced">sustituido por %1$s</string>
+    <string name="typing_swipes_deleted">borrado</string>
 </resources>

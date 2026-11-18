@@ -211,6 +211,8 @@ int main(int argc, char** argv) {
         while (std::getline(in, line)) {
             if (line.empty()) continue;
             json j = json::parse(line);
+            // typing records of a swipe the user deleted have no target: nothing to measure against
+            if (!j.contains("target") || !j["target"].is_string()) continue;
             std::string letters, sig;
             std::vector<float> cx, cy;
             std::vector<int> cps;

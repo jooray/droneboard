@@ -31,6 +31,7 @@ import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.SwipeRecorderScreen
+import helium314.keyboard.settings.screens.TypingSwipesScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import kotlinx.coroutines.CoroutineScope
@@ -97,6 +98,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.SwipeRecorder) {
             SwipeRecorderScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.TypingSwipes) {
+            TypingSwipesScreen(onClickBack = ::goBack)
+        }
         composable(SettingsDestination.Advanced) {
             AdvancedSettingsScreen(onClickBack = ::goBack)
         }
@@ -147,6 +151,7 @@ object SettingsDestination {
     const val Toolbar = "toolbar"
     const val GestureTyping = "gesture_typing"
     const val SwipeRecorder = "swipe_recorder"
+    const val TypingSwipes = "typing_swipes"
     const val Advanced = "advanced"
     const val Debug = "debug"
     const val Appearance = "appearance"
