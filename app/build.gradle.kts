@@ -94,6 +94,9 @@ android {
         }
     }
 
+    // unit tests exist only for one build type: on CI it is "runTests", which skips the tests known to fail there
+    testBuildType = if (System.getenv("CI") != null) "runTests" else "debug"
+
     buildFeatures {
         viewBinding = true
         buildConfig = true

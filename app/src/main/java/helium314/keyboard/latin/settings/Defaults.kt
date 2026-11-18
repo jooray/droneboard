@@ -172,6 +172,7 @@ object Defaults {
     const val PREF_POPUP_KEYS_HINT_ORDER = POPUP_KEYS_LABEL_DEFAULT
     const val PREF_SHOW_POPUP_HINTS = false
     const val PREF_SHOW_TLD_POPUP_KEYS = true
+    const val PREF_POPUP_EDIT_ACTIONS = true
     const val PREF_MORE_POPUP_KEYS = "main"
     const val PREF_SPACE_TO_CHANGE_LANG = true
     const val SPACE_LONG_PRESS_TRACKPAD = "trackpad"

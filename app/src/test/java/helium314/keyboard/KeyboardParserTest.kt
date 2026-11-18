@@ -129,6 +129,23 @@ f""", // no newline at the end
         assertIsExpected("""[[{ "label": "a" }]]""", Expected('a'.code, "a"))
     }
 
+    @Test fun editActionsOnLetters() {
+        params.mPopupEditActions = true
+        try {
+            // the action comes after the key's own popups, so a plain long press still gives the first of them
+            assertIsExpected("""[[{ "label": "a", "popup": { "relevant": [{ "label": "á" }] } }]]""",
+                Expected('a'.code, "a", popups = listOf("á" to 'á'.code, null to KeyCode.CLIPBOARD_SELECT_ALL)))
+            assertIsExpected("""[[{ "label": "x" }]]""", Expected('x'.code, "x", popups = listOf(null to KeyCode.CLIPBOARD_CUT)))
+            assertIsExpected("""[[{ "label": "c" }]]""", Expected('c'.code, "c", popups = listOf(null to KeyCode.CLIPBOARD_COPY)))
+            assertIsExpected("""[[{ "label": "v" }]]""", Expected('v'.code, "v", popups = listOf(null to KeyCode.CLIPBOARD_PASTE)))
+            assertIsExpected("""[[{ "label": "z" }]]""", Expected('z'.code, "z", popups = listOf(null to KeyCode.UNDO)))
+            assertIsExpected("""[[{ "label": "y" }]]""", Expected('y'.code, "y", popups = listOf(null to KeyCode.REDO)))
+            assertIsExpected("""[[{ "label": "b" }]]""", Expected('b'.code, "b"))
+        } finally {
+            params.mPopupEditActions = false
+        }
+    }
+
     @Test fun labelAndExplicitCode() {
         assertIsExpected("""[[{ "$": "text_key" "label": "a", "code": 98 }]]""", Expected('b'.code, "a"))
     }

@@ -59,6 +59,7 @@ fun PreferencesScreen(
         Settings.PREF_POPUP_KEYS_ORDER,
         Settings.PREF_SHOW_POPUP_HINTS,
         Settings.PREF_SHOW_TLD_POPUP_KEYS,
+        Settings.PREF_POPUP_EDIT_ACTIONS,
         Settings.PREF_POPUP_ON,
         if (AudioAndHapticFeedbackManager.getInstance().hasVibrator())
             Settings.PREF_VIBRATE_ON else null,
@@ -145,6 +146,12 @@ fun createPreferencesSettings(context: Context) = listOf(
         R.string.show_tld_popup_keys_summary
     ) {
         SwitchPreference(it, Defaults.PREF_SHOW_TLD_POPUP_KEYS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(
+        context, Settings.PREF_POPUP_EDIT_ACTIONS, R.string.popup_edit_actions,
+        R.string.popup_edit_actions_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_POPUP_EDIT_ACTIONS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_SHOW_POPUP_HINTS, R.string.show_popup_hints, R.string.show_popup_hints_summary) {
         SwitchPreference(it, Defaults.PREF_SHOW_POPUP_HINTS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }

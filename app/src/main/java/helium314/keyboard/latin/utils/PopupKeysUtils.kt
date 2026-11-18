@@ -8,6 +8,7 @@ import helium314.keyboard.keyboard.internal.PopupKeySpec
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyLabel.rtlLabel
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.PopupSet
 import helium314.keyboard.latin.common.Constants.Separators
+import java.util.Locale
 
 const val POPUP_KEYS_NUMBER = "number"
 private const val POPUP_KEYS_LANGUAGE_PRIORITY = "language_priority"
@@ -44,8 +45,11 @@ fun createPopupKeysArray(popupSet: PopupSet<*>?, params: KeyboardParams, label: 
             POPUP_KEYS_LANGUAGE_PRIORITY -> params.mLocaleKeyboardInfos.getPriorityPopupKeys(label)?.let { popupKeys.addAll(it) }
         }
     }
+    // Droneboard: hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo. The action is the last popup key,
+    // so accents and symbols stay where they were and a plain long press still gives the first of them.
+    val editAction = if (params.mId.element.isAlphabet && params.mPopupEditActions) editActionPopupKey(label) else null
     if (!popupKeysDelegate.isInitialized() || popupKeys.isEmpty())
-        return null
+        return editAction?.let { arrayOf(it) }
     val fco = popupKeys.firstOrNull { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
     if (fco != null && fco.substringAfter(Key.POPUP_KEYS_FIXED_COLUMN_ORDER).toIntOrNull() != popupKeys.size - 1) {
         val fcoExpected = popupKeys.size - popupKeys.count { it.startsWith("!") && it.endsWith("!") } - 1
@@ -61,11 +65,25 @@ fun createPopupKeysArray(popupSet: PopupSet<*>?, params: KeyboardParams, label: 
     }
     // autoColumnOrder should be fine
 
+    if (editAction != null) popupKeys.add(editAction)
     val array = popupKeys.toTypedArray()
     for (i in array.indices) {
         array[i] = transformLabel(array[i], params)
     }
     return array
+}
+
+private fun editActionPopupKey(label: String): String? {
+    val toolbarKey = when (label.lowercase(Locale.ROOT)) {
+        "a" -> ToolbarKey.SELECT_ALL
+        "x" -> ToolbarKey.CUT
+        "c" -> ToolbarKey.COPY
+        "v" -> ToolbarKey.PASTE
+        "z" -> ToolbarKey.UNDO
+        "y" -> ToolbarKey.REDO
+        else -> return null
+    }
+    return "!icon/${toolbarKeyStrings[toolbarKey]}|!code/${getCodeForToolbarKey(toolbarKey)}"
 }
 
 fun getHintLabel(popupSet: PopupSet<*>?, params: KeyboardParams, label: String): String? {

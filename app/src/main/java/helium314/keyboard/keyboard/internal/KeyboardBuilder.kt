@@ -72,6 +72,7 @@ open class KeyboardBuilder<KP : KeyboardParams>(protected val mContext: Context,
 
         LocaleKeyboardInfos.addLocaleKeyTextsToParams(mContext, mParams, sv.mShowMorePopupKeys)
         mParams.mPopupKeyOrder.addAll(sv.mPopupKeyOrder)
+        mParams.mPopupEditActions = sv.mPopupEditActions
         // add label source only if popup key type enabled
         sv.mPopupKeyHintOrder.forEach { if (it in sv.mPopupKeyOrder) mParams.mPopupKeyHintOrder.add(it) }
     }

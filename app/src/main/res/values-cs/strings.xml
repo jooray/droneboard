@@ -560,4 +560,6 @@
     <string name="delete_swipe_letters">Písmena</string>
     <string name="delete_swipe_words">Slova</string>
     <string name="gesture_data_single_instance_per_word">Zobrazit jen jeden záznam na slovo</string>
+    <string name="popup_edit_actions">Úpravy na A, X, C, V, Z, Y</string>
+    <string name="popup_edit_actions_summary">Podržení těchto písmen nabídne i vybrat vše, vyjmout, kopírovat, vložit, zpět a znovu</string>
 </resources>

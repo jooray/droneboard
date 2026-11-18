@@ -85,6 +85,8 @@ public class KeyboardParams {
     @NonNull // todo: not good, this only works because params are currently always created for the active subtype
     public final List<Locale> mSecondaryLocales = Settings.getValues().mSecondaryLocales;
     public final ArrayList<String> mPopupKeyOrder = new ArrayList<>();
+    /** Droneboard: hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo, redo */
+    public boolean mPopupEditActions;
     public final ArrayList<String> mPopupKeyHintOrder = new ArrayList<>();
 
     @NonNull

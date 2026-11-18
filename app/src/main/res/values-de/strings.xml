@@ -558,4 +558,6 @@
     <string name="space_long_press_trackpad">Trackpad</string>
     <string name="space_long_press_language">Sprache oder Tastatur wechseln</string>
     <string name="gesture_data_single_instance_per_word">Nur einen Eintrag pro Wort anzeigen</string>
+    <string name="popup_edit_actions">Bearbeiten auf A, X, C, V, Z, Y</string>
+    <string name="popup_edit_actions_summary">Langes Drücken dieser Buchstaben bietet auch Alles auswählen, Ausschneiden, Kopieren, Einfügen, Rückgängig und Wiederholen</string>
 </resources>

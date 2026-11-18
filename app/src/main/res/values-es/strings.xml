@@ -558,4 +558,6 @@
     <string name="space_long_press_trackpad">Panel táctil</string>
     <string name="space_long_press_language">Cambiar de idioma o de teclado</string>
     <string name="gesture_data_single_instance_per_word">Mostrar solo una entrada por palabra</string>
+    <string name="popup_edit_actions">Edición en A, X, C, V, Z, Y</string>
+    <string name="popup_edit_actions_summary">Al mantener pulsadas estas letras también se ofrece seleccionar todo, cortar, copiar, pegar, deshacer y rehacer</string>
 </resources>

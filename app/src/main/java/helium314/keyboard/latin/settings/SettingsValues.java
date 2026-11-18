@@ -77,6 +77,7 @@ public class SettingsValues {
     public final boolean mShowsHints;
     public final boolean mShowsPopupHints;
     public final boolean mShowTldPopupKeys;
+    public final boolean mPopupEditActions;
     public final boolean mSpaceForLangChange;
     public final boolean mSpaceLongPressTrackpad;
     public final boolean mShowsEmojiKey;
@@ -225,6 +226,7 @@ public class SettingsValues {
         mShowsHints = prefs.getBoolean(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS);
         mShowsPopupHints = prefs.getBoolean(Settings.PREF_SHOW_POPUP_HINTS, Defaults.PREF_SHOW_POPUP_HINTS);
         mShowTldPopupKeys = prefs.getBoolean(Settings.PREF_SHOW_TLD_POPUP_KEYS, Defaults.PREF_SHOW_TLD_POPUP_KEYS);
+        mPopupEditActions = prefs.getBoolean(Settings.PREF_POPUP_EDIT_ACTIONS, Defaults.PREF_POPUP_EDIT_ACTIONS);
         final String spaceLongPress = prefs.getString(Settings.PREF_SPACE_LONG_PRESS, Defaults.PREF_SPACE_LONG_PRESS);
         mSpaceForLangChange = Defaults.SPACE_LONG_PRESS_LANGUAGE.equals(spaceLongPress);
         mSpaceLongPressTrackpad = Defaults.SPACE_LONG_PRESS_TRACKPAD.equals(spaceLongPress);
