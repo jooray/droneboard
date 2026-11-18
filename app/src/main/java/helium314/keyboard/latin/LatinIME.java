@@ -1254,14 +1254,26 @@ public class LatinIME extends InputMethodService implements
             if (!mDictation.onMicKey())
                 mRichImm.switchToShortcutIme(this);
         }
+        // Droneboard: the first backspace right after dictation takes back the whole dictated block
+        if (mDictation.onKeyEvent(event.getKeyCode() == KeyCode.DELETE && !event.isKeyRepeat())) {
+            mKeyboardSwitcher.updateShiftState(getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+            mHandler.postResumeSuggestions(false);
+            return;
+        }
         InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event, mKeyboardSwitcher.getKeyboardCapsMode(), mHandler);
         updateStateAfterInputTransaction(completeInputTransaction);
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
     }
 
+    /** for InputLogic */
+    public boolean deleteDictatedBlock(@NonNull String block) {
+        return mInputLogic.deleteTextBeforeCursorIfPresent(block);
+    }
+
     public void onTextInput(@Nullable String rawText) {
         if (rawText == null) return;
+        mDictation.onOtherInput();
         // TODO: have the keyboard pass the correct key code when we need it.
         Event event = Event.createSoftwareTextEvent(rawText, KeyCode.MULTIPLE_CODE_POINTS, null);
         InputTransaction completeInputTransaction = mInputLogic.onTextInput(mSettings.getCurrent(),

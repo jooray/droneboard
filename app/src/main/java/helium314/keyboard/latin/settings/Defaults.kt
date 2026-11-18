@@ -62,6 +62,7 @@ object Defaults {
     const val PREF_VIBRATE_IN_DND_MODE = false
     const val PREF_SOUND_ON = false
     const val PREF_DICTATION_USE_BLUETOOTH_MIC = true
+    const val PREF_DICTATION_BACKSPACE_UNDO = true
     const val PREF_SUGGEST_EMOJIS = true
     const val PREF_INLINE_EMOJI_SEARCH = true
     const val PREF_SHOW_EMOJI_DESCRIPTIONS = true

@@ -30,4 +30,6 @@
     <string name="dictation_use_bluetooth_mic">Používať mikrofón v slúchadlách</string>
     <string name="dictation_use_bluetooth_mic_summary">Keď sú pripojené Bluetooth slúchadlá, diktovanie nahráva z ich mikrofónu. Po vypnutí sa vždy nahráva mikrofónom v telefóne.</string>
     <string name="voice_text_in_clipboard">Nadiktovaný text je v schránke</string>
+    <string name="dictation_backspace_undo">Backspace vráti diktovanie</string>
+    <string name="dictation_backspace_undo_summary">Prvý backspace hneď po diktovaní zmaže všetko, čo sa práve nadiktovalo</string>
 </resources>

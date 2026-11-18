@@ -30,4 +30,6 @@
     <string name="dictation_use_bluetooth_mic">Use the headset microphone</string>
     <string name="dictation_use_bluetooth_mic_summary">With a Bluetooth headset connected, dictation records from its microphone. Turn this off to always record from the phone\'s microphone.</string>
     <string name="voice_text_in_clipboard">The dictated text is in the clipboard</string>
+    <string name="dictation_backspace_undo">Backspace takes back dictation</string>
+    <string name="dictation_backspace_undo_summary">The first backspace right after dictation deletes everything that was just dictated</string>
 </resources>

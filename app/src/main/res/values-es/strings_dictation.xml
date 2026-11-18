@@ -30,4 +30,6 @@
     <string name="dictation_use_bluetooth_mic">Usar el micrófono de los auriculares</string>
     <string name="dictation_use_bluetooth_mic_summary">Con unos auriculares Bluetooth conectados, el dictado graba con su micrófono. Si lo desactivas, siempre se graba con el micrófono del teléfono.</string>
     <string name="voice_text_in_clipboard">El texto dictado está en el portapapeles</string>
+    <string name="dictation_backspace_undo">Retroceso deshace el dictado</string>
+    <string name="dictation_backspace_undo_summary">El primer retroceso justo después de dictar borra todo lo que se acaba de dictar</string>
 </resources>

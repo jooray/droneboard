@@ -210,6 +210,25 @@ public final class InputLogic {
     /**
      * Clean up the input logic after input is finished.
      */
+    /**
+     * Droneboard: removes [text] when it is exactly what stands before the cursor (the block that dictation typed).
+     * Returns false and changes nothing otherwise.
+     */
+    public boolean deleteTextBeforeCursorIfPresent(final String text) {
+        if (text.isEmpty() || mConnection.hasSelection()) return false;
+        final CharSequence before = mConnection.getTextBeforeCursor(text.length(), 0);
+        if (before == null || !text.contentEquals(before)) return false;
+        mConnection.beginBatchEdit();
+        if (mWordComposer.isComposingWord()) {
+            mWordComposer.reset();
+            mConnection.finishComposingText();
+        }
+        mConnection.deleteTextBeforeCursor(text.length());
+        mConnection.endBatchEdit();
+        mSpaceState = SpaceState.NONE;
+        return true;
+    }
+
     public void finishInput() {
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText();

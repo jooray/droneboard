@@ -30,4 +30,6 @@
     <string name="dictation_use_bluetooth_mic">Mikrofon des Headsets verwenden</string>
     <string name="dictation_use_bluetooth_mic_summary">Ist ein Bluetooth-Headset verbunden, nimmt das Diktat über dessen Mikrofon auf. Ausgeschaltet wird immer über das Mikrofon des Smartphones aufgenommen.</string>
     <string name="voice_text_in_clipboard">Der diktierte Text ist in der Zwischenablage</string>
+    <string name="dictation_backspace_undo">Rücktaste nimmt Diktat zurück</string>
+    <string name="dictation_backspace_undo_summary">Die erste Rücktaste direkt nach dem Diktieren löscht alles, was gerade diktiert wurde</string>
 </resources>

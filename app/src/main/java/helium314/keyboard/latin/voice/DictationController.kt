@@ -5,12 +5,15 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +43,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         const val SAMPLE_RATE = 16_000
         /** Caller audio to a recognizer needs Android 13. */
         val supported get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        /** how long after the last dictated piece one backspace still takes the whole block back */
+        private const val UNDO_WINDOW_MS = 30_000L
         private const val HELP_BASE = "https://cypherpunk.today/droneboard/"
         /** Languages the website has a dictation page in, besides English at the root. */
         private val HELP_LANGUAGES = setOf("sk", "cs", "de", "es")
@@ -58,6 +63,11 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private var errorShown = false
     /** dictated text that could not be typed because its field went away; see [deliverUntyped] */
     private val untyped = StringBuilder()
+    /** what the last dictation typed, for taking it back with one backspace; see [onKeyEvent] */
+    private val typedBlock = StringBuilder()
+    private var typedBlockAt = 0L
+    private var typing = false
+    private var focusRequest: AudioFocusRequest? = null
 
     val isActive get() = state != State.IDLE || panel != null
 
@@ -94,6 +104,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         field = editor?.packageName to (editor?.fieldId ?: 0)
         errorShown = false
         untyped.setLength(0)
+        typedBlock.setLength(0)
         val t = OsttTranscriber(ime, this)
         transcriber = t
         val chunker = Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) }
@@ -108,6 +119,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         engine = e
         state = State.RECORDING
         showPanel(VoiceInputView.Mode.STARTING, ime.getString(R.string.voice_starting), null)
+        pauseOtherAudio()
         e.start()
     }
 
@@ -122,6 +134,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     fun cancel() {
         engine?.stop(discardAudio = true)
         engine = null
+        resumeOtherAudio()
         transcriber?.cancel()
         transcriber = null
         untyped.setLength(0)
@@ -158,6 +171,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             main.post {
                 if (failure != null) Log.w(TAG, "recording ended: $failure")
                 engine = null
+                resumeOtherAudio()
                 if (failure != null && samples == 0L && state != State.IDLE) {
                     transcriber?.cancel()
                     transcriber = null
@@ -237,7 +251,56 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         }
         val before = ic.getTextBeforeCursor(64, 0) ?: ""
         val joined = TextJoiner.join(before, text)
-        if (joined.isNotEmpty()) ime.onTextInput(joined)
+        if (joined.isEmpty()) return
+        typing = true
+        try { ime.onTextInput(joined) } finally { typing = false }
+        typedBlock.append(joined)
+        typedBlockAt = SystemClock.elapsedRealtime()
+    }
+
+    /** Anything typed by the user after dictation: the block is theirs now, backspace is a plain backspace again. */
+    fun onOtherInput() {
+        if (!typing) typedBlock.setLength(0)
+    }
+
+    /**
+     * Every key press comes through here. The first backspace after a dictation deletes the whole dictated block,
+     * like Gboard, as long as nothing was typed since, the block still stands right before the cursor and the
+     * dictation is fresh. Returns true when the key was used up that way.
+     */
+    fun onKeyEvent(backspace: Boolean): Boolean {
+        if (typedBlock.isEmpty()) return false
+        val block = typedBlock.toString()
+        val fresh = state == State.IDLE && SystemClock.elapsedRealtime() - typedBlockAt < UNDO_WINDOW_MS
+        if (state == State.IDLE) typedBlock.setLength(0) // while pieces are still coming, keys do not end the block
+        if (!backspace || !fresh) return false
+        if (!ime.prefs().getBoolean(Settings.PREF_DICTATION_BACKSPACE_UNDO, Defaults.PREF_DICTATION_BACKSPACE_UNDO)) return false
+        val editor = ime.currentInputEditorInfo ?: return false
+        if (field != (editor.packageName to editor.fieldId)) return false
+        return runCatching { ime.deleteDictatedBlock(block) }.getOrDefault(false)
+    }
+
+    // ---- other audio ----
+
+    /** Music and podcasts pause while the microphone is on, and continue afterwards. */
+    private fun pauseOtherAudio() {
+        if (focusRequest != null) return
+        runCatching {
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setOnAudioFocusChangeListener({ }, main)
+                .build()
+            ime.getSystemService(AudioManager::class.java).requestAudioFocus(request)
+            focusRequest = request
+        }.onFailure { Log.w(TAG, "could not take audio focus", it) }
+    }
+
+    private fun resumeOtherAudio() {
+        val request = focusRequest ?: return
+        focusRequest = null
+        runCatching { ime.getSystemService(AudioManager::class.java).abandonAudioFocusRequest(request) }
     }
 
     /** Dictated text that had no field to go to is never thrown away: it lands in the clipboard, with a message. */
