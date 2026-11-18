@@ -30,6 +30,7 @@ Czech, Slovak, English, German, Spanish, Dutch and Hungarian, plus Slovak and Cz
   - suggestions without silent autocorrection.
 - **Next-word prediction with a small neural network on the phone,** for every language above. The model sees the text before the cursor and predicts only in the languages you enabled; words you have typed before also count. Trigram (word-triple) statistics back it up, and completion ignores accents ("dak" offers "ďakujem").
 - **Emoji:** search the emoji panel by any part of a word in any of these languages ("ocket" finds 🚀). A matching emoji also appears in the strip while you type.
+- **A compact keyboard on tablets and unfolded foldables** that you resize and move with handles.
 - **Space bar long-press** moves the cursor like a trackpad, or switches the language if you prefer.
 - **Clipboard history, split and one-handed layouts, themes, custom layouts and a physical keyboard,** all inherited from HeliBoard.
 - **Swipe recording for tuning:** an optional screen shows words for you to swipe and saves the gestures to a local file. The `tools/swipe-replay` tool replays them through the exact decoder.
@@ -47,7 +48,6 @@ These numbers come from the offline gesture set "sink-or-swipe" (1,872 Czech ges
 ## Planned
 
 - More languages, with the same swipe dictionaries and neural prediction.
-- Resizing and moving the keyboard with handles, and a floating keyboard on tablets in landscape.
 - A clipboard chip for fresh links, e-mails and one-time codes, like Gboard's.
 - Hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo.
 - A "fix sentence" button backed by a small on-device model.
@@ -64,7 +64,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"  
 ./gradlew assembleDebug
 ```
 
-You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The Droneboard dictionaries (Slovak, Czech, English, German, Spanish, Dutch, Hungarian) are rebuilt from open data with the scripts in `tools/dicts`.
+You need the Android SDK and NDK 28. The native swipe library is prebuilt in `app/src/main/jniLibs`. Rebuild it with `tools/build-swipe-lib.sh`. The APK ships the ARM libraries only; for an emulator add `x86_64` to `abiFilters` in `app/build.gradle.kts`. A release is prepared with `tools/release.sh`. The Droneboard dictionaries (Slovak, Czech, English, German, Spanish, Dutch, Hungarian) are rebuilt from open data with the scripts in `tools/dicts`.
 
 ## Privacy
 

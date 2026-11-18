@@ -36,7 +36,9 @@ android {
         versionName = "0.1.18"
         ndk {
             abiFilters.clear()
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+            // phones only; the x86 libraries (emulators) were 3.4 MB of the APK.
+            // To run on an emulator add "x86_64" here; the prebuilt swipe library for it is in jniLibs.
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
         }
         proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
