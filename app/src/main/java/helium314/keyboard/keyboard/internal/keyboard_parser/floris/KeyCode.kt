@@ -181,8 +181,8 @@ object KeyCode {
     const val META_RIGHT =                -10049
     const val EMOJI_SEARCH =              -10050
     const val INLINE_EMOJI_SEARCH_DONE =  -10051
-    const val BACKGROUND_GATHERING =         -10052 // will be useless after removal of gesture data gathering (keep for compatibility)
-    const val BACKGROUND_GATHERING_TEMP_OFF =-10053 // will be useless after removal of gesture data gathering (keep for compatibility)
+    const val BACKGROUND_GATHERING =         -10052 // unused: HeliBoard's gesture data gathering was removed (kept so that old layouts still parse)
+    const val BACKGROUND_GATHERING_TEMP_OFF =-10053 // unused: HeliBoard's gesture data gathering was removed (kept so that old layouts still parse)
     const val DPAD =                      -10054
 
     // Valid in popups and for toolbar key long press only

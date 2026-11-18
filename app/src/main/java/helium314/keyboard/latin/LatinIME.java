@@ -62,15 +62,12 @@ import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.voice.DictationController;
 import helium314.keyboard.latin.utils.ColorUtilKt;
-import helium314.keyboard.latin.utils.GestureDataGatheringKt;
-import helium314.keyboard.latin.utils.GestureDataGatheringSettings;
 import helium314.keyboard.latin.utils.InlineAutofillUtils;
 import helium314.keyboard.latin.utils.InputMethodPickerKt;
 import helium314.keyboard.latin.utils.JniUtils;
 import helium314.keyboard.latin.utils.KtxKt;
 import helium314.keyboard.latin.utils.LeakGuardHandlerWrapper;
 import helium314.keyboard.latin.utils.Log;
-import helium314.keyboard.latin.utils.BackgroundGatheringCache;
 import helium314.keyboard.latin.utils.RecapitalizeMode;
 import helium314.keyboard.latin.utils.StatsUtils;
 import helium314.keyboard.latin.utils.StatsUtilsManager;
@@ -111,9 +108,8 @@ public class LatinIME extends InputMethodService implements
 
     // UIHandler is needed when creating InputLogic
     public final UIHandler mHandler = new UIHandler(this);
-    private DictionaryFacilitator mDictionaryFacilitator = // non-final for active gesture data gathering, revert when data gathering phase is done (end of 2026 latest)
+    private final DictionaryFacilitator mDictionaryFacilitator =
             DictionaryFacilitatorProvider.getDictionaryFacilitator(false);
-    private final DictionaryFacilitator mOriginalDictionaryFacilitator = mDictionaryFacilitator;
     final InputLogic mInputLogic = new InputLogic(this, this, mDictionaryFacilitator);
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
@@ -725,13 +721,11 @@ public class LatinIME extends InputMethodService implements
         mDictation.onFinishInputView();
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
-        BackgroundGatheringCache.saveOrClear(this);
     }
 
     @Override
     public void onFinishInput() {
         mHandler.onFinishInput();
-        BackgroundGatheringCache.saveOrClear(this);
     }
 
     @Override
@@ -786,8 +780,6 @@ public class LatinIME extends InputMethodService implements
 
     void onStartInputViewInternal(EditorInfo editorInfo, boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
-
-        setGestureDataGatheringMode(editorInfo, restarting);
 
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for which we
@@ -1637,25 +1629,5 @@ public class LatinIME extends InputMethodService implements
             KeyboardLayoutSet.Companion.onSystemLocaleChanged(); // clears caches, nothing else
             mKeyboardSwitcher.trimMemory();
         }
-    }
-
-    public void setGestureDataGatheringMode(EditorInfo editorInfo, boolean restarting) {
-        // only for gesture data gathering, remove when data gathering phase is done (end of 2026 latest)
-        if (GestureDataGatheringSettings.INSTANCE.isInActiveGatheringMode(editorInfo)) {
-            mDictionaryFacilitator = GestureDataGatheringKt.getGestureDataActiveFacilitator();
-            GestureDataGatheringKt.useBackgroundGathering = false;
-            mKeyboardSwitcher.setBackgroundGatheringIndicator(false, false, false);
-        } else {
-            mDictionaryFacilitator = mOriginalDictionaryFacilitator;
-
-            // no active mode, check for background mode
-            boolean useBackground = GestureDataGatheringKt.setUseBackgroundGathering(this, editorInfo);
-            mKeyboardSwitcher.setBackgroundGatheringIndicator(useBackground, false, false);
-            // restarting means we're still in the same field, so don't clear anything in discard-by-default mode
-            if (!restarting || !GestureDataGatheringSettings.INSTANCE.isDiscardByDefault(this))
-                BackgroundGatheringCache.saveOrClear(this);
-        }
-        GestureDataGatheringSettings.INSTANCE.showEndNotificationIfNecessary(this); // will do nothing for a long time
-        mInputLogic.setFacilitator(mDictionaryFacilitator);
     }
 }

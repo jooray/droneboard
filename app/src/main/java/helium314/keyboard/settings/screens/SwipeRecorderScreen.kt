@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-package helium314.keyboard.settings.screens.gesturedata
+package helium314.keyboard.settings.screens
 
 import android.content.ClipData
 import android.content.ClipboardManager

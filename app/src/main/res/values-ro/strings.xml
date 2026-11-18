@@ -476,5 +476,4 @@
     <string name="layout_dpad" tools:keep="@string/layout_dpad">Tastatură în cruce</string>
     <string name="accent_shifted_icon">Accentuare tastă majuscule</string>
     <string name="space_swipe_toggle_dpad_entry">Activează tastatură în cruce</string>
-    <string name="gesture_data_screen">Colectare date despre gesturi</string>
 </resources>
