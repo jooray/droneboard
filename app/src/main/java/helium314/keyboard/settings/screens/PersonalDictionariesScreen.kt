@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import helium314.keyboard.latin.support.SupportCheckout
+import helium314.keyboard.settings.SupportAskStrip
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils
@@ -44,17 +46,24 @@ fun PersonalDictionariesScreen(
     val fileActions = personalDictionaryFileActions()
     val importLabel = stringResource(R.string.personal_dictionary_import)
     val exportLabel = stringResource(R.string.personal_dictionary_export)
-    val items: List<Any?> = locales + listOf(FileAction(importLabel, fileActions.import), FileAction(exportLabel, fileActions.export))
+    val items: List<Any?> = locales + listOf(FileAction(importLabel, fileActions.import), FileAction(exportLabel, fileActions.export)) +
+        // the support ask, under the rows, after a successful import (it decides itself whether it shows)
+        (if (fileActions.importDone) listOf(SupportAskItem) else emptyList())
     SearchScreen(
         onClickBack = onClickBack,
         title = { Text(stringResource(R.string.edit_personal_dictionary)) },
         filteredItems = { term ->
             items.filter { item ->
+                if (item === SupportAskItem) return@filter term.isBlank() // never while searching
                 val name = if (item is FileAction) item.label else (item as Locale?).getLocaleDisplayNameForUserDictSettings(ctx)
                 name.replace("(", "").splitOnWhitespace().any { it.startsWith(term, true) }
             }
         },
         itemContent = { item ->
+            if (item === SupportAskItem) {
+                SupportAskStrip(SupportCheckout.REF_AFTER_IMPORT)
+                return@SearchScreen
+            }
             if (item is FileAction) {
                 Row(
                     modifier = Modifier
@@ -88,6 +97,8 @@ fun PersonalDictionariesScreen(
 }
 
 private class FileAction(val label: String, val onClick: () -> Unit)
+
+private object SupportAskItem
 
 fun getSortedDictionaryLocales(): TreeSet<Locale> {
     val sortedLocales = sortedSetOf<Locale>(compareBy { it.toLanguageTag().lowercase() })

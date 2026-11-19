@@ -55,6 +55,7 @@ fun DebugScreen(
         DebugSettings.PREF_SHOW_SUGGESTION_INFOS,
         DebugSettings.PREF_FORCE_NON_DISTINCT_MULTITOUCH,
         DebugSettings.PREF_SLIDING_KEY_INPUT_PREVIEW,
+        DebugSettings.PREF_FORCE_SUPPORT_ASK,
         DebugSettings.PREF_EXPORT_DICTIONARY,
     )
     SearchSettingsScreen(
@@ -107,6 +108,9 @@ private fun createDebugSettings(context: Context) = listOf(
     },
     Setting(context, DebugSettings.PREF_SLIDING_KEY_INPUT_PREVIEW, R.string.sliding_key_input_preview, R.string.sliding_key_input_preview_summary) { def ->
         SwitchPreference(def, Defaults.PREF_SLIDING_KEY_INPUT_PREVIEW)
+    },
+    Setting(context, DebugSettings.PREF_FORCE_SUPPORT_ASK, R.string.prefs_force_support_ask, R.string.prefs_force_support_ask_summary) { def ->
+        SwitchPreference(def, Defaults.PREF_FORCE_SUPPORT_ASK)
     },
     Setting(context, DebugSettings.PREF_EXPORT_DICTIONARY, R.string.prefs_export_dynamic_dicts) { setting ->
         val ctx = LocalContext.current

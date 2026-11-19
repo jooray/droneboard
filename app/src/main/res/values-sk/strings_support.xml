@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: the support ask and the "Support the project" row. The wording is shared by the
+     author's apps (support-widget/spec/ask.md section 6: ask_text, ask_yes, ask_later, ask_never, menu);
+     languages without a file use English.
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="support_ask_text">Droneboard je zadarmo a open source. Podpor ho a dostaneš e-knihu.</string>
+    <string name="support_ask_yes">Podporiť</string>
+    <string name="support_ask_later">Teraz nie</string>
+    <string name="support_ask_never">Už neukazovať</string>
+    <string name="support_menu">Podporiť projekt</string>
+</resources>

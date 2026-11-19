@@ -18,4 +18,7 @@
     <string name="sliding_key_input_preview_summary" translatable="false">Display visual cue while sliding from Shift or Symbol keys</string>
     <!-- Title of the setting for exporting dictionary files that have been created on the device [CHAR LIMIT=35] -->
     <string name="prefs_export_dynamic_dicts" translatable="false">Export dictionary</string>
+    <!-- Droneboard: for testing the support ask by hand -->
+    <string name="prefs_force_support_ask" translatable="false">Always show the support ask</string>
+    <string name="prefs_force_support_ask_summary" translatable="false">On the main settings screen and after a personal dictionary import, whatever the counts are. Asks shown this way are not counted.</string>
 </resources>

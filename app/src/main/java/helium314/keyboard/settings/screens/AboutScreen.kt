@@ -37,6 +37,7 @@ import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.SupportMenuPreference
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.previewDark
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,7 @@ fun AboutScreen(
         SettingsWithoutKey.GITHUB_WIKI,
         SettingsWithoutKey.COMMUNITY_LINKS,
         SettingsWithoutKey.GITHUB,
+        SettingsWithoutKey.SUPPORT,
         SettingsWithoutKey.SAVE_LOG,
     )
     SearchSettingsScreen(
@@ -184,6 +186,9 @@ fun createAboutSettings(context: Context) = listOf(
             },
             icon = R.drawable.ic_settings_about_github
         )
+    },
+    Setting(context, SettingsWithoutKey.SUPPORT, R.string.support_menu) {
+        SupportMenuPreference()
     },
     Setting(context, SettingsWithoutKey.SAVE_LOG, R.string.save_log) { setting ->
         val ctx = LocalContext.current
