@@ -1,0 +1,3 @@
+- Personal dictionary: import words from a file and export them (Settings → Text correction → Personal dictionary). It reads a plain list of words, Gboard's exported dictionary and Droneboard's own backup. Words that are already there stay, nothing is deleted.
+- New tool and assistant skill for building that list from text you have already written: `tools/personal-dict` and `skills/droneboard-personal-dictionary` in the repository. It leaves out the words the keyboard already knows.
+- Swipe typing picks up new personal dictionary words within seconds, not minutes.

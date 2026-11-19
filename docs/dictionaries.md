@@ -36,4 +36,6 @@ lightning	en
 On my way!	en_US	omw	200
 ```
 
+You do not have to write the list by hand. `tools/personal-dict/personal_dict.py` finds the words in text you have already written (notes, sent mail, your chat messages) that Droneboard does not know yet, and writes this file; it runs on your computer and needs only Python. If you work with an AI assistant, give it `skills/droneboard-personal-dictionary/SKILL.md`: it describes the whole procedure, including the cleaning of the word list.
+
 Lines that cannot be read (no word, a word longer than 48 characters, an unknown language, a frequency outside 1 to 255) are skipped and counted in the summary before the import.
