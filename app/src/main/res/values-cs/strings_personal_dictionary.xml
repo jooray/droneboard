@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: import of a word list into the personal dictionary and export to a file
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="personal_dictionary_import">Importovat ze souboru</string>
+    <string name="personal_dictionary_export">Exportovat do souboru</string>
+    <string name="personal_dictionary_import_title">Import slov</string>
+    <string name="personal_dictionary_import_confirm">Importovat</string>
+    <string name="personal_dictionary_format_text">Textový soubor, jedno slovo na řádek</string>
+    <string name="personal_dictionary_format_gboard">Slovník z Gboardu</string>
+    <string name="personal_dictionary_format_droneboard">Osobní slovník Droneboardu</string>
+    <string name="personal_dictionary_import_summary">Položky v souboru: %1$d\nNové: %2$d\nUž jsou ve slovníku: %3$d\nPřeskočené neplatné řádky: %4$d</string>
+    <string name="personal_dictionary_import_repeated">V souboru se opakují: %d</string>
+    <string name="personal_dictionary_import_preview">První nová slova:</string>
+    <string name="personal_dictionary_import_more">a dalších %d</string>
+    <string name="personal_dictionary_import_nothing_new">Všechna slova ze souboru už v osobním slovníku jsou. Není co přidat.</string>
+    <string name="personal_dictionary_import_done">Přidaná slova: %d</string>
+    <string name="personal_dictionary_unavailable">Android dovolí měnit osobní slovník jen zapnuté klávesnici. Zapněte Droneboard v nastavení systému, vyberte ho jako klávesnici a zkuste to znovu. Nic se nezměnilo.</string>
+    <string name="personal_dictionary_import_too_large">Soubor je příliš velký. Limit je %1$d MB a %2$d položek. Nic se nepřidalo.</string>
+    <string name="personal_dictionary_import_unreadable">Tento soubor není seznam slov. Použijte textový soubor v UTF-8 s jedním slovem na řádek, slovník exportovaný z Gboardu nebo soubor osobního slovníku z Droneboardu.</string>
+    <string name="personal_dictionary_import_empty">V souboru se nenašla žádná slova. Neplatné řádky: %d</string>
+    <string name="personal_dictionary_export_empty">Osobní slovník je prázdný. Není co exportovat.</string>
+    <string name="personal_dictionary_export_done">Exportovaná slova: %d</string>
+    <string name="personal_dictionary_export_error">Soubor se nepodařilo zapsat: %s</string>
+    <string name="personal_dictionary_working">Pracuji…</string>
+</resources>

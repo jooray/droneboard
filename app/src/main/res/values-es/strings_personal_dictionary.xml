@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: import of a word list into the personal dictionary and export to a file
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="personal_dictionary_import">Importar desde un archivo</string>
+    <string name="personal_dictionary_export">Exportar a un archivo</string>
+    <string name="personal_dictionary_import_title">Importar palabras</string>
+    <string name="personal_dictionary_import_confirm">Importar</string>
+    <string name="personal_dictionary_format_text">Archivo de texto, una palabra por línea</string>
+    <string name="personal_dictionary_format_gboard">Diccionario de Gboard</string>
+    <string name="personal_dictionary_format_droneboard">Diccionario personal de Droneboard</string>
+    <string name="personal_dictionary_import_summary">Entradas en el archivo: %1$d\nNuevas: %2$d\nYa están en el diccionario: %3$d\nLíneas no válidas omitidas: %4$d</string>
+    <string name="personal_dictionary_import_repeated">Repetidas en el archivo: %d</string>
+    <string name="personal_dictionary_import_preview">Primeras palabras nuevas:</string>
+    <string name="personal_dictionary_import_more">y %d más</string>
+    <string name="personal_dictionary_import_nothing_new">Todas las palabras del archivo ya están en el diccionario personal. No hay nada que añadir.</string>
+    <string name="personal_dictionary_import_done">Palabras añadidas: %d</string>
+    <string name="personal_dictionary_unavailable">Android solo permite cambiar el diccionario personal a un teclado activado. Activa Droneboard en los ajustes del sistema, elígelo como teclado e inténtalo de nuevo. No se ha cambiado nada.</string>
+    <string name="personal_dictionary_import_too_large">El archivo es demasiado grande. El límite es de %1$d MB y %2$d entradas. No se ha añadido nada.</string>
+    <string name="personal_dictionary_import_unreadable">Este archivo no es una lista de palabras. Usa un archivo de texto en UTF-8 con una palabra por línea, un diccionario exportado de Gboard o un archivo del diccionario personal de Droneboard.</string>
+    <string name="personal_dictionary_import_empty">No se ha encontrado ninguna palabra en el archivo. Líneas no válidas: %d</string>
+    <string name="personal_dictionary_export_empty">El diccionario personal está vacío. No hay nada que exportar.</string>
+    <string name="personal_dictionary_export_done">Palabras exportadas: %d</string>
+    <string name="personal_dictionary_export_error">No se ha podido escribir el archivo: %s</string>
+    <string name="personal_dictionary_working">Un momento…</string>
+</resources>

@@ -221,6 +221,8 @@ class StuffReceiver(latinIME: LatinIME) {
             override fun onChange(self: Boolean, uri: Uri?) {
                 // just always reload
                 ExpandableDictionaryUtils.setNeedsUpdate(UserBinaryDictionary.NAME)
+                // Droneboard: swipe typing has its own copy of the user's words
+                helium314.keyboard.latin.swipe.SwipeGestureDecoder.invalidateUserWords()
             }
         }
     }

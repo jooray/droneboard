@@ -12,7 +12,9 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 
 object ExpandableDictionaryUtils {
-    private val upToDateDicts = hashSetOf<String>()
+    // Droneboard: changed from several threads at once (content observer on binder threads, dictionary
+    // threads, a bulk import into the personal dictionary), so it must be a concurrent set
+    private val upToDateDicts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** fill with dicts from file system, so we don't recreate on app start (misses changes that were made while different keyboard were active) */
     fun initUpToDateDicts(context: Context) {

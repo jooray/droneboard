@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: import of a word list into the personal dictionary and export to a file
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="personal_dictionary_import">Import from file</string>
+    <string name="personal_dictionary_export">Export to file</string>
+    <string name="personal_dictionary_import_title">Import words</string>
+    <string name="personal_dictionary_import_confirm">Import</string>
+    <string name="personal_dictionary_format_text">Text file, one word per line</string>
+    <string name="personal_dictionary_format_gboard">Gboard dictionary</string>
+    <string name="personal_dictionary_format_droneboard">Droneboard personal dictionary</string>
+    <string name="personal_dictionary_import_summary">Entries in the file: %1$d\nNew: %2$d\nAlready in the dictionary: %3$d\nInvalid lines skipped: %4$d</string>
+    <string name="personal_dictionary_import_repeated">Repeated in the file: %d</string>
+    <string name="personal_dictionary_import_preview">First new words:</string>
+    <string name="personal_dictionary_import_more">and %d more</string>
+    <string name="personal_dictionary_import_nothing_new">Every word from the file is already in the personal dictionary. There is nothing to add.</string>
+    <string name="personal_dictionary_import_done">Words added: %d</string>
+    <string name="personal_dictionary_unavailable">Android lets only a keyboard that is turned on change the personal dictionary. Turn Droneboard on in the system settings, select it as your keyboard and try again. Nothing was changed.</string>
+    <string name="personal_dictionary_import_too_large">The file is too large. The limit is %1$d MB and %2$d entries. Nothing was added.</string>
+    <string name="personal_dictionary_import_unreadable">This file is not a word list. Use a UTF-8 text file with one word per line, a dictionary exported from Gboard or a Droneboard personal dictionary file.</string>
+    <string name="personal_dictionary_import_empty">No words were found in the file. Invalid lines: %d</string>
+    <string name="personal_dictionary_export_empty">The personal dictionary is empty. There is nothing to export.</string>
+    <string name="personal_dictionary_export_done">Words exported: %d</string>
+    <string name="personal_dictionary_export_error">The file could not be written: %s</string>
+    <string name="personal_dictionary_working">Working…</string>
+</resources>

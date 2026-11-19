@@ -40,16 +40,35 @@ fun PersonalDictionariesScreen(
     val ctx = LocalContext.current
     val locales: MutableList<Locale?> = getSortedDictionaryLocales().toMutableList()
     locales.add(0, null)
+    // Droneboard: a word list can be imported from a file and the dictionary exported to one
+    val fileActions = personalDictionaryFileActions()
+    val importLabel = stringResource(R.string.personal_dictionary_import)
+    val exportLabel = stringResource(R.string.personal_dictionary_export)
+    val items: List<Any?> = locales + listOf(FileAction(importLabel, fileActions.import), FileAction(exportLabel, fileActions.export))
     SearchScreen(
         onClickBack = onClickBack,
         title = { Text(stringResource(R.string.edit_personal_dictionary)) },
         filteredItems = { term ->
-            locales.filter { locale ->
-                locale.getLocaleDisplayNameForUserDictSettings(ctx).replace("(", "")
-                    .splitOnWhitespace().any { it.startsWith(term, true) }
+            items.filter { item ->
+                val name = if (item is FileAction) item.label else (item as Locale?).getLocaleDisplayNameForUserDictSettings(ctx)
+                name.replace("(", "").splitOnWhitespace().any { it.startsWith(term, true) }
             }
         },
-        itemContent = {
+        itemContent = { item ->
+            if (item is FileAction) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { item.onClick() }
+                        .heightIn(min = 44.dp)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(item.label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                }
+                return@SearchScreen
+            }
+            val it = item as Locale?
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -67,6 +86,8 @@ fun PersonalDictionariesScreen(
         }
     )
 }
+
+private class FileAction(val label: String, val onClick: () -> Unit)
 
 fun getSortedDictionaryLocales(): TreeSet<Locale> {
     val sortedLocales = sortedSetOf<Locale>(compareBy { it.toLanguageTag().lowercase() })
