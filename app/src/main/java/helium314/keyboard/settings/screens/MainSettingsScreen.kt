@@ -29,6 +29,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import helium314.keyboard.settings.preferences.PersonalDictionaryBackup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,6 +61,7 @@ fun MainSettingsScreen(
     onClickLanguage: () -> Unit,
     onClickLayouts: () -> Unit,
     onClickDictionaries: () -> Unit,
+    onClickPersonalDictionary: () -> Unit,
     onClickBack: () -> Unit,
 ) {
     SearchSettingsScreen(
@@ -111,6 +117,13 @@ fun MainSettingsScreen(
                     onClick = onClickDictionaries,
                     icon = R.drawable.ic_dictionary
                 ) { NextScreenIcon() }
+                // Droneboard: the personal dictionary is also under Text correction, where few people look for it
+                Preference(
+                    name = stringResource(R.string.edit_personal_dictionary),
+                    description = personalDictionarySummary(),
+                    onClick = onClickPersonalDictionary,
+                    icon = R.drawable.ic_edit
+                ) { NextScreenIcon() }
                 Preference(
                     name = stringResource(R.string.settings_screen_advanced),
                     onClick = onClickAdvanced,
@@ -124,6 +137,20 @@ fun MainSettingsScreen(
             }
         }
     }
+}
+
+/** the number of words, read off the main thread; the plain description until it is known or when there are none */
+@Composable
+private fun personalDictionarySummary(): String {
+    val ctx = LocalContext.current
+    val count by produceState<Int?>(null) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { PersonalDictionaryBackup.count(ctx, everything = true, locale = null) }.getOrNull()
+        }
+    }
+    val words = count
+    return if (words != null && words > 0) stringResource(R.string.personal_dictionary_word_count, words)
+        else stringResource(R.string.personal_dictionary_main_summary)
 }
 
 /** Droneboard brand: the icon on its slate tile, with a red swipe line under the name */
@@ -175,7 +202,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

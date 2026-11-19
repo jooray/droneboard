@@ -23,4 +23,19 @@
     <string name="personal_dictionary_export_done">Palabras exportadas: %d</string>
     <string name="personal_dictionary_export_error">No se ha podido escribir el archivo: %s</string>
     <string name="personal_dictionary_working">Un momento…</string>
+    <!-- the row in the main settings, "Delete all words" and the letter index of the word list -->
+    <string name="personal_dictionary_main_summary">Sus propias palabras, importación y exportación</string>
+    <string name="personal_dictionary_word_count">Palabras: %d</string>
+    <string name="personal_dictionary_delete_all">Eliminar todas las palabras</string>
+    <string name="personal_dictionary_delete_all_title">¿Eliminar todas las palabras?</string>
+    <string name="personal_dictionary_delete_all_everything">Se eliminará todo el diccionario personal, en todos los idiomas.</string>
+    <string name="personal_dictionary_delete_all_list">Solo se eliminarán las palabras de esta lista: %s. Las demás listas no cambian.</string>
+    <string name="personal_dictionary_delete_all_count">Palabras que se eliminarán: %d</string>
+    <string name="personal_dictionary_delete_all_warning">Esto no se puede deshacer. Si puede volver a necesitar las palabras, expórtelas antes a un archivo.</string>
+    <string name="personal_dictionary_delete_all_confirm">Eliminar todo</string>
+    <string name="personal_dictionary_export_first">Exportar antes</string>
+    <string name="personal_dictionary_delete_all_done">Palabras eliminadas: %d</string>
+    <string name="personal_dictionary_delete_all_empty">Aquí no hay palabras. No hay nada que eliminar.</string>
+    <string name="personal_dictionary_index_letter">Ir a la letra %s</string>
+    <string name="personal_dictionary_index_other">Ir a las palabras que no empiezan por una letra</string>
 </resources>

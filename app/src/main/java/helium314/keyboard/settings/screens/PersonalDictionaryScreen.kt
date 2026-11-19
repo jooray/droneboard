@@ -7,6 +7,27 @@ import android.database.Cursor
 import android.provider.UserDictionary
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,15 +61,34 @@ import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
 import helium314.keyboard.settings.DropDownField
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.Collator
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun PersonalDictionaryScreen(
     onClickBack: () -> Unit,
     locale: Locale?
 ) {
-    val words = getAll(locale, LocalContext.current)
+    val ctx = LocalContext.current
+    // Droneboard: the words are read once, off the main thread, and again after a change (this used to query
+    // the provider in every recomposition). They are sorted here and not by the provider, whose
+    // UPPER() knows only ASCII and put every word starting with an accented letter after Z.
+    var reload by remember { mutableIntStateOf(0) }
+    var list: LetterIndex.Result<Word>? by remember { mutableStateOf(null) }
+    LaunchedEffect(locale, reload) {
+        list = withContext(Dispatchers.IO) {
+            val all = runCatching { getAll(locale, ctx) }.getOrDefault(emptyList())
+            LetterIndex.build(all, Collator.getInstance(locale ?: Locale.getDefault())) { it.word }
+        }
+    }
     var selectedWord: Word? by remember { mutableStateOf(null) }
+    val fileActions = personalDictionaryFileActions()
+    // deletes only the words of this list
+    val deleteAll = personalDictionaryDeleteAll(everything = false, locale = locale, export = fileActions.export) { reload++ }
     SearchScreen(
         onClickBack = onClickBack,
         title = {
@@ -61,31 +101,15 @@ fun PersonalDictionaryScreen(
                 )
             }
         },
+        menu = listOf(stringResource(R.string.personal_dictionary_delete_all) to deleteAll),
         filteredItems = { term ->
-            // we could maybe to this using a query and getting items by position
-            // requires adjusting the SearchScreen, likely not worth the effort
-            words.filter { it.word.startsWith(term, true) || it.shortcut?.startsWith(term, true) == true }
+            list?.items.orEmpty().filter { it.word.startsWith(term, true) || it.shortcut?.startsWith(term, true) == true }
         },
-        itemContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { selectedWord = it }
-                    .padding(vertical = 6.dp, horizontal = 16.dp)
-            ) {
-                Column {
-                    Text(it.word, style = MaterialTheme.typography.bodyLarge)
-                    val details = if (it.shortcut == null) it.weight.toString() else "${it.weight}  |  ${it.shortcut}"
-                    Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_settings_edit_dialog_title))
-            }
-        }
+        itemContent = { word -> WordRow(word) { selectedWord = word } },
+        content = { list?.let { WordList(it) { word -> selectedWord = word } } }
     )
     if (selectedWord != null) {
-        EditWordDialog(selectedWord!!, locale) { selectedWord = null }
+        EditWordDialog(selectedWord!!, locale, onChanged = { reload++ }) { selectedWord = null }
     }
     ExtendedFloatingActionButton(
         onClick = { selectedWord = Word("", null, null) },
@@ -97,7 +121,81 @@ fun PersonalDictionaryScreen(
 }
 
 @Composable
-private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> Unit) {
+private fun WordRow(word: Word, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 16.dp)
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(word.word, style = MaterialTheme.typography.bodyLarge)
+            val details = if (word.shortcut == null) word.weight.toString() else "${word.weight}  |  ${word.shortcut}"
+            Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_settings_edit_dialog_title))
+    }
+}
+
+/** the whole list; a long one gets a letter index at the end edge (the left one in right-to-left languages) */
+@Composable
+private fun WordList(list: LetterIndex.Result<Word>, onClick: (Word) -> Unit) {
+    val state = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val showIndex = list.items.size > MIN_WORDS_FOR_INDEX && list.sections.size > 1
+    var activeSection: Int? by remember { mutableStateOf(null) }
+    var fingerY by remember { mutableFloatStateOf(0f) }
+    // the bottom inset contains the keyboard, so the index is as tall as the visible part of the list
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)) { innerPadding ->
+        Box(Modifier.fillMaxSize().padding(innerPadding)) {
+            Row(Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    state = state,
+                    // the last rows can be scrolled out from under the "add word" button
+                    contentPadding = PaddingValues(bottom = SPACE_FOR_ADD_BUTTON),
+                ) {
+                    items(list.items, key = { it.id }) { word -> WordRow(word) { onClick(word) } }
+                }
+                if (showIndex)
+                    LetterIndexBar(
+                        sections = list.sections,
+                        onSection = { scope.launch { state.scrollToItem(list.sections[it].firstIndex) } },
+                        onActive = { section, y -> activeSection = section; fingerY = y },
+                        modifier = Modifier.fillMaxHeight().padding(top = INDEX_TOP_PADDING, bottom = SPACE_FOR_ADD_BUTTON),
+                    )
+            }
+            val label = activeSection?.let { list.sections.getOrNull(it)?.label }
+            if (showIndex && label != null) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = LetterIndexWidth + 12.dp)
+                        .offset { IntOffset(0, (fingerY + INDEX_TOP_PADDING.toPx() - BUBBLE_SIZE.toPx() / 2).roundToInt().coerceAtLeast(0)) }
+                        .size(BUBBLE_SIZE)
+                        .clearAndSetSemantics { }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(label, style = MaterialTheme.typography.headlineSmall, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val MIN_WORDS_FOR_INDEX = 30
+private val SPACE_FOR_ADD_BUTTON = 80.dp
+private val INDEX_TOP_PADDING = 4.dp
+private val BUBBLE_SIZE = 56.dp
+
+@Composable
+private fun EditWordDialog(word: Word, locale: Locale?, onChanged: () -> Unit, onDismissRequest: () -> Unit) {
     val ctx = LocalContext.current
     val focusRequester = remember { FocusRequester() }
     var newWord by remember { mutableStateOf(word) }
@@ -108,6 +206,7 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
             deleteWord(word, locale, ctx.contentResolver)
             val saveWeight = newWord.weight ?: WEIGHT_FOR_USER_DICTIONARY_ADDS
             UserDictionary.Words.addWord(ctx, newWord.word, saveWeight, newWord.shortcut, newLocale)
+            onChanged()
         }
     }
     ThreeButtonAlertDialog(
@@ -118,6 +217,7 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
         neutralButtonText = stringResource(R.string.delete),
         onNeutral = {
             deleteWord(word, locale, ctx.contentResolver) // delete the originally selected word
+            onChanged()
             onDismissRequest()
         },
         title = {
@@ -259,19 +359,27 @@ fun Locale?.getLocaleDisplayNameForUserDictSettings(context: Context) =
     this?.localizedDisplayName(context.resources) ?: context.resources.getString(R.string.user_dict_settings_all_languages)
 
 // weight is frequency but different name towards user
-private data class Word(val word: String, val shortcut: String?, val weight: Int?)
+// id is the row of the provider (the stable key of the list), 0 for a word that is not saved yet
+private data class Word(val word: String, val shortcut: String?, val weight: Int?, val id: Long = 0)
 
 // getting all words instead of reading directly cursor, because filteredItems expects a list
+// Droneboard: one query; call it off the main thread. The order is made by LetterIndex.build.
 private fun getAll(locale: Locale?, context: Context): List<Word> {
     val cursor = createCursor(locale, context) ?: return emptyList()
 
-    if (!cursor.moveToFirst()) return emptyList()
+    if (!cursor.moveToFirst()) {
+        cursor.close()
+        return emptyList()
+    }
     val result = mutableListOf<Word>()
     val wordIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.WORD)
     val shortcutIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.SHORTCUT)
     val frequencyIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.FREQUENCY)
+    val idIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words._ID)
     while (!cursor.isAfterLast) {
-        result.add(Word(cursor.getString(wordIndex), cursor.getString(shortcutIndex), cursor.getInt(frequencyIndex)))
+        val word = cursor.getString(wordIndex)
+        if (word != null)
+            result.add(Word(word, cursor.getString(shortcutIndex), cursor.getInt(frequencyIndex), cursor.getLong(idIndex)))
         cursor.moveToNext()
     }
     cursor.close()

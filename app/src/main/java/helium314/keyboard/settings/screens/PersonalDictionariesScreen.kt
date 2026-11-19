@@ -44,7 +44,14 @@ fun PersonalDictionariesScreen(
     val fileActions = personalDictionaryFileActions()
     val importLabel = stringResource(R.string.personal_dictionary_import)
     val exportLabel = stringResource(R.string.personal_dictionary_export)
-    val items: List<Any?> = locales + listOf(FileAction(importLabel, fileActions.import), FileAction(exportLabel, fileActions.export))
+    // Droneboard: "Delete all words" here empties the whole dictionary, in every language
+    val deleteAll = personalDictionaryDeleteAll(everything = true, locale = null, export = fileActions.export)
+    val deleteLabel = stringResource(R.string.personal_dictionary_delete_all)
+    val items: List<Any?> = locales + listOf(
+        FileAction(importLabel, fileActions.import),
+        FileAction(exportLabel, fileActions.export),
+        FileAction(deleteLabel, deleteAll, destructive = true),
+    )
     SearchScreen(
         onClickBack = onClickBack,
         title = { Text(stringResource(R.string.edit_personal_dictionary)) },
@@ -64,7 +71,8 @@ fun PersonalDictionariesScreen(
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(item.label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(item.label, style = MaterialTheme.typography.bodyLarge,
+                        color = if (item.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                 }
                 return@SearchScreen
             }
@@ -87,7 +95,7 @@ fun PersonalDictionariesScreen(
     )
 }
 
-private class FileAction(val label: String, val onClick: () -> Unit)
+private class FileAction(val label: String, val onClick: () -> Unit, val destructive: Boolean = false)
 
 fun getSortedDictionaryLocales(): TreeSet<Locale> {
     val sortedLocales = sortedSetOf<Locale>(compareBy { it.toLanguageTag().lowercase() })

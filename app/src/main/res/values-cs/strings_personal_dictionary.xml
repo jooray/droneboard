@@ -23,4 +23,19 @@
     <string name="personal_dictionary_export_done">Exportovaná slova: %d</string>
     <string name="personal_dictionary_export_error">Soubor se nepodařilo zapsat: %s</string>
     <string name="personal_dictionary_working">Pracuji…</string>
+    <!-- the row in the main settings, "Delete all words" and the letter index of the word list -->
+    <string name="personal_dictionary_main_summary">Vlastní slova, import a export</string>
+    <string name="personal_dictionary_word_count">Počet slov: %d</string>
+    <string name="personal_dictionary_delete_all">Smazat všechna slova</string>
+    <string name="personal_dictionary_delete_all_title">Smazat všechna slova?</string>
+    <string name="personal_dictionary_delete_all_everything">Smaže se celý osobní slovník, ve všech jazycích.</string>
+    <string name="personal_dictionary_delete_all_list">Smažou se jen slova z tohoto seznamu: %s. Ostatní seznamy zůstanou beze změny.</string>
+    <string name="personal_dictionary_delete_all_count">Počet slov, která se smažou: %d</string>
+    <string name="personal_dictionary_delete_all_warning">Smazání nelze vrátit zpět. Pokud byste slova ještě mohli potřebovat, nejprve je exportujte do souboru.</string>
+    <string name="personal_dictionary_delete_all_confirm">Smazat vše</string>
+    <string name="personal_dictionary_export_first">Nejprve exportovat</string>
+    <string name="personal_dictionary_delete_all_done">Smazaná slova: %d</string>
+    <string name="personal_dictionary_delete_all_empty">Nejsou tu žádná slova. Není co smazat.</string>
+    <string name="personal_dictionary_index_letter">Přejít na písmeno %s</string>
+    <string name="personal_dictionary_index_other">Přejít na slova, která nezačínají písmenem</string>
 </resources>
