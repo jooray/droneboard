@@ -104,6 +104,7 @@ android {
     tasks.withType<Test>().configureEach { forkEvery = 1 }
     if (System.getenv("CI") != null) {
         tasks.withType<Test>().configureEach {
+            testLogging { events("passed", "failed", "skipped") } // shows in the log where a run got stuck
             filter {
                 excludeTestsMatching("*.InputLogicTest")
                 excludeTestsMatching("*.InputTest")
