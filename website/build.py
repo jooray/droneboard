@@ -15,6 +15,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # no __pycache__ in the deployed folder
 import dictation  # noqa: E402  the dictation subpage
 import tips  # noqa: E402  the tips subpage
+import languages  # noqa: E402  the languages panel and the support link
 import agents  # noqa: E402  the page for AI agents 
 import crosspromo  # noqa: E402  cross-promotion block
 
@@ -648,6 +649,8 @@ def page(code):
   </div>
 </section>
 
+{languages.section(code, agents.PATH, "https://njump.me/" + NPROFILE)}
+
 <section class="panel" id="install" aria-labelledby="install-h">
   <h2 id="install-h">{e(t['inst_h'])}</h2>
   <p class="lede">{t['inst_p']}</p>
@@ -659,6 +662,7 @@ def page(code):
     </div>
   </div>
   <p class="inst-note">{t['src']}</p>
+  <p class="inst-note">{languages.support_note(code)}</p>
 </section>
 
 <section class="panel" id="nostr" aria-labelledby="nostr-h">
@@ -681,7 +685,7 @@ def page(code):
 </main>
 
 <footer class="foot">
-  <span>{t['runout']}</span>
+  <span>{t['runout']} · {languages.support_footer(code)}</span>
   <ul aria-label="{e(t['langlabel'])}">{foot_langs}</ul>
 </footer>
 

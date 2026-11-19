@@ -349,6 +349,7 @@ Checklist from the commits in the table at the top. "Automatic" means nothing ha
 | `AppLanguage.kt` (`LANGUAGES`, `displayNameRes`), `res/values/strings_app_language.xml`, `res/xml/locales_config.xml`, `res/values-LL/strings*.xml` | optional: Droneboard's own settings translated into the language. A keyboard language does not need it | `53ae4c4f` |
 | `README.md`, `docs/dictionaries.md`, `tools/dicts/README.md`, `tools/swipe-replay/README.md`, `zapstore.yaml` | language lists, the exact build commands you ran, the numbers you measured, a tag | `53ae4c4f` |
 | `website/build.py` | the language list in the "multilingual swipe" text of all five site languages, then `python3 website/build.py` and commit the regenerated pages | `53ae4c4f` |
+| `website/languages.py` | the language in the right row of the languages panel (swipe and neural, or dictionary only), in all five site languages | (new) |
 
 No unit test enumerates the languages, so no test list needs a new entry. Version numbers and
 `docs/RELEASE_NOTES_*.md` belong to the maintainer's release, not to your pull request.
