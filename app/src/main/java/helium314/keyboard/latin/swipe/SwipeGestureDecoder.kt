@@ -145,6 +145,7 @@ object SwipeGestureDecoder {
     /** loads dictionaries one after another, never on the input thread, never under the decoder lock */
     private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-load") }
     private val extractLock = Any()
+    private val extractLocks = ConcurrentHashMap<String, Any>()
     private var assetDir: File? = null
     private var availableLanguages: Set<String>? = null
 
@@ -192,27 +193,38 @@ object SwipeGestureDecoder {
             .also { availableLanguages = it }
     }
 
-    /** Copies the model and dictionaries out of the APK once per app version (native code needs files). */
-    internal fun extract(context: Context, name: String): File = synchronized(extractLock) {
+    /**
+     * Copies the model and dictionaries out of the APK once per installation (native code needs files).
+     * Different files are copied in parallel: after an update the swipe dictionaries and the neural models are
+     * requested at the same time by two loader threads, and one lock for all files made each wait for the other.
+     */
+    internal fun extract(context: Context, name: String): File {
         // fail closed before touching storage: no_backup is credential-encrypted
         if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked, not extracting $name")
-        // keyed by install time, so that every update (also with the same version code) re-extracts
-        val installed = runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
-        }.getOrDefault(BuildConfig.VERSION_CODE.toLong())
-        val dir = assetDir ?: File(context.noBackupFilesDir, "swipe-$installed").also {
-            context.noBackupFilesDir.listFiles()?.forEach { old ->
-                if (old.name.startsWith("swipe-") && old != it) old.deleteRecursively()
+        val dir = synchronized(extractLock) {
+            assetDir ?: run {
+                // keyed by install time, so that every update (also with the same version code) re-extracts
+                val installed = runCatching {
+                    context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime
+                }.getOrDefault(BuildConfig.VERSION_CODE.toLong())
+                File(context.noBackupFilesDir, "swipe-$installed").also {
+                    context.noBackupFilesDir.listFiles()?.forEach { old ->
+                        if (old.name.startsWith("swipe-") && old != it) old.deleteRecursively()
+                    }
+                    assetDir = it
+                }
             }
-            assetDir = it
         }
         val file = File(dir, name)
         if (file.isFile) return file
-        file.parentFile?.mkdirs()
-        val tmp = File(file.path + ".tmp")
-        context.assets.open("$ASSET_DIR/$name").use { input -> tmp.outputStream().use { input.copyTo(it) } }
-        tmp.renameTo(file)
-        file
+        synchronized(extractLocks.computeIfAbsent(name) { Any() }) {
+            if (file.isFile) return file
+            file.parentFile?.mkdirs()
+            val tmp = File(file.path + ".tmp")
+            context.assets.open("$ASSET_DIR/$name").use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            if (!tmp.renameTo(file)) throw java.io.IOException("could not move $name into place")
+            return file
+        }
     }
 
     private fun ensureSession(context: Context): Boolean {
