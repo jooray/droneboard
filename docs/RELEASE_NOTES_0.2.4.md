@@ -1,0 +1,4 @@
+- Personal dictionary is now in the main settings menu, right under Dictionaries. Long lists have a letter index on the right: tap or drag along it to jump to a letter. Words are sorted properly for your language (á next to a, not after z).
+- Personal dictionary: "Delete all words", with a confirmation that shows how many words go and offers to export them first. Inside one language it deletes only that language.
+- After an update the dictionaries and neural models are unpacked in parallel, so predictions and swipe are back sooner.
+- A "Support the project" entry in settings and About. Once in a long while, and never while you type, the settings screen may ask whether you want to support Droneboard; "Don't ask again" ends it for good. The keyboard still has no internet access: the link opens in your browser.
