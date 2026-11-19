@@ -151,6 +151,33 @@ use the public writing of Droneboard's author (blogs, books, Nostr posts) plus
 - The new words go into the swipe lists and into a small extra dictionary, `assets/dicts/vocab_<lang>.dict`. HeliBoard loads every dictionary type of a locale next to the main one, so tap typing and the spell checker know them without rebuilding the main dictionary.
 - Czech text only ever feeds Czech lists.
 
+## Blocklist
+
+Some words must never get into a shipped dictionary even when a corpus contains them (names and
+handles from the personal corpus, for example). `blocklist.py` reads them from a local text file
+that is not part of the repository, so the words themselves are not published:
+`tools/dicts/blocklist.local.txt` (in `.gitignore`), or the file named by `DRONEBOARD_BLOCKLIST`
+or by the scripts' `--blocklist` option. Without a file nothing is blocked. One entry per line:
+`word` blocks the word in any case, with or without diacritics and with `'s`; `stem*` blocks every
+word that starts with the stem.
+
+`build_dicts.py`, `personal_vocab.py`, `count_ngrams.py`, `strip_diacritics.py` and
+`tools/lm/prepare.py` leave blocked words out; in the n-gram counts a blocked word is an unknown
+token, so no bigram or trigram contains it. Keep the file in place for every rebuild, and check
+the result before shipping (exit code 1 when something is found):
+
+```sh
+python3 -I tools/dicts/unpack_swipe_dict.py app/src/main/assets/swipe/sk.kpd work/check
+python3 -I tools/dicts/blocklist.py work/check/sk.words.tsv work/check/sk.bigrams.tsv work/check/sk.trigrams.tsv
+```
+
+A word that is already in a shipped `.kpd` is removed without the corpora by unpacking the file,
+deleting its rows from the three TSVs and packing them again with `--min-bigram=0 --min-trigram=0
+--trigram-bytes=1000000000 --total=$(cat <lang>.total)` (the round trip is byte for byte). In a
+neural model's `.lmv` a token is replaced in place by a placeholder of the same byte length that
+starts with `<` (the runtime never suggests such a token and the ids of the other tokens stay);
+removing the line would shift the ids that the weights in `.lmb` are trained on.
+
 ## Trigrams
 
 `count_ngrams.py` counts unigrams, bigrams and trigrams of the vocabulary with an out-of-vocabulary

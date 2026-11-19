@@ -25,6 +25,9 @@ import subprocess
 import sys
 import unicodedata
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blocklist  # noqa: E402
+
 LANG = {
     # letters a word may contain (lowercase); anything else rejects the token
     "sk": dict(alphabet="aáäbcčdďeéfghiíjklĺľmnňoóôpqrŕsštťuúvwxyýzž", top=320_000,
@@ -134,8 +137,9 @@ def select_words(lang, uni, prefix):
     cfg = LANG[lang]
     alphabet = set(cfg["alphabet"])
     cand = collections.Counter()
+    blocked = blocklist.load()
     for w, c in uni.items():
-        if c < cfg["min_count"]:
+        if c < cfg["min_count"] or w in blocked:
             continue
         if len(w) > 1 and w.isupper():           # ALL-CAPS junk ("TRIM", "ZASTUPITEĽSTVO")
             continue

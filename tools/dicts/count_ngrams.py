@@ -30,6 +30,9 @@ import sys
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blocklist  # noqa: E402
+
 TOKEN = re.compile(r"[^\W\d_]+(?:['-][^\W\d_]+)*")  # as in build_dicts.py
 SENTENCE = re.compile(r"[.!?\n]+")
 BITS = 20  # word ids < 2^20
@@ -128,10 +131,13 @@ def main():
     ap.add_argument("--min-bigram", type=int, default=3)
     ap.add_argument("--min-trigram", type=int, default=3)
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
+    ap.add_argument("--blocklist", help="words to leave out (see blocklist.py); default: the local list")
     a = ap.parse_args()
+    blocked = blocklist.load(a.blocklist)
 
     rows = [line.rstrip("\n").split("\t") for line in open(a.words, encoding="utf-8")]
-    rows = [r for r in rows if len(r) == 4]
+    # a blocked word is not in the vocabulary, so it breaks the n-gram chain like any unknown token
+    rows = [r for r in rows if len(r) == 4 and r[0] not in blocked]
     lowers = []
     vocab = {}
     for r in rows:

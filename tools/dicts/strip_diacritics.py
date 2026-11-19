@@ -23,6 +23,7 @@ import sys
 import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blocklist  # noqa: E402
 from pack_swipe_dict import native_lower  # noqa: E402
 from unpack_swipe_dict import unpack  # noqa: E402
 
@@ -45,12 +46,15 @@ def main():
     os.makedirs(out, exist_ok=True)
     tmp = os.path.join(out, "unpacked")
     (words_tsv, bigrams_tsv, trigrams_tsv), total = unpack(kpd, tmp, lang)
+    blocked = blocklist.load(opts.get("blocklist"))  # the stripped form of a word may be a blocked one
 
     # words: lowercase counts summed over the distinct lowercase forms that merge
     lower_count = {}                       # original lowercase -> count
     variants = collections.OrderedDict()   # stripped surface -> [keypath, freq]
     for line in open(words_tsv, encoding="utf-8"):
         surface, kp, freq, count = line.rstrip("\n").split("\t")
+        if surface in blocked:
+            continue
         lower_count.setdefault(native_lower(surface), float(count))
         s = strip(surface)
         v = variants.setdefault(s, [kp, 0])
@@ -65,6 +69,8 @@ def main():
     bigrams = collections.Counter()
     for line in open(bigrams_tsv, encoding="utf-8"):
         a, b, c = line.rstrip("\n").split("\t")
+        if a in blocked or b in blocked:
+            continue
         bigrams[(strip(a), strip(b))] += float(c)
     with open(os.path.join(out, f"{nd}.bigrams.tsv"), "w", encoding="utf-8") as o:
         for (a, b), c in bigrams.items():
@@ -75,6 +81,8 @@ def main():
     pair_count = collections.Counter()
     for line in open(trigrams_tsv, encoding="utf-8"):
         a, b, c, n, cc = line.rstrip("\n").split("\t")
+        if a in blocked or b in blocked or c in blocked:
+            continue
         key = (strip(a), strip(b))
         trigrams[key + (strip(c),)] += float(n)
         if (a, b) not in pair_seen:

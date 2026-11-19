@@ -26,6 +26,7 @@ import sys
 import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blocklist  # noqa: E402
 from build_dicts import LANG, keypath, rank_to_freq  # noqa: E402
 
 TOKEN = re.compile(r"[^\W\d_]+(?:['-][^\W\d_]+)*")  # as in build_dicts.py
@@ -56,7 +57,9 @@ def main():
         ap.add_argument(name)
     ap.add_argument("--weight", type=float, default=8.0)
     ap.add_argument("--min-count", type=int, default=2)
+    ap.add_argument("--blocklist", help="words never to add (see blocklist.py); default: the local list")
     a = ap.parse_args()
+    blocked = blocklist.load(a.blocklist)
     cfg = LANG[a.lang]
     alphabet = set(cfg["alphabet"])
     base = load_lower(a.words)
@@ -100,6 +103,8 @@ def main():
 
     cand = []
     for low, c in count.items():
+        if low in blocked:
+            continue
         if low in base or len(low) < 2 or any(ch not in alphabet and ch not in "'-" for ch in low) or not keypath(low):
             continue
         allowed = low in allow
@@ -160,6 +165,7 @@ def main():
     counts = sorted((c for c in base.values()), reverse=True)
     neg = [-c for c in counts]
     rows = [line.rstrip("\n") for line in open(a.words, encoding="utf-8") if line.count("\t") == 3]
+    rows = [r for r in rows if r.split("\t", 1)[0] not in blocked]
     with open(os.path.join(a.out, f"{a.lang}.added.tsv"), "w", encoding="utf-8") as o:
         for low, c, reason in added:
             o.write(f"{low}\t{c}\t{reason}\n")

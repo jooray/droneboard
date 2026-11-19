@@ -17,6 +17,9 @@ from pathlib import Path
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dicts"))
+import blocklist  # noqa: E402  words that never become tokens (tools/dicts/blocklist.py)
+
 work, lang, vsize, personal = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), sys.argv[4]
 (work / "vocab").mkdir(exist_ok=True)
 (work / "ids").mkdir(exist_ok=True)
@@ -40,7 +43,8 @@ for fn in files:
             if not is_test(line, 1):
                 counts.update(line.split())
 specials = ["<pad>", "<unk>", "<bos>"]
-vocab = specials + [w for w, _ in counts.most_common(vsize - len(specials))]
+blocked = blocklist.load()  # a blocked word is <unk> in the training streams
+vocab = specials + [w for w, _ in counts.most_common() if w not in blocked][:vsize - len(specials)]
 index = {w: i for i, w in enumerate(vocab)}
 total = sum(counts.values())
 covered = sum(counts[w] for w in vocab[3:])
