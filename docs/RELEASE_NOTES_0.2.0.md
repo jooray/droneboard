@@ -1,0 +1,7 @@
+- Hold A, X, C, V, Z or Y for select all, cut, copy, paste, undo and redo. The action is the last item in the long-press popup, so accents and symbols stay where they were. It can be turned off in Settings → Preferences.
+- Quick clips: when the text you just copied contains an e-mail address, a link or a one-time code, the suggestion strip offers that piece as its own chip next to the whole clip.
+- Dictation: the first backspace right after dictating takes back the whole dictated block. Music and podcasts pause while the microphone is on and continue afterwards.
+- Optional recording of your swipes while typing, off by default (Settings → Gesture typing). It stays on the phone, never runs in password, e-mail or incognito fields, and can be viewed, deleted and exported. It exists so that swipe typing can be measured on real use.
+- Smaller download: the APK no longer carries libraries for emulators.
+- Removed the leftover code of HeliBoard's gesture data collection. It could not be opened in Droneboard, but parts of it still ran.
+- A few words that came from the author's own texts were removed from the Slovak, English and Czech dictionaries.
