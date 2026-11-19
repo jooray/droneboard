@@ -32,8 +32,8 @@ android {
         applicationId = "today.cypherpunk.droneboard"
         minSdk = 21
         targetSdk = 37
-        versionCode = 5018
-        versionName = "0.1.18"
+        versionCode = 5100
+        versionName = "0.2.0"
         ndk {
             abiFilters.clear()
             // phones only; the x86 libraries (emulators) were 3.4 MB of the APK.
