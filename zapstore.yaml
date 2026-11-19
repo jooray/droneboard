@@ -35,4 +35,4 @@ icon: ./art/droneboard-icon-512.png
 images:
     - ./graphics/screenshot-keyboard.png
     - ./graphics/screenshot-emoji-search.png
-release_notes: ./docs/RELEASE_NOTES_0.2.2.md
+release_notes: ./docs/RELEASE_NOTES_0.2.3.md
