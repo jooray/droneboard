@@ -82,7 +82,7 @@ Drop:
 Being rude is not a reason to drop a word. The user's own name and handles are wanted, even though
 they look like "handles": add them with `--add` if cleaning removed them. Ask the user for names of
 family, friends, streets and towns that may not be in the text, and add those too. Multi-word entries
-such as `Paralelná Polis` are allowed (they are suggested when tapping; swipe works on single words).
+such as `Banská Štiavnica` are allowed (they are suggested when tapping; swipe works on single words).
 
 Show the user the final count and a random sample of about 50 words before importing, and offer the
 full list for a look. It is their dictionary.
@@ -93,8 +93,8 @@ UTF-8 text, one entry per line. Only the word is required; more columns are sepa
 
 ```
 # word	language	shortcut	frequency
-Bernolákovo
-Paralelná Polis
+Kežmarok
+Banská Štiavnica
 lightning	en
 On my way!	en_US	omw	200
 ```

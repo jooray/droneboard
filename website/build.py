@@ -15,6 +15,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # no __pycache__ in the deployed folder
 import dictation  # noqa: E402  the dictation subpage
 import tips  # noqa: E402  the tips subpage
+import agents  # noqa: E402  the page for AI agents 
 import crosspromo  # noqa: E402  cross-promotion block
 
 ROOT = Path(__file__).resolve().parent
@@ -619,6 +620,7 @@ def page(code):
   </div>
   <div class="shots">{shots}</div>
   <p class="inst-note">{tips.MAIN_NOTE[code].format(href=tips.PATH)}</p>
+  <p class="inst-note">{agents.MAIN_NOTE[code].format(href=agents.PATH)}</p>
 </section>
 
 <figure class="held">
@@ -710,6 +712,7 @@ def main():
         print("wrote", out.relative_to(ROOT))
     dictation.write_pages(ROOT, T, LANGS, SITE)
     tips.write_pages(ROOT, T, LANGS, SITE)
+    agents.write_pages(ROOT, T, LANGS, SITE)
 
 
 if __name__ == "__main__":

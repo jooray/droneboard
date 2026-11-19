@@ -22,7 +22,7 @@ If you have a list of words you often write (names, places, terms from your work
 
 Droneboard has to be turned on as a keyboard, because Android lets only a keyboard change the personal dictionary. A file can have up to 5 MB and 50,000 entries. The format is recognised from the content of the file, not from its name:
 
-- **Text file** in UTF-8, one entry per line. A line is a word, or columns separated by a tab: word, language, shortcut, frequency. Only the word is required. The language is written as `sk`, `en_US` or `en-US`; when it is empty or missing, the word is used in all languages. The frequency is a number from 1 to 255 (250 when missing). An entry can have more words (`Paralelná Polis`), up to 48 characters. Blank lines and lines starting with `#` are skipped; a line that starts with `#` and has a tab is an entry, so hashtags survive an export and import.
+- **Text file** in UTF-8, one entry per line. A line is a word, or columns separated by a tab: word, language, shortcut, frequency. Only the word is required. The language is written as `sk`, `en_US` or `en-US`; when it is empty or missing, the word is used in all languages. The frequency is a number from 1 to 255 (250 when missing). An entry can have more words (`Banská Štiavnica`), up to 48 characters. Blank lines and lines starting with `#` are skipped; a line that starts with `#` and has a tab is an entry, so hashtags survive an export and import.
 - **Gboard dictionary**: the `dictionary.txt` that Gboard exports (in Gboard: Settings → Dictionary → Personal dictionary, then Export in the menu), or the `.zip` it is packed in.
 - **Droneboard's `personal_dictionary.json`** from a backup, or the backup `.zip` itself.
 
@@ -31,7 +31,7 @@ Example of a text file (the gaps are tabs):
 ```
 # word	language	shortcut	frequency
 Bratislava
-Paralelná Polis	sk	pp
+Banská Štiavnica	sk	bs
 lightning	en
 On my way!	en_US	omw	200
 ```

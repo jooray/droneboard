@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droneboard for AI agents: personal dictionary and new languages</title>
+<meta name="description" content="Two jobs an AI coding agent can do for you: build a personal dictionary for the Droneboard keyboard from your own text, or train and add a new language. Plain Markdown guides and one small tool.">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" hreflang="en" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" hreflang="sk" href="https://cypherpunk.today/droneboard/sk/agents/">
+<link rel="alternate" hreflang="cs" href="https://cypherpunk.today/droneboard/cs/agents/">
+<link rel="alternate" hreflang="de" href="https://cypherpunk.today/droneboard/de/agents/">
+<link rel="alternate" hreflang="es" href="https://cypherpunk.today/droneboard/es/agents/">
+<link rel="alternate" hreflang="x-default" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/personal-dictionary.md" title="personal-dictionary.md">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/new-language.md" title="new-language.md">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Droneboard for AI agents: personal dictionary and new languages">
+<meta property="og:description" content="Two jobs an AI coding agent can do for you: build a personal dictionary for the Droneboard keyboard from your own text, or train and add a new language. Plain Markdown guides and one small tool.">
+<meta property="og:url" content="https://cypherpunk.today/droneboard/agents/">
+<meta property="og:image" content="https://cypherpunk.today/droneboard/img/og.jpg">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../img/icon-512.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="preload" href="../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<style>
+.prompt { display: block; padding: 0.9rem 1rem; border: 1px solid var(--rule); border-radius: 6px; font-style: italic; user-select: all; overflow-wrap: anywhere; }
+.agents .tracks p { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<a class="skip" href="#g1">Skip to content</a>
+
+<header class="sleeve subpage" id="top">
+  <picture><source type="image/webp" srcset="../img/fog-photo.webp"><img class="fog" src="../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="../">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="../#features">features</a></li>
+        <li><a href="../#privacy">privacy</a></li>
+        <li><a href="../#install">install</a></li>
+        <li><a href="../tips/">tips</a></li>
+        <li><a href="../agents/" aria-current="page">agents</a></li>
+      </ul>
+      <ul class="langs" aria-label="Language"><li><a href="../agents/" hreflang="en" lang="en" title="English" aria-current="page">en</a></li><li><a href="../sk/agents/" hreflang="sk" lang="sk" title="Slovenčina">sk</a></li><li><a href="../cs/agents/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../de/agents/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="../es/agents/" hreflang="es" lang="es" title="Español">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>hand it to your agent.</h1>
+    <p class="sub">An AI coding agent can do two jobs for you from start to finish: make a personal dictionary out of text you have already written, and add a language Droneboard does not have yet. Each job has a Markdown guide the agent reads on its own. Everything runs on your computer.</p>
+  </div>
+</header>
+
+<main>
+<section class="panel agents" id="g1" aria-labelledby="g1-h">
+  <h2 id="g1-h">a personal dictionary from your own text</h2>
+  <ol class="tracks tips"><li><span class="no">01</span><h3>what it does</h3><p>You type words no dictionary has: family names, streets, company and project names, jargon. The agent reads text you have already written (notes, sent mail, your own chat messages), finds the words Droneboard does not know yet, cleans the list and writes a file. You import that file in the keyboard. The tool only reads and writes files on your computer.</p></li><li><span class="no">02</span><h3>what the agent needs</h3><p>Python 3.8 or newer, the tool <a href="https://raw.githubusercontent.com/jooray/droneboard/main/tools/personal-dict/personal_dict.py"><code>personal_dict.py</code></a> (one file, standard library only), the Droneboard APK from the <a href="https://github.com/jooray/droneboard/releases/latest">latest release</a> and your text. The tool reads the built-in dictionaries out of the APK, so words the keyboard already knows are not added again.</p></li><li><span class="no">03</span><h3>the guide</h3><p><a href="../agents/personal-dictionary.md"><code>personal-dictionary.md</code></a> says where to look for text, how to take only your own messages from a chat export, which three commands to run, how to clean the word list, what the import file looks like and how to get it onto the phone. It is also a skill: copy it into your agent's skills folder.</p></li><li><span class="no">04</span><h3>say this to your agent</h3><p><span class="prompt">Read https://cypherpunk.today/droneboard/agents/personal-dictionary.md and build me a personal dictionary for the Droneboard keyboard from my own writing. My text is in &lt;folder or file&gt;. I type in &lt;languages&gt;. Keep everything on this computer and show me the list before I import it.</span></p></li><li><span class="no">05</span><h3>then, on the phone</h3><p>In Droneboard 0.2.1 or newer open <strong>Settings → Text correction → Personal dictionary → Import from file</strong>. It shows how many words are new and adds them after you confirm. Words that are already there stay. The same screen imports the dictionary exported from Gboard, if you only want to move the words you added there by hand.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g2" aria-labelledby="g2-h">
+  <h2 id="g2-h">teach droneboard a new language</h2>
+  <ol class="tracks tips"><li><span class="no">06</span><h3>what a language consists of</h3><p>A main dictionary for tap typing, a swipe word list with word-pair and word-triple statistics, an emoji dictionary, a small neural next-word model that runs on the phone, and a keyboard layout. Each part is built from open data with scripts in the repository.</p></li><li><span class="no">07</span><h3>what the agent needs</h3><p>A checkout of the <a href="https://github.com/jooray/droneboard">latest main</a>, Python and disk space for the corpus. The neural model is trained with MLX, so it needs an Apple Silicon Mac. The guide says what each step downloads and how long it takes.</p></li><li><span class="no">08</span><h3>the guide</h3><p><a href="../agents/new-language.md"><code>new-language.md</code></a> covers how to check that a language is feasible, where our data came from and how to find the same for another language, the commands for dictionaries and n-grams, training, exporting and verifying the model, and every file in the app that has to change. The commits that added Hungarian serve as a worked example. It ends with how to measure the result and what to put in the pull request.</p></li><li><span class="no">09</span><h3>say this to your agent</h3><p><span class="prompt">Read https://cypherpunk.today/droneboard/agents/new-language.md, check out the latest https://github.com/jooray/droneboard and add &lt;language&gt; to Droneboard: dictionaries, swipe word list and the neural next-word model. Before you start, tell me what data you want to download and how long training will take.</span></p></li><li><span class="no">10</span><h3>send it back</h3><p>A language that works for you will work for the next person too. Open a pull request at <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a> with the built files, the commands you ran and the numbers you measured.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g3" aria-labelledby="g3-h">
+  <h2 id="g3-h">facts an agent should know</h2>
+  <ol class="tracks tips"><li><span class="no">11</span><h3>the project</h3><p>Droneboard is an open-source Android keyboard (GPL-3.0), a fork of HeliBoard. Its application id is <code>today.cypherpunk.droneboard</code>. It has no INTERNET permission, so everything it uses ships in the APK or is imported from a file by the user.</p></li><li><span class="no">12</span><h3>where things are</h3><p>Source: <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a>. The APK is in <a href="https://github.com/jooray/droneboard/releases/latest">GitHub releases</a>. Dictionary tooling is in <code>tools/dicts</code>, neural model tooling in <code>tools/lm</code>, swipe replay and evaluation in <code>tools/swipe-replay</code>. File formats are described in <code>native/droneswipe/FORMAT.md</code> and <code>docs/dictionaries.md</code>.</p></li><li><span class="no">13</span><h3>plain text for machines</h3><p>The two guides are Markdown files with stable addresses, listed in <a href="../llms.txt"><code>llms.txt</code></a>. They are copies of files in the repository and are rebuilt with the website.</p></li><li><span class="no">14</span><h3>limits</h3><p>The personal dictionary cannot be filled over adb. Android lets only the keyboard write it, so the import happens in the app. Swipe typing works on single words in the Latin alphabet. The swipe encoder weights come from FUTO under their own licence.</p></li></ol>
+</section>
+
+<section class="panel" id="more" aria-label="back to the main page">
+  <p class="inst-note"><a href="../">back to the main page</a> · <a href="https://github.com/jooray/droneboard">source code</a></p>
+</section>
+
+<section class="panel xpromo compact" id="more" aria-labelledby="more-h">
+  <h2 id="more-h">if you like Droneboard, you might also like…</h2>
+  <ul class="xp-list"><li><img src="../img/third-ear-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>Third Ear</h3><p>A voice recorder with your own buttons: save, transcribe, copy, share or send to a White Noise group. It records from Bluetooth headsets and hearing aids, transcribes on the phone with Offline Speech to Text, and works in Android Auto.</p></div><div class="xp-links"><a href="https://cypherpunk.today/third-ear/" hreflang="en">Website</a><a href="https://zapstore.dev/apps/app.thirdear">Zapstore</a></div></li><li><img src="../img/i-hear-you-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>I Hear You</h3><p>An open-source Android remote for GN hearing aids (ReSound, Beltone, Jabra Enhance and sister brands), with no account or cloud. It can also record voice notes from the aids’ own microphones and transcribe them on the phone.</p></div><div class="xp-links"><a href="https://cypherpunk.today/i-hear-you/" hreflang="en">Website</a><a href="https://zapstore.dev/apps/app.ihearyou">Zapstore</a></div></li></ul>
+  <p class="xp-note">All three apps transcribe speech on the phone with Offline Speech to Text. <a href="../dictation/#languages">How dictation works</a>.</p>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 beta · GPL-3.0 · built with AI assistance; contributions welcome</span>
+  <ul aria-label="Language"><li><a href="../agents/" hreflang="en" lang="en" aria-current="page">English</a></li><li><a href="../sk/agents/" hreflang="sk" lang="sk">Slovenčina</a></li><li><a href="../cs/agents/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../de/agents/" hreflang="de" lang="de">Deutsch</a></li><li><a href="../es/agents/" hreflang="es" lang="es">Español</a></li></ul>
+</footer>
+</body>
+</html>

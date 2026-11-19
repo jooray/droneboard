@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droneboard pre AI agentov: osobný slovník a nové jazyky</title>
+<meta name="description" content="Dve úlohy, ktoré za vás spraví AI agent: osobný slovník pre klávesnicu Droneboard z vašich vlastných textov a natrénovanie a pridanie nového jazyka. Návody v Markdowne a jeden malý nástroj.">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/sk/agents/">
+<link rel="alternate" hreflang="en" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" hreflang="sk" href="https://cypherpunk.today/droneboard/sk/agents/">
+<link rel="alternate" hreflang="cs" href="https://cypherpunk.today/droneboard/cs/agents/">
+<link rel="alternate" hreflang="de" href="https://cypherpunk.today/droneboard/de/agents/">
+<link rel="alternate" hreflang="es" href="https://cypherpunk.today/droneboard/es/agents/">
+<link rel="alternate" hreflang="x-default" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/personal-dictionary.md" title="personal-dictionary.md">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/new-language.md" title="new-language.md">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Droneboard pre AI agentov: osobný slovník a nové jazyky">
+<meta property="og:description" content="Dve úlohy, ktoré za vás spraví AI agent: osobný slovník pre klávesnicu Droneboard z vašich vlastných textov a natrénovanie a pridanie nového jazyka. Návody v Markdowne a jeden malý nástroj.">
+<meta property="og:url" content="https://cypherpunk.today/droneboard/sk/agents/">
+<meta property="og:image" content="https://cypherpunk.today/droneboard/img/og.jpg">
+<meta property="og:locale" content="sk_SK">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../../img/icon-512.png">
+<link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+<link rel="preload" href="../../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../style.css">
+<style>
+.prompt { display: block; padding: 0.9rem 1rem; border: 1px solid var(--rule); border-radius: 6px; font-style: italic; user-select: all; overflow-wrap: anywhere; }
+.agents .tracks p { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<a class="skip" href="#g1">Preskočiť na obsah</a>
+
+<header class="sleeve subpage" id="top">
+  <picture><source type="image/webp" srcset="../../img/fog-photo.webp"><img class="fog" src="../../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="../../sk/">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="../../sk/#features">funkcie</a></li>
+        <li><a href="../../sk/#privacy">súkromie</a></li>
+        <li><a href="../../sk/#install">inštalácia</a></li>
+        <li><a href="../../sk/tips/">tipy</a></li>
+        <li><a href="../../sk/agents/" aria-current="page">agenti</a></li>
+      </ul>
+      <ul class="langs" aria-label="Jazyk"><li><a href="../../agents/" hreflang="en" lang="en" title="English">en</a></li><li><a href="../../sk/agents/" hreflang="sk" lang="sk" title="Slovenčina" aria-current="page">sk</a></li><li><a href="../../cs/agents/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../../de/agents/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="../../es/agents/" hreflang="es" lang="es" title="Español">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>dajte to svojmu agentovi.</h1>
+    <p class="sub">AI agent za vás spraví od začiatku do konca dve úlohy: z textov, ktoré ste už napísali, vyrobí osobný slovník, a pridá jazyk, ktorý Droneboard ešte nemá. Ku každej je návod v Markdowne (v angličtine), ktorý si agent prečíta sám. Všetko beží na vašom počítači.</p>
+  </div>
+</header>
+
+<main>
+<section class="panel agents" id="g1" aria-labelledby="g1-h">
+  <h2 id="g1-h">osobný slovník z vlastných textov</h2>
+  <ol class="tracks tips"><li><span class="no">01</span><h3>čo to robí</h3><p>Píšete slová, ktoré nie sú v žiadnom slovníku: priezviská, ulice, názvy firiem a projektov, žargón. Agent prejde texty, ktoré ste už napísali (poznámky, odoslané e-maily, vaše správy z chatu), nájde slová, ktoré Droneboard ešte nepozná, zoznam prečistí a zapíše do súboru. Ten potom v klávesnici naimportujete. Nástroj iba číta a zapisuje súbory vo vašom počítači.</p></li><li><span class="no">02</span><h3>čo agent potrebuje</h3><p>Python 3.8 alebo novší, nástroj <a href="https://raw.githubusercontent.com/jooray/droneboard/main/tools/personal-dict/personal_dict.py"><code>personal_dict.py</code></a> (jeden súbor, stačí štandardná knižnica), APK Droneboardu z <a href="https://github.com/jooray/droneboard/releases/latest">najnovšieho vydania</a> a vaše texty. Nástroj si z APK prečíta vstavané slovníky, takže slová, ktoré klávesnica už pozná, sa nepridajú znova.</p></li><li><span class="no">03</span><h3>návod</h3><p>V súbore <a href="../../agents/personal-dictionary.md"><code>personal-dictionary.md</code></a> (v angličtine) je, kde hľadať texty, ako z exportu chatu vybrať len vaše správy, ktoré tri príkazy spustiť, ako zoznam prečistiť, ako vyzerá súbor na import a ako ho dostať do telefónu. Je to zároveň skill: skopírujte ho do priečinka so skillmi svojho agenta.</p></li><li><span class="no">04</span><h3>povedzte agentovi</h3><p><span class="prompt">Prečítaj si https://cypherpunk.today/droneboard/agents/personal-dictionary.md a vyrob mi osobný slovník pre klávesnicu Droneboard z mojich vlastných textov. Texty mám v &lt;priečinok alebo súbor&gt;. Píšem v jazykoch &lt;jazyky&gt;. Všetko nechaj na tomto počítači a pred importom mi ukáž zoznam.</span></p></li><li><span class="no">05</span><h3>potom v telefóne</h3><p>V Droneboarde 0.2.1 alebo novšom otvorte <strong>Nastavenia → Oprava textu → Osobný slovník → Importovať zo súboru</strong>. Ukáže, koľko slov je nových, a po potvrdení ich pridá. Slová, ktoré v slovníku už sú, ostanú. Tá istá obrazovka vie naimportovať aj slovník exportovaný z Gboardu, ak chcete len preniesť slová, ktoré ste si tam pridali ručne.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g2" aria-labelledby="g2-h">
+  <h2 id="g2-h">naučte droneboard nový jazyk</h2>
+  <ol class="tracks tips"><li><span class="no">06</span><h3>z čoho sa jazyk skladá</h3><p>Hlavný slovník na písanie ťukaním, zoznam slov pre swipe so štatistikou dvojíc a trojíc slov, slovník emoji, malý neurónový model na predikciu ďalšieho slova, ktorý beží v telefóne, a rozloženie klávesnice. Každá časť sa stavia z otvorených dát skriptmi z repozitára.</p></li><li><span class="no">07</span><h3>čo agent potrebuje</h3><p>Stiahnutý <a href="https://github.com/jooray/droneboard">najnovší main</a>, Python a miesto na disku pre korpus. Neurónový model sa trénuje cez MLX, takže treba Mac s Apple Silicon. V návode je, čo ktorý krok sťahuje a ako dlho trvá.</p></li><li><span class="no">08</span><h3>návod</h3><p>Súbor <a href="../../agents/new-language.md"><code>new-language.md</code></a> (v angličtine) popisuje, ako overiť, že sa jazyk dá spraviť, odkiaľ sme brali dáta a ako nájsť to isté pre iný jazyk, príkazy na slovníky a n-gramy, trénovanie, export a overenie modelu a všetky súbory v aplikácii, ktoré treba zmeniť. Ako príklad slúžia commity, ktorými pribudla maďarčina. Na konci je, ako výsledok zmerať a čo dať do pull requestu.</p></li><li><span class="no">09</span><h3>povedzte agentovi</h3><p><span class="prompt">Prečítaj si https://cypherpunk.today/droneboard/agents/new-language.md, stiahni si najnovší https://github.com/jooray/droneboard a pridaj do Droneboardu &lt;jazyk&gt;: slovníky, zoznam slov pre swipe a neurónový model na predikciu ďalšieho slova. Skôr než začneš, povedz mi, aké dáta chceš stiahnuť a ako dlho potrvá trénovanie.</span></p></li><li><span class="no">10</span><h3>pošlite to späť</h3><p>Jazyk, ktorý funguje vám, bude fungovať aj ďalšiemu človeku. Otvorte pull request na <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a> s hotovými súbormi, príkazmi, ktoré ste spustili, a číslami, ktoré ste namerali.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g3" aria-labelledby="g3-h">
+  <h2 id="g3-h">fakty, ktoré má agent vedieť</h2>
+  <ol class="tracks tips"><li><span class="no">11</span><h3>projekt</h3><p>Droneboard je open-source klávesnica pre Android (GPL-3.0), fork HeliBoardu. Identifikátor aplikácie je <code>today.cypherpunk.droneboard</code>. Nemá povolenie INTERNET, takže všetko, čo používa, je v APK alebo si to používateľ naimportuje zo súboru.</p></li><li><span class="no">12</span><h3>kde čo je</h3><p>Zdrojový kód: <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a>. APK je vo <a href="https://github.com/jooray/droneboard/releases/latest">vydaniach na GitHube</a>. Nástroje na slovníky sú v <code>tools/dicts</code>, na neurónový model v <code>tools/lm</code>, prehrávanie a meranie swipe v <code>tools/swipe-replay</code>. Formáty súborov popisujú <code>native/droneswipe/FORMAT.md</code> a <code>docs/dictionaries.md</code>.</p></li><li><span class="no">13</span><h3>čistý text pre stroje</h3><p>Oba návody sú súbory v Markdowne so stálou adresou a ich zoznam je v <a href="../../llms.txt"><code>llms.txt</code></a>. Sú to kópie súborov z repozitára a generujú sa spolu s webom.</p></li><li><span class="no">14</span><h3>obmedzenia</h3><p>Osobný slovník sa nedá naplniť cez adb. Android doň dovolí zapisovať len klávesnici, preto sa importuje v aplikácii. Swipe funguje na jednotlivé slová v latinke. Váhy swipe enkodéra sú od FUTO a majú vlastnú licenciu.</p></li></ol>
+</section>
+
+<section class="panel" id="more" aria-label="späť na hlavnú stránku">
+  <p class="inst-note"><a href="../../sk/">späť na hlavnú stránku</a> · <a href="https://github.com/jooray/droneboard">zdrojový kód</a></p>
+</section>
+
+<section class="panel xpromo compact" id="more" aria-labelledby="more-h">
+  <h2 id="more-h">ak sa vám páči Droneboard, môže sa vám páčiť aj…</h2>
+  <ul class="xp-list"><li><img src="../../img/third-ear-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>Third Ear</h3><p>Diktafón s vlastnými tlačidlami: uložte, prepíšte, skopírujte, zdieľajte alebo pošlite do skupiny vo White Noise. Nahráva aj z Bluetooth slúchadiel a načúvacích prístrojov, prepisuje v telefóne cez Offline Speech to Text a funguje v Android Auto.</p></div><div class="xp-links"><a href="https://cypherpunk.today/third-ear/sk/" hreflang="sk">Web</a><a href="https://zapstore.dev/apps/app.thirdear">Zapstore</a></div></li><li><img src="../../img/i-hear-you-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>I Hear You</h3><p>Open-source aplikácia pre Android na ovládanie načúvacích prístrojov GN (ReSound Nexia a CROS), bez účtu a offline. Cez mikrofóny prístrojov nahráte hlasové správy a prepíšete ich v telefóne.</p></div><div class="xp-links"><a href="https://cypherpunk.today/i-hear-you/sk/" hreflang="sk">Web</a><a href="https://zapstore.dev/apps/app.ihearyou">Zapstore</a></div></li></ul>
+  <p class="xp-note">Všetky tri aplikácie prepisujú reč v telefóne cez Offline Speech to Text. <a href="../dictation/#languages">Ako funguje diktovanie</a>.</p>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 beta · GPL-3.0 · vyvíjané s pomocou AI, príspevky vítané</span>
+  <ul aria-label="Jazyk"><li><a href="../../agents/" hreflang="en" lang="en">English</a></li><li><a href="../../sk/agents/" hreflang="sk" lang="sk" aria-current="page">Slovenčina</a></li><li><a href="../../cs/agents/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../../de/agents/" hreflang="de" lang="de">Deutsch</a></li><li><a href="../../es/agents/" hreflang="es" lang="es">Español</a></li></ul>
+</footer>
+</body>
+</html>

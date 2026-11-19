@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Droneboard para agentes de IA: diccionario personal e idiomas nuevos</title>
+<meta name="description" content="Dos tareas que un agente de IA hace por ti: un diccionario personal para el teclado Droneboard a partir de tus propios textos, y entrenar y añadir un idioma nuevo. Guías en Markdown y una herramienta pequeña.">
+<link rel="canonical" href="https://cypherpunk.today/droneboard/es/agents/">
+<link rel="alternate" hreflang="en" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" hreflang="sk" href="https://cypherpunk.today/droneboard/sk/agents/">
+<link rel="alternate" hreflang="cs" href="https://cypherpunk.today/droneboard/cs/agents/">
+<link rel="alternate" hreflang="de" href="https://cypherpunk.today/droneboard/de/agents/">
+<link rel="alternate" hreflang="es" href="https://cypherpunk.today/droneboard/es/agents/">
+<link rel="alternate" hreflang="x-default" href="https://cypherpunk.today/droneboard/agents/">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/personal-dictionary.md" title="personal-dictionary.md">
+<link rel="alternate" type="text/markdown" href="https://cypherpunk.today/droneboard/agents/new-language.md" title="new-language.md">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Droneboard para agentes de IA: diccionario personal e idiomas nuevos">
+<meta property="og:description" content="Dos tareas que un agente de IA hace por ti: un diccionario personal para el teclado Droneboard a partir de tus propios textos, y entrenar y añadir un idioma nuevo. Guías en Markdown y una herramienta pequeña.">
+<meta property="og:url" content="https://cypherpunk.today/droneboard/es/agents/">
+<meta property="og:image" content="https://cypherpunk.today/droneboard/img/og.jpg">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#2e3a44">
+<link rel="icon" href="../../img/icon-512.png">
+<link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+<link rel="preload" href="../../fonts/ptsans-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../style.css">
+<style>
+.prompt { display: block; padding: 0.9rem 1rem; border: 1px solid var(--rule); border-radius: 6px; font-style: italic; user-select: all; overflow-wrap: anywhere; }
+.agents .tracks p { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<a class="skip" href="#g1">Saltar al contenido</a>
+
+<header class="sleeve subpage" id="top">
+  <picture><source type="image/webp" srcset="../../img/fog-photo.webp"><img class="fog" src="../../img/fog-photo.png" alt="" width="1600" height="1600" fetchpriority="high"></picture>
+  <div class="masthead">
+    <a class="wordmark" href="../../es/">droneboard</a>
+    <nav class="topnav" aria-label="Droneboard">
+      <ul class="sections">
+        <li><a href="../../es/#features">funciones</a></li>
+        <li><a href="../../es/#privacy">privacidad</a></li>
+        <li><a href="../../es/#install">instalar</a></li>
+        <li><a href="../../es/tips/">trucos</a></li>
+        <li><a href="../../es/agents/" aria-current="page">agentes</a></li>
+      </ul>
+      <ul class="langs" aria-label="Idioma"><li><a href="../../agents/" hreflang="en" lang="en" title="English">en</a></li><li><a href="../../sk/agents/" hreflang="sk" lang="sk" title="Slovenčina">sk</a></li><li><a href="../../cs/agents/" hreflang="cs" lang="cs" title="Čeština">cs</a></li><li><a href="../../de/agents/" hreflang="de" lang="de" title="Deutsch">de</a></li><li><a href="../../es/agents/" hreflang="es" lang="es" title="Español" aria-current="page">es</a></li></ul>
+    </nav>
+  </div>
+  <div class="stack">
+    <h1>déjaselo a tu agente.</h1>
+    <p class="sub">Un agente de IA puede hacer por ti dos tareas de principio a fin: crear un diccionario personal con los textos que ya has escrito y añadir un idioma que Droneboard todavía no tiene. Cada tarea tiene una guía en Markdown (en inglés) que el agente lee por su cuenta. Todo se ejecuta en tu ordenador.</p>
+  </div>
+</header>
+
+<main>
+<section class="panel agents" id="g1" aria-labelledby="g1-h">
+  <h2 id="g1-h">un diccionario personal con tus propios textos</h2>
+  <ol class="tracks tips"><li><span class="no">01</span><h3>qué hace</h3><p>Escribes palabras que no están en ningún diccionario: apellidos, calles, nombres de empresas y proyectos, jerga. El agente lee textos que ya has escrito (notas, correos enviados, tus propios mensajes de chat), encuentra las palabras que Droneboard aún no conoce, limpia la lista y escribe un archivo. Ese archivo lo importas en el teclado. La herramienta solo lee y escribe archivos en tu ordenador.</p></li><li><span class="no">02</span><h3>qué necesita el agente</h3><p>Python 3.8 o posterior, la herramienta <a href="https://raw.githubusercontent.com/jooray/droneboard/main/tools/personal-dict/personal_dict.py"><code>personal_dict.py</code></a> (un archivo, solo la biblioteca estándar), el APK de Droneboard de la <a href="https://github.com/jooray/droneboard/releases/latest">última versión</a> y tus textos. La herramienta lee los diccionarios incluidos en el APK, así que las palabras que el teclado ya conoce no se añaden otra vez.</p></li><li><span class="no">03</span><h3>la guía</h3><p><a href="../../agents/personal-dictionary.md"><code>personal-dictionary.md</code></a> (en inglés) explica dónde buscar textos, cómo tomar solo tus mensajes de una exportación de chat, qué tres comandos ejecutar, cómo limpiar la lista de palabras, cómo es el archivo de importación y cómo pasarlo al teléfono. También es un skill: cópialo en la carpeta de skills de tu agente.</p></li><li><span class="no">04</span><h3>dile esto a tu agente</h3><p><span class="prompt">Lee https://cypherpunk.today/droneboard/agents/personal-dictionary.md y créame un diccionario personal para el teclado Droneboard a partir de mis propios textos. Mis textos están en &lt;carpeta o archivo&gt;. Escribo en &lt;idiomas&gt;. Déjalo todo en este ordenador y enséñame la lista antes de importarla.</span></p></li><li><span class="no">05</span><h3>después, en el teléfono</h3><p>En Droneboard 0.2.1 o posterior abre <strong>Ajustes → Corrección de texto → Diccionario personal → Importar desde un archivo</strong>. Muestra cuántas palabras son nuevas y las añade cuando confirmas. Las palabras que ya estaban se quedan. La misma pantalla importa el diccionario exportado de Gboard, si solo quieres traer las palabras que añadiste allí a mano.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g2" aria-labelledby="g2-h">
+  <h2 id="g2-h">enséñale a droneboard un idioma nuevo</h2>
+  <ol class="tracks tips"><li><span class="no">06</span><h3>de qué consta un idioma</h3><p>Un diccionario principal para escribir tocando, una lista de palabras para deslizar con estadísticas de pares y tríos de palabras, un diccionario de emojis, un pequeño modelo neuronal de la palabra siguiente que se ejecuta en el teléfono y una distribución de teclado. Cada parte se construye con datos abiertos y scripts del repositorio.</p></li><li><span class="no">07</span><h3>qué necesita el agente</h3><p>Una copia del <a href="https://github.com/jooray/droneboard">main más reciente</a>, Python y espacio en disco para el corpus. El modelo neuronal se entrena con MLX, así que hace falta un Mac con Apple Silicon. La guía dice qué descarga cada paso y cuánto tarda.</p></li><li><span class="no">08</span><h3>la guía</h3><p><a href="../../agents/new-language.md"><code>new-language.md</code></a> (en inglés) explica cómo comprobar que un idioma es viable, de dónde salieron nuestros datos y cómo encontrar lo mismo para otro idioma, los comandos para diccionarios y n-gramas, el entrenamiento, la exportación y la verificación del modelo, y cada archivo de la app que hay que cambiar. Los commits que añadieron el húngaro sirven de ejemplo. Termina con cómo medir el resultado y qué poner en el pull request.</p></li><li><span class="no">09</span><h3>dile esto a tu agente</h3><p><span class="prompt">Lee https://cypherpunk.today/droneboard/agents/new-language.md, descarga la última versión de https://github.com/jooray/droneboard y añade &lt;idioma&gt; a Droneboard: diccionarios, lista de palabras para deslizar y el modelo neuronal de la palabra siguiente. Antes de empezar, dime qué datos quieres descargar y cuánto tardará el entrenamiento.</span></p></li><li><span class="no">10</span><h3>envíalo de vuelta</h3><p>Un idioma que te funciona a ti le funcionará también a la siguiente persona. Abre un pull request en <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a> con los archivos generados, los comandos que ejecutaste y las cifras que mediste.</p></li></ol>
+</section>
+
+<section class="panel agents" id="g3" aria-labelledby="g3-h">
+  <h2 id="g3-h">datos que un agente debe conocer</h2>
+  <ol class="tracks tips"><li><span class="no">11</span><h3>el proyecto</h3><p>Droneboard es un teclado para Android de código abierto (GPL-3.0), un fork de HeliBoard. Su identificador de aplicación es <code>today.cypherpunk.droneboard</code>. No tiene el permiso INTERNET, así que todo lo que usa viene en el APK o lo importa el usuario desde un archivo.</p></li><li><span class="no">12</span><h3>dónde está cada cosa</h3><p>Código fuente: <a href="https://github.com/jooray/droneboard">github.com/jooray/droneboard</a>. El APK está en las <a href="https://github.com/jooray/droneboard/releases/latest">versiones de GitHub</a>. Las herramientas de diccionarios están en <code>tools/dicts</code>, las del modelo neuronal en <code>tools/lm</code>, la reproducción y evaluación de gestos en <code>tools/swipe-replay</code>. Los formatos de archivo se describen en <code>native/droneswipe/FORMAT.md</code> y <code>docs/dictionaries.md</code>.</p></li><li><span class="no">13</span><h3>texto plano para máquinas</h3><p>Las dos guías son archivos Markdown con direcciones estables y figuran en <a href="../../llms.txt"><code>llms.txt</code></a>. Son copias de archivos del repositorio y se regeneran con el sitio web.</p></li><li><span class="no">14</span><h3>límites</h3><p>El diccionario personal no se puede rellenar por adb. Android solo deja escribir en él al teclado, por eso la importación se hace en la app. La escritura deslizando funciona con palabras sueltas en alfabeto latino. Los pesos del codificador de gestos son de FUTO y tienen su propia licencia.</p></li></ol>
+</section>
+
+<section class="panel" id="more" aria-label="volver a la página principal">
+  <p class="inst-note"><a href="../../es/">volver a la página principal</a> · <a href="https://github.com/jooray/droneboard">código fuente</a></p>
+</section>
+
+<section class="panel xpromo compact" id="more" aria-labelledby="more-h">
+  <h2 id="more-h">si te gusta Droneboard, quizá también te gusten…</h2>
+  <ul class="xp-list"><li><img src="../../img/third-ear-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>Third Ear</h3><p>Una grabadora de voz con tus propios botones: guardar, transcribir, copiar, compartir o enviar a un grupo de White Noise. Graba también desde auriculares Bluetooth y audífonos, transcribe en el teléfono con Offline Speech to Text y funciona en Android Auto.</p></div><div class="xp-links"><a href="https://cypherpunk.today/third-ear/es/" hreflang="es">Web</a><a href="https://zapstore.dev/apps/app.thirdear">Zapstore</a></div></li><li><img src="../../img/i-hear-you-icon.png" width="48" height="48" alt="" loading="lazy"><div class="xp-text"><h3>I Hear You</h3><p>Un mando independiente y de código abierto para audífonos GN (ReSound Nexia y CROS) en Android, sin cuenta y sin conexión. Graba notas de voz con los micrófonos de los audífonos y las transcribe en el teléfono.</p></div><div class="xp-links"><a href="https://cypherpunk.today/i-hear-you/es/" hreflang="es">Web</a><a href="https://zapstore.dev/apps/app.ihearyou">Zapstore</a></div></li></ul>
+  <p class="xp-note">Las tres apps transcriben voz en el teléfono con Offline Speech to Text. <a href="../dictation/#languages">Cómo funciona el dictado</a>.</p>
+</section>
+</main>
+
+<footer class="foot">
+  <span>Droneboard 0.1 beta · GPL-3.0 · hecho con ayuda de IA; las contribuciones son bienvenidas</span>
+  <ul aria-label="Idioma"><li><a href="../../agents/" hreflang="en" lang="en">English</a></li><li><a href="../../sk/agents/" hreflang="sk" lang="sk">Slovenčina</a></li><li><a href="../../cs/agents/" hreflang="cs" lang="cs">Čeština</a></li><li><a href="../../de/agents/" hreflang="de" lang="de">Deutsch</a></li><li><a href="../../es/agents/" hreflang="es" lang="es" aria-current="page">Español</a></li></ul>
+</footer>
+</body>
+</html>

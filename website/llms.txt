@@ -1,0 +1,17 @@
+# Droneboard
+
+> Droneboard is an open-source Android keyboard that works entirely offline: multilingual swipe typing,
+> on-device neural next-word prediction and offline dictation. No INTERNET permission. GPL-3.0.
+
+## Guides for agents
+
+- [personal-dictionary.md](https://cypherpunk.today/droneboard/agents/personal-dictionary.md): Build a personal dictionary for Droneboard from text the user has already written.
+- [new-language.md](https://cypherpunk.today/droneboard/agents/new-language.md): Add a language to Droneboard: dictionaries, swipe word list, neural next-word model, app wiring.
+
+## Project
+
+- [Source code](https://github.com/jooray/droneboard): app, dictionary and model tooling, website
+- [Releases](https://github.com/jooray/droneboard/releases/latest): the signed APK
+- [Website](https://cypherpunk.today/droneboard/): features, privacy, install
+- [Tips](https://cypherpunk.today/droneboard/tips/): gestures and settings that are easy to miss
+- [Dictation](https://cypherpunk.today/droneboard/dictation/): how offline dictation is set up

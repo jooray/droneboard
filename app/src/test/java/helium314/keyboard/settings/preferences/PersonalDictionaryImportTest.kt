@@ -29,20 +29,20 @@ class PersonalDictionaryImportTest {
     }
 
     @Test fun plainWords() {
-        val p = parse("Bratislava\nParalelná Polis\nžltý\n")
+        val p = parse("Bratislava\nBanská Štiavnica\nžltý\n")
         assertEquals(Format.TEXT, p.format)
         assertNull(p.error)
-        assertEquals(listOf(Entry("Bratislava", null), Entry("Paralelná Polis", null), Entry("žltý", null)), p.entries)
+        assertEquals(listOf(Entry("Bratislava", null), Entry("Banská Štiavnica", null), Entry("žltý", null)), p.entries)
         assertEquals(0, p.invalidLines)
         assertEquals(0, p.duplicates)
     }
 
     @Test fun columns() {
-        val p = parse("word\nlightning\ten\nParalelná Polis\tsk\tpp\nBednár\tsk\t\t200\nomw\t\tOn my way!\nx\t\t\t17\n")
+        val p = parse("word\nlightning\ten\nBanská Štiavnica\tsk\tbs\nKováč\tsk\t\t200\nomw\t\tOn my way!\nx\t\t\t17\n")
         assertEquals(
             listOf(
-                Entry("word", null), Entry("lightning", "en"), Entry("Paralelná Polis", "sk", "pp"),
-                Entry("Bednár", "sk", null, 200), Entry("omw", null, "On my way!"), Entry("x", null, null, 17),
+                Entry("word", null), Entry("lightning", "en"), Entry("Banská Štiavnica", "sk", "bs"),
+                Entry("Kováč", "sk", null, 200), Entry("omw", null, "On my way!"), Entry("x", null, null, 17),
             ), p.entries
         )
         assertEquals(0, p.invalidLines)
@@ -111,11 +111,11 @@ class PersonalDictionaryImportTest {
     }
 
     @Test fun gboard() {
-        val p = parse("# Gboard Dictionary version:1\n\npp\tParalelná Polis\tsk\n\tBednár\tsk\nomw\tOn my way!\ten-US\n\tnostr\t\n\tlightning\nbroken\n")
+        val p = parse("# Gboard Dictionary version:1\n\nbs\tBanská Štiavnica\tsk\n\tKováč\tsk\nomw\tOn my way!\ten-US\n\tnostr\t\n\tlightning\nbroken\n")
         assertEquals(Format.GBOARD, p.format)
         assertEquals(
             listOf(
-                Entry("Paralelná Polis", "sk", "pp"), Entry("Bednár", "sk"), Entry("On my way!", "en_US", "omw"),
+                Entry("Banská Štiavnica", "sk", "bs"), Entry("Kováč", "sk"), Entry("On my way!", "en_US", "omw"),
                 Entry("nostr", null), Entry("lightning", null),
             ), p.entries
         )
@@ -145,7 +145,7 @@ class PersonalDictionaryImportTest {
 
     @Test fun droneboardJson() {
         val json = """[
- {"word": "Paralelná Polis", "shortcut": "pp", "frequency": 250, "locale": "sk"},
+ {"word": "Banská Štiavnica", "shortcut": "bs", "frequency": 250, "locale": "sk"},
  {"word": "nostr", "frequency": 999},
  {"word": "color", "locale": "en_US", "frequency": 120},
  {"word": "odd", "locale": "some odd locale"},
@@ -158,7 +158,7 @@ class PersonalDictionaryImportTest {
         assertEquals(Format.DRONEBOARD, p.format)
         assertEquals(
             listOf(
-                Entry("Paralelná Polis", "sk", "pp", 250), Entry("nostr", null, null, 255),
+                Entry("Banská Štiavnica", "sk", "bs", 250), Entry("nostr", null, null, 255),
                 Entry("color", "en_US", null, 120), Entry("odd", "some odd locale"),
             ), p.entries
         )
@@ -217,7 +217,7 @@ class PersonalDictionaryImportTest {
 
     @Test fun exportRoundTrips() {
         val entries = listOf(
-            Entry("Paralelná Polis", "sk", "pp", 250), Entry("nostr", null, null, 200), Entry("#bitcoin", null, null, 1),
+            Entry("Banská Štiavnica", "sk", "bs", 250), Entry("nostr", null, null, 200), Entry("#bitcoin", null, null, 1),
             Entry("color", "en_US", "clr", 255), Entry("sr", "sr__#Latn", null, 17),
         )
         val text = PersonalDictionaryImport.toText(entries)
