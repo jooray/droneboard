@@ -663,6 +663,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         for (group in dictionaryGroups) {
             for (type in arrayOf(Dictionary.TYPE_USER, Dictionary.TYPE_USER_HISTORY)) {
                 val dict = group.getSubDict(type) ?: continue
+                // rebuilds the personal dictionary in the background if words were added or imported;
+                // the swipe decoder asks again shortly after a change
+                dict.reloadDictionaryIfRequired()
                 // personal dictionary words count as written often
                 val floor = if (type == Dictionary.TYPE_USER) 200 else 0
                 dict.dumpWordsForSwipe(maxWords).forEach { (word, p) ->

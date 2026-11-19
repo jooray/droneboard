@@ -110,6 +110,8 @@ object SwipeGestureDecoder {
     private val USER_PARAMS = floatArrayOf(0.5f, 0.9866f, 0.025f, 0f, 0f, 0f, 1.0f)
     private const val USER_WORDS_MAX = 20000
     private const val USER_WORDS_REFRESH_MS = 5 * 60 * 1000L
+    private const val USER_WORDS_CHANGED_MS = 2 * 60 * 1000L
+    private const val USER_WORDS_CHANGED_REFRESH_MS = 10 * 1000L
 
     /** Supplies the user's words with weights 0-255 (typing history, personal dictionary); set by the IME. */
     @JvmStatic
@@ -117,6 +119,20 @@ object SwipeGestureDecoder {
     var userWordsProvider: ((Int) -> Map<String, Int>)? = null
     @Volatile
     private var userWordsLoadedAt = 0L
+    /** until this time the user's words are reloaded often, see [invalidateUserWords] */
+    @Volatile
+    private var userWordsChangedUntil = 0L
+
+    /**
+     * The personal dictionary changed (a word was added, a list was imported): reload the user's words at the
+     * next swipe instead of after [USER_WORDS_REFRESH_MS]. The keyboard's copy of the personal dictionary is
+     * rebuilt in the background, so for a while the words are reloaded every few seconds to catch the new copy.
+     */
+    @JvmStatic
+    fun invalidateUserWords() {
+        userWordsChangedUntil = System.currentTimeMillis() + USER_WORDS_CHANGED_MS
+        userWordsLoadedAt = 0L
+    }
 
     private var session = 0L
     /** loaded dictionaries; filled by the loader thread, read by the decoder */
@@ -212,7 +228,8 @@ object SwipeGestureDecoder {
         val provider = userWordsProvider ?: return
         if (!DirectBoot.isUnlocked()) return // the user's words are personal data, not read before unlock
         val now = System.currentTimeMillis()
-        if (session == 0L || now - userWordsLoadedAt < USER_WORDS_REFRESH_MS) return
+        val interval = if (now < userWordsChangedUntil) USER_WORDS_CHANGED_REFRESH_MS else USER_WORDS_REFRESH_MS
+        if (session == 0L || now - userWordsLoadedAt < interval) return
         userWordsLoadedAt = now
         loader.execute {
             try {

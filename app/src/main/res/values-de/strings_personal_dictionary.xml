@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: import of a word list into the personal dictionary and export to a file
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="personal_dictionary_import">Aus Datei importieren</string>
+    <string name="personal_dictionary_export">In Datei exportieren</string>
+    <string name="personal_dictionary_import_title">Wörter importieren</string>
+    <string name="personal_dictionary_import_confirm">Importieren</string>
+    <string name="personal_dictionary_format_text">Textdatei, ein Wort pro Zeile</string>
+    <string name="personal_dictionary_format_gboard">Gboard-Wörterbuch</string>
+    <string name="personal_dictionary_format_droneboard">Persönliches Wörterbuch von Droneboard</string>
+    <string name="personal_dictionary_import_summary">Einträge in der Datei: %1$d\nNeu: %2$d\nSchon im Wörterbuch: %3$d\nÜbersprungene ungültige Zeilen: %4$d</string>
+    <string name="personal_dictionary_import_repeated">In der Datei wiederholt: %d</string>
+    <string name="personal_dictionary_import_preview">Die ersten neuen Wörter:</string>
+    <string name="personal_dictionary_import_more">und %d weitere</string>
+    <string name="personal_dictionary_import_nothing_new">Alle Wörter aus der Datei stehen schon im persönlichen Wörterbuch. Es gibt nichts hinzuzufügen.</string>
+    <string name="personal_dictionary_import_done">Hinzugefügte Wörter: %d</string>
+    <string name="personal_dictionary_unavailable">Android erlaubt nur einer eingeschalteten Tastatur, das persönliche Wörterbuch zu ändern. Schalte Droneboard in den Systemeinstellungen ein, wähle es als Tastatur aus und versuche es noch einmal. Es wurde nichts geändert.</string>
+    <string name="personal_dictionary_import_too_large">Die Datei ist zu groß. Die Grenze liegt bei %1$d MB und %2$d Einträgen. Es wurde nichts hinzugefügt.</string>
+    <string name="personal_dictionary_import_unreadable">Diese Datei ist keine Wortliste. Verwende eine UTF-8-Textdatei mit einem Wort pro Zeile, ein aus Gboard exportiertes Wörterbuch oder eine Datei mit dem persönlichen Wörterbuch von Droneboard.</string>
+    <string name="personal_dictionary_import_empty">In der Datei wurden keine Wörter gefunden. Ungültige Zeilen: %d</string>
+    <string name="personal_dictionary_export_empty">Das persönliche Wörterbuch ist leer. Es gibt nichts zu exportieren.</string>
+    <string name="personal_dictionary_export_done">Exportierte Wörter: %d</string>
+    <string name="personal_dictionary_export_error">Die Datei konnte nicht geschrieben werden: %s</string>
+    <string name="personal_dictionary_working">Einen Moment…</string>
+</resources>
