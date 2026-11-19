@@ -276,6 +276,7 @@ def page(code, t, langs, site):
         <li><a href="{home}#features">{nav['features']}</a></li>
         <li><a href="{home}#privacy">{nav['privacy']}</a></li>
         <li><a href="{home}#install">{nav['install']}</a></li>
+        <li><a href="{home}#nostr">{nav['nostr']}</a></li>
         <li><a href="{home}tips/">{TIPS[code]}</a></li>
         <li><a href="{home}{PATH}" aria-current="page">{LABEL[code]}</a></li>
       </ul>

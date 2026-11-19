@@ -592,6 +592,7 @@ def page(code):
         <li><a href="#install">{nav['install']}</a></li>
         <li><a href="#nostr">{nav['nostr']}</a></li>
         <li><a href="{tips.PATH}">{tips.LABEL[code]}</a></li>
+        <li><a href="{agents.PATH}">{agents.LABEL[code]}</a></li>
       </ul>
       <ul class="langs" aria-label="{e(t['langlabel'])}">{switcher}</ul>
     </nav>

@@ -4,6 +4,7 @@ Called from build.py, which passes in the shared copy (T) for the header and foo
 here are written by us and may contain HTML.
 """
 import crosspromo
+import agents
 import tips
 from html import escape
 
@@ -241,6 +242,7 @@ def page(code, t, langs, site):
         <li><a href="{home}#install">{nav['install']}</a></li>
         <li><a href="{home}#nostr">{nav['nostr']}</a></li>
         <li><a href="{home}{tips.PATH}">{tips.LABEL[code]}</a></li>
+        <li><a href="{home}{agents.PATH}">{agents.LABEL[code]}</a></li>
       </ul>
       <ul class="langs" aria-label="{e(t['langlabel'])}">{switcher}</ul>
     </nav>
