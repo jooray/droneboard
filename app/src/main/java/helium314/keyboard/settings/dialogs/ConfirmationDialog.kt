@@ -4,6 +4,7 @@ package helium314.keyboard.settings.dialogs
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import helium314.keyboard.latin.R
@@ -24,6 +25,7 @@ fun ConfirmationDialog(
     cancelButtonText: String = stringResource(android.R.string.cancel),
     neutralButtonText: String? = null,
     onNeutral: () -> Unit = { },
+    confirmButtonColor: Color = Color.Unspecified,
 ) {
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -35,6 +37,7 @@ fun ConfirmationDialog(
         modifier = modifier,
         title = title,
         content = content,
+        confirmButtonColor = confirmButtonColor,
     )
 }
 

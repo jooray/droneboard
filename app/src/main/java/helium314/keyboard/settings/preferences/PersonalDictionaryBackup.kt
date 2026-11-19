@@ -16,6 +16,7 @@ import org.json.JSONObject
  * so the file backup did not contain it. It is written to the backup as JSON and merged on restore:
  * missing words are added, existing ones are left as they are, nothing is deleted.
  * Importing a word list ([PersonalDictionaryImport]) merges the same way, through [addMissing].
+ * Only [deleteAll] ("Delete all words" in the settings, after a confirmation) removes entries.
  *
  * Android lets only an enabled keyboard (or spell checker) use the provider: for anybody else queries are
  * empty and inserts do nothing, without an error.
@@ -102,6 +103,37 @@ internal object PersonalDictionaryBackup {
         val added = toAdd.count { it.key in after }
         if (added > 0) notifyChanged()
         return added
+    }
+
+    /** [everything]: the whole dictionary; otherwise the entries of [locale] (Locale.toString()), null = "for all languages" */
+    private fun selection(everything: Boolean, locale: String?): Pair<String?, Array<String>?> = when {
+        everything -> null to null
+        // the same selections the word list of the settings uses
+        locale == null -> "${UserDictionary.Words.LOCALE} is null" to null
+        else -> "${UserDictionary.Words.LOCALE}=?" to arrayOf(locale)
+    }
+
+    /** how many entries there are (see [selection]); null when the provider is unavailable */
+    fun count(context: Context, everything: Boolean, locale: String?): Int? {
+        val (where, args) = selection(everything, locale)
+        return context.contentResolver.query(UserDictionary.Words.CONTENT_URI,
+            arrayOf(UserDictionary.Words._ID), where, args, null)?.use { it.count }
+    }
+
+    /**
+     * Deletes the whole dictionary or one list of it (see [selection]). Returns how many entries were removed,
+     * null when the provider is unavailable. Call it off the main thread.
+     */
+    fun deleteAll(context: Context, everything: Boolean, locale: String?): Int? {
+        val before = count(context, everything, locale) ?: return null
+        if (before == 0) return 0
+        val (where, args) = selection(everything, locale)
+        context.contentResolver.delete(UserDictionary.Words.CONTENT_URI, where, args)
+        // counted, because a keyboard that is not enabled deletes nothing and gets no error
+        val after = count(context, everything, locale) ?: return null
+        val removed = (before - after).coerceAtLeast(0)
+        if (removed > 0) notifyChanged()
+        return removed
     }
 
     /** the keyboard's copy of the personal dictionary is rebuilt at the next use, for tapping and for swiping */

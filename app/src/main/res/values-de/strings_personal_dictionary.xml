@@ -23,4 +23,19 @@
     <string name="personal_dictionary_export_done">Exportierte Wörter: %d</string>
     <string name="personal_dictionary_export_error">Die Datei konnte nicht geschrieben werden: %s</string>
     <string name="personal_dictionary_working">Einen Moment…</string>
+    <!-- the row in the main settings, "Delete all words" and the letter index of the word list -->
+    <string name="personal_dictionary_main_summary">Eigene Wörter, Import und Export</string>
+    <string name="personal_dictionary_word_count">Wörter: %d</string>
+    <string name="personal_dictionary_delete_all">Alle Wörter löschen</string>
+    <string name="personal_dictionary_delete_all_title">Alle Wörter löschen?</string>
+    <string name="personal_dictionary_delete_all_everything">Das gesamte persönliche Wörterbuch wird gelöscht, in allen Sprachen.</string>
+    <string name="personal_dictionary_delete_all_list">Nur die Wörter dieser Liste werden gelöscht: %s. Die anderen Listen bleiben unverändert.</string>
+    <string name="personal_dictionary_delete_all_count">Wörter, die gelöscht werden: %d</string>
+    <string name="personal_dictionary_delete_all_warning">Das kann nicht rückgängig gemacht werden. Wenn Sie die Wörter noch brauchen könnten, exportieren Sie sie zuerst in eine Datei.</string>
+    <string name="personal_dictionary_delete_all_confirm">Alle löschen</string>
+    <string name="personal_dictionary_export_first">Zuerst exportieren</string>
+    <string name="personal_dictionary_delete_all_done">Gelöschte Wörter: %d</string>
+    <string name="personal_dictionary_delete_all_empty">Hier gibt es keine Wörter. Es gibt nichts zu löschen.</string>
+    <string name="personal_dictionary_index_letter">Zum Buchstaben %s springen</string>
+    <string name="personal_dictionary_index_other">Zu den Wörtern springen, die nicht mit einem Buchstaben beginnen</string>
 </resources>

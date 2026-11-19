@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,6 +25,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,9 @@ fun ThreeButtonAlertDialog(
     cancelButtonText: String = stringResource(android.R.string.cancel),
     neutralButtonText: String? = null,
     reducePadding: Boolean = false,
-    properties: DialogProperties = DialogProperties()
+    properties: DialogProperties = DialogProperties(),
+    // Droneboard: a destructive action is marked with the error colour
+    confirmButtonColor: Color = Color.Unspecified,
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -103,6 +107,8 @@ fun ThreeButtonAlertDialog(
                             TextButton(
                                 enabled = checkOk(),
                                 onClick = { onConfirmed(); onDismissRequest() },
+                                colors = if (confirmButtonColor == Color.Unspecified) ButtonDefaults.textButtonColors()
+                                    else ButtonDefaults.textButtonColors(contentColor = confirmButtonColor),
                             ) { Text(confirmButtonText) }
                     }
                 }

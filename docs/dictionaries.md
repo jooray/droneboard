@@ -18,7 +18,11 @@ Swipe typing uses only the bundled swipe word lists. Other languages can be type
 
 ## Importing your own words into the personal dictionary
 
-If you have a list of words you often write (names, places, terms from your work), you do not have to add them one by one. Settings → Text correction → Personal dictionary → **Import from file** reads the list, shows how many words are new and adds them after you confirm. Words that are already in the dictionary stay as they are and nothing is deleted, so the same file can be imported again. **Export to file** on the same screen writes the whole personal dictionary in the text format below.
+If you have a list of words you often write (names, places, terms from your work), you do not have to add them one by one. Settings → Personal dictionary → **Import from file** reads the list, shows how many words are new and adds them after you confirm. Words that are already in the dictionary stay as they are and nothing is deleted, so the same file can be imported again. **Export to file** on the same screen writes the whole personal dictionary in the text format below.
+
+The personal dictionary is in the main settings menu, right after Dictionaries (the same screen is also under Text correction → Personal dictionary). It has one list per language and one "For all languages". A list with more than 30 words shows the letters its words start with on the right edge: tap a letter or slide a finger along them to jump to it. Accented letters are under their base letter (č under C) and words that do not start with a letter are under `#`.
+
+**Delete all words** on the personal dictionary screen empties the whole dictionary, in all languages. The same action in the menu of one list (the arrow at the top right) deletes only the words of that list. Both ask first, show how many words will be deleted and offer **Export first**, because the deletion cannot be undone.
 
 Droneboard has to be turned on as a keyboard, because Android lets only a keyboard change the personal dictionary. A file can have up to 5 MB and 50,000 entries. The format is recognised from the content of the file, not from its name:
 

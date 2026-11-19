@@ -23,4 +23,19 @@
     <string name="personal_dictionary_export_done">Words exported: %d</string>
     <string name="personal_dictionary_export_error">The file could not be written: %s</string>
     <string name="personal_dictionary_working">Working…</string>
+    <!-- the row in the main settings, "Delete all words" and the letter index of the word list -->
+    <string name="personal_dictionary_main_summary">Your own words, import and export</string>
+    <string name="personal_dictionary_word_count">Words: %d</string>
+    <string name="personal_dictionary_delete_all">Delete all words</string>
+    <string name="personal_dictionary_delete_all_title">Delete all words?</string>
+    <string name="personal_dictionary_delete_all_everything">The whole personal dictionary will be deleted, in all languages.</string>
+    <string name="personal_dictionary_delete_all_list">Only the words of this list will be deleted: %s. The other lists stay as they are.</string>
+    <string name="personal_dictionary_delete_all_count">Words that will be deleted: %d</string>
+    <string name="personal_dictionary_delete_all_warning">This cannot be undone. If you might need the words again, export them to a file first.</string>
+    <string name="personal_dictionary_delete_all_confirm">Delete all</string>
+    <string name="personal_dictionary_export_first">Export first</string>
+    <string name="personal_dictionary_delete_all_done">Words deleted: %d</string>
+    <string name="personal_dictionary_delete_all_empty">There are no words here. There is nothing to delete.</string>
+    <string name="personal_dictionary_index_letter">Jump to the letter %s</string>
+    <string name="personal_dictionary_index_other">Jump to the words that do not start with a letter</string>
 </resources>

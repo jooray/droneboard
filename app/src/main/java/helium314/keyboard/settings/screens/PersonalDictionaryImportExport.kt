@@ -38,8 +38,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
-/** what the two rows of the personal dictionary screen do */
+/** what the import and export rows of the personal dictionary screen do */
 class PersonalDictionaryFileActions(val import: () -> Unit, val export: () -> Unit)
 
 private class ImportPreview(val parsed: PersonalDictionaryImport.Parsed, val plan: PersonalDictionaryImport.Plan)
@@ -150,6 +151,80 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
             }
         }
     )
+}
+
+/**
+ * Droneboard: "Delete all words". [everything] deletes the whole personal dictionary, otherwise only the list
+ * of [locale] (null = "for all languages"). Asks first, with the number of words; [export] is offered in the
+ * question. Returns the action to start it; [onDeleted] runs after words were removed.
+ */
+@Composable
+fun personalDictionaryDeleteAll(
+    everything: Boolean,
+    locale: Locale?,
+    export: () -> Unit,
+    onDeleted: () -> Unit = { },
+): () -> Unit {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var working by remember { mutableStateOf(false) }
+    var message: String? by remember { mutableStateOf(null) }
+    var pending: Int? by remember { mutableStateOf(null) }
+    // requires use of locale string for interaction with Android system
+    val localeString = locale?.toString()
+
+    if (working) WorkingDialog()
+    message?.let { InfoDialog(it) { message = null } }
+    pending?.let { count ->
+        ConfirmationDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(stringResource(R.string.personal_dictionary_delete_all_title)) },
+            content = {
+                val what = if (everything) stringResource(R.string.personal_dictionary_delete_all_everything)
+                    else stringResource(R.string.personal_dictionary_delete_all_list, locale.getLocaleDisplayNameForUserDictSettings(ctx))
+                Text(what + "\n\n" + stringResource(R.string.personal_dictionary_delete_all_count, count)
+                    + "\n\n" + stringResource(R.string.personal_dictionary_delete_all_warning))
+            },
+            confirmButtonText = stringResource(R.string.personal_dictionary_delete_all_confirm),
+            confirmButtonColor = MaterialTheme.colorScheme.error,
+            neutralButtonText = stringResource(R.string.personal_dictionary_export_first),
+            onNeutral = {
+                pending = null
+                export()
+            },
+            onConfirmed = {
+                pending = null
+                working = true
+                scope.launch {
+                    // leaving the screen must not stop the deletion half way
+                    val removed = withContext(Dispatchers.IO + NonCancellable) {
+                        runCatching { PersonalDictionaryBackup.deleteAll(ctx, everything, localeString) }
+                            .onFailure { Log.w(TAG, "could not delete from the personal dictionary", it) }.getOrNull()
+                    }
+                    working = false
+                    if (removed == null || removed == 0) {
+                        message = ctx.getString(R.string.personal_dictionary_unavailable)
+                    } else {
+                        message = ctx.getString(R.string.personal_dictionary_delete_all_done, removed)
+                        onDeleted()
+                    }
+                }
+            }
+        )
+    }
+
+    return {
+        scope.launch {
+            val count = withContext(Dispatchers.IO) {
+                runCatching { PersonalDictionaryBackup.count(ctx, everything, localeString) }.getOrNull()
+            }
+            when {
+                !isKeyboardEnabled(ctx) || count == null -> message = ctx.getString(R.string.personal_dictionary_unavailable)
+                count == 0 -> message = ctx.getString(R.string.personal_dictionary_delete_all_empty)
+                else -> pending = count
+            }
+        }
+    }
 }
 
 /** an [ImportPreview] to confirm, or the message to show when there is nothing to import */
