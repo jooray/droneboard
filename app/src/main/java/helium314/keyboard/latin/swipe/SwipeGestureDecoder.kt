@@ -293,6 +293,18 @@ object SwipeGestureDecoder {
         }
     }
 
+    /**
+     * False while a swipe dictionary of [languages] that ships in the APK is not loaded yet (right after an
+     * install or update the files are still being copied out of the APK). Predictions made then come from
+     * fewer languages or without n-grams: they are stand-ins and must not be cached.
+     */
+    @JvmStatic
+    fun dictionariesReady(languages: List<String>): Boolean {
+        val context = appContext ?: return false
+        val available = languagesWithDictionary(context)
+        return languages.all { it !in available || dictionaries[it] != null }
+    }
+
     /** Handle of the loaded dictionary, 0 if it is not loaded (yet). With [waitMs] > 0, waits for loading. */
     private fun dictionary(context: Context, language: String, waitMs: Long): Long {
         dictionaries[language]?.let { return it }

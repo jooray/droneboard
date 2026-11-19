@@ -84,13 +84,20 @@ object NeuralLanguageModel : LanguageModel {
 
     override fun predict(context: List<String>, prefix: String, locales: List<Locale>, maxResults: Int): List<WordPrediction> {
         lastAnswerTemporary.set(false)
-        val fallback = { NgramLanguageModel.predict(context, prefix, locales, maxResults) }
+        val languages = locales.map { it.engineKey }.distinct()
+        // While a dictionary is still loading (right after an update the files are being copied out of the APK),
+        // an answer comes from fewer languages or without n-grams. It is a stand-in like the ones below: caching
+        // it would keep the worse answer for that context until the keyboard restarts.
+        val dictionariesReady = SwipeGestureDecoder.dictionariesReady(languages)
+        val fallback = {
+            if (!dictionariesReady) lastAnswerTemporary.set(true)
+            NgramLanguageModel.predict(context, prefix, locales, maxResults)
+        }
         val temporaryFallback = { lastAnswerTemporary.set(true); fallback() }
         // direct boot: no model files before the first unlock, and no predictions from personal data
         if (maxResults <= 0 || !DirectBoot.isUnlocked() || !FutoSwipe.isAvailable) return emptyList()
         if (!Settings.getValues().mNeuralPredictions) return fallback()
         val app = SwipeGestureDecoder.appContext ?: return fallback()
-        val languages = locales.map { it.engineKey }.distinct()
         if (languages.isEmpty() || !languages.all { it in neuralLanguages(app) }) return fallback()
         releaseOthers(languages)
         val handles = languages.map { models[it] }
@@ -101,11 +108,12 @@ object NeuralLanguageModel : LanguageModel {
         val (tokens, bos) = tokensBeforeCursor(textBeforeCursor.get(), context, prefix)
         val key = languages.joinToString(",") + "|" + bos + "|" + tokens.joinToString(" ") + "|" + prefix + "|" + maxResults
         synchronized(cache) { cache[key] }?.let { return it }
+        if (!dictionariesReady) lastAnswerTemporary.set(true)
         val future: Future<List<WordPrediction>> = executor.submit<List<WordPrediction>> {
             val start = SystemClock.elapsedRealtimeNanos()
             val result = run(languages, tokens, bos, prefix, maxResults, locales, context)
             record((SystemClock.elapsedRealtimeNanos() - start) / 1e6f, prefix.isEmpty())
-            if (result != null) synchronized(cache) { cache[key] = result }
+            if (result != null && dictionariesReady) synchronized(cache) { cache[key] = result }
             result ?: emptyList()
         }
         return try {

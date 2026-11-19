@@ -1,0 +1,1 @@
+- Predictions after an update: if you started typing while the dictionaries were still being unpacked, the weaker suggestions from those first seconds were remembered and kept coming back for the same sentence beginnings until the keyboard restarted. They are no longer remembered, so predictions are back to normal as soon as loading finishes.
