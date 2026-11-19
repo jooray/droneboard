@@ -22,6 +22,8 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.Database
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.support.SupportAsk
+import helium314.keyboard.latin.support.SupportState
 import helium314.keyboard.latin.swipe.TypingSwipeRecorder
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -286,6 +288,8 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                 onError("r" + t.message)
                 Log.w("AdvancedScreen", "error during restore", t)
             } finally {
+                // the support ask's state travels with the settings, but an ended asking stays ended
+                SupportAsk.afterRestore(ctx, oldPrefs[SupportState.KEY] as? String)
                 wait.countDown()
             }
         }

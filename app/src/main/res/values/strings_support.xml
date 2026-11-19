@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: the support ask and the "Support the project" row. The wording is shared by the
+     author's apps (support-widget/spec/ask.md section 6: ask_text, ask_yes, ask_later, ask_never, menu);
+     German and Spanish as in Third Ear, other languages use English. Slovak, Czech and German use the formal form, like the rest of this app.
+     SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="support_ask_text">Droneboard is free and open source. Support it and get an e-book.</string>
+    <string name="support_ask_yes">Support</string>
+    <string name="support_ask_later">Not now</string>
+    <string name="support_ask_never">Don\'t ask again</string>
+    <string name="support_menu">Support the project</string>
+</resources>

@@ -17,6 +17,8 @@ public final class DebugSettings {
     public static final String PREF_EXPORT_DICTIONARY = "export_dictionary";
 
     public static final String PREF_SHOW_SUGGESTION_INFOS = "show_suggestion_infos";
+    /** Droneboard: the support ask shows on every visit of its screens, whatever the counts are */
+    public static final String PREF_FORCE_SUPPORT_ASK = "force_support_ask";
     private DebugSettings() {
         // This class is not publicly instantiable.
     }

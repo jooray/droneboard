@@ -2282,6 +2282,8 @@ public final class InputLogic {
         enterInlineEmojiSearchIfNeeded(batchInputText.codePointAt(0), settingsValues);
         setComposingTextInternal(batchInputText, 1);
         mConnection.endBatchEdit();
+        // Droneboard: one swiped word for the support ask (+1 in memory, nothing about the word)
+        helium314.keyboard.latin.support.SupportAsk.onAction(mLatinIME);
         if (TypingSwipeRecorder.armed)
             TypingSwipeRecorder.onSwipeCommitted(batchInputText, mConnection.getExpectedSelectionEnd());
         // Space state must be updated before calling updateShiftState

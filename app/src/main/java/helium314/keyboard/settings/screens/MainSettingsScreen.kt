@@ -44,6 +44,9 @@ import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.NextScreenIcon
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.SupportAskStrip
+import helium314.keyboard.settings.SupportMenuPreference
+import helium314.keyboard.latin.support.SupportCheckout
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.Preference
@@ -75,6 +78,7 @@ fun MainSettingsScreen(
                 Modifier.verticalScroll(rememberScrollState()).then(Modifier.padding(innerPadding))
             ) {
                 BrandHeader()
+                SupportAskStrip(SupportCheckout.REF_SETTINGS_HOME)
                 Preference(
                     name = stringResource(R.string.language_and_layouts_title),
                     description = enabledSubtypes.joinToString(", ") { it.displayName() },
@@ -134,6 +138,7 @@ fun MainSettingsScreen(
                     onClick = onClickAbout,
                     icon = R.drawable.ic_settings_about
                 ) { NextScreenIcon() }
+                SupportMenuPreference()
             }
         }
     }

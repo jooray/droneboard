@@ -24,6 +24,7 @@ import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.support.SupportAsk
 import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.prefs
 
@@ -61,6 +62,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private var field: Pair<String?, Int>? = null
     private var lastStatus: EngineStatus? = null
     private var errorShown = false
+    /** this dictation typed something into the field; one action for the support ask, see [finished] */
+    private var typedAny = false
     /** dictated text that could not be typed because its field went away; see [deliverUntyped] */
     private val untyped = StringBuilder()
     /** what the last dictation typed, for taking it back with one backspace; see [onKeyEvent] */
@@ -103,6 +106,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         val editor = ime.currentInputEditorInfo
         field = editor?.packageName to (editor?.fieldId ?: 0)
         errorShown = false
+        typedAny = false
         untyped.setLength(0)
         typedBlock.setLength(0)
         val t = OsttTranscriber(ime, this)
@@ -230,6 +234,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             transcriber = null
             state = State.IDLE
             deliverUntyped()
+            countDictation()
         }
     }
 
@@ -237,7 +242,15 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         transcriber = null
         state = State.IDLE
         deliverUntyped()
+        countDictation()
         if (!errorShown) hidePanel()
+    }
+
+    /** A dictation that typed text is one action for the support ask (a number only). */
+    private fun countDictation() {
+        if (!typedAny) return
+        typedAny = false
+        SupportAsk.onAction(ime)
     }
 
     private fun type(text: String) {
@@ -254,6 +267,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         if (joined.isEmpty()) return
         typing = true
         try { ime.onTextInput(joined) } finally { typing = false }
+        typedAny = true
         typedBlock.append(joined)
         typedBlockAt = SystemClock.elapsedRealtime()
     }

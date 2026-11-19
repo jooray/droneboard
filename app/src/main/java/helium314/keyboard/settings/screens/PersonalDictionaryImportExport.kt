@@ -40,8 +40,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-/** what the import and export rows of the personal dictionary screen do */
-class PersonalDictionaryFileActions(val import: () -> Unit, val export: () -> Unit)
+/**
+ * what the import and export rows of the personal dictionary screen do; [importDone] is true once an import
+ * added words and its result was closed (the screen may then show the support ask, never inside the dialog)
+ */
+class PersonalDictionaryFileActions(val import: () -> Unit, val export: () -> Unit, val importDone: Boolean = false)
 
 private class ImportPreview(val parsed: PersonalDictionaryImport.Parsed, val plan: PersonalDictionaryImport.Plan)
 
@@ -60,6 +63,8 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
     var working by remember { mutableStateOf(false) }
     var message: String? by remember { mutableStateOf(null) }
     var preview: ImportPreview? by remember { mutableStateOf(null) }
+    var importResultShown by remember { mutableStateOf(false) }
+    var importDone by remember { mutableStateOf(false) }
 
     val importPicker = filePicker { uri ->
         working = true
@@ -97,7 +102,15 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
     }
 
     if (working) WorkingDialog()
-    message?.let { InfoDialog(it) { message = null } }
+    message?.let {
+        InfoDialog(it) {
+            message = null
+            if (importResultShown) {
+                importResultShown = false
+                importDone = true
+            }
+        }
+    }
     preview?.let { p ->
         if (p.plan.toAdd.isEmpty()) {
             InfoDialog(previewText(ctx, p)) { preview = null }
@@ -118,6 +131,7 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
                             .onFailure { Log.w(TAG, "could not write to the personal dictionary", it) }.getOrNull()
                     }
                     working = false
+                    importResultShown = added != null && added > 0
                     message = if (added == null || added == 0) ctx.getString(R.string.personal_dictionary_unavailable)
                         else ctx.getString(R.string.personal_dictionary_import_done, added)
                 }
@@ -149,7 +163,8 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
                     )
                 }
             }
-        }
+        },
+        importDone = importDone
     )
 }
 
