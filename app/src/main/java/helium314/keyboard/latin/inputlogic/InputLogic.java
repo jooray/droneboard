@@ -101,7 +101,7 @@ public final class InputLogic {
     // Current space state of the input method. This can be any of the above constants.
     private int mSpaceState;
     // Never null
-    public SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
+    public volatile SuggestedWords mSuggestedWords = SuggestedWords.getEmptyInstance();
     public final Suggest mSuggest;
     private final DictionaryFacilitator mDictionaryFacilitator;
     private SingleDictionaryFacilitator mEmojiDictionaryFacilitator;
@@ -594,6 +594,7 @@ public final class InputLogic {
             }
         }
         mConnection.endBatchEdit();
+        mSuggestedWords = SuggestedWords.getEmptyBatchInstance();
         mWordComposer.setCapitalizedModeAtStartComposingTime(
                 getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardCapsMode()));
     }

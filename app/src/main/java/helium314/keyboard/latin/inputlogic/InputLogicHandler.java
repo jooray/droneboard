@@ -24,6 +24,10 @@ class InputLogicHandler implements Handler.Callback {
     final InputLogic mInputLogic;
     private final Object mLock = new Object();
     private boolean mInBatchInput; // synchronized using {@link #mLock}.
+    // counts gestures, so that a result can tell whether it belongs to the gesture in progress; guarded by mLock
+    private int mGestureId;
+    // the last non-empty preview of the gesture in progress; guarded by mLock
+    private SuggestedWords mGesturePreview;
 
     private static final int MSG_GET_SUGGESTED_WORDS = 1;
 
@@ -56,6 +60,8 @@ class InputLogicHandler implements Handler.Callback {
     public void onStartBatchInput() {
         synchronized (mLock) {
             mInBatchInput = true;
+            ++mGestureId;
+            mGesturePreview = null;
         }
     }
 
@@ -83,30 +89,44 @@ class InputLogicHandler implements Handler.Callback {
                 return;
             }
             mInputLogic.mWordComposer.setBatchInputPointers(batchPointers);
+            final int gestureId = mGestureId;
             getSuggestedWords(() -> mInputLogic.getSuggestedWords(
                 isTailBatchInput ? InputStyle.TAIL_BATCH : InputStyle.UPDATE_BATCH, sequenceNumber,
-                suggestedWords -> showGestureSuggestionsWithPreviewVisuals(suggestedWords, isTailBatchInput))
+                suggestedWords -> showGestureSuggestionsWithPreviewVisuals(suggestedWords, isTailBatchInput, gestureId))
             );
         }
     }
 
-    private void showGestureSuggestionsWithPreviewVisuals(final SuggestedWords suggestedWordsForBatchInput,
-            final boolean isTailBatchInput) {
+    /**
+     * The result of one decoding step of the gesture [gestureId]: shown as a preview, and committed when it is
+     * the tail. When the decoder found nothing, the last preview of the same gesture is used instead. Nothing
+     * else may stand in for it: not what the strip showed before the gesture (next-word predictions, which a
+     * swipe that could not be read used to commit), and not the preview of an earlier gesture.
+     */
+    // Runs on the Non-UI thread, no matter what thread updateBatchInput was originally called on.
+    void showGestureSuggestionsWithPreviewVisuals(final SuggestedWords suggestedWordsForBatchInput,
+            final boolean isTailBatchInput, final int gestureId) {
         final SuggestedWords suggestedWordsToShowSuggestions;
-        // We're now inside the callback. This always runs on the Non-UI thread,
-        // no matter what thread updateBatchInput was originally called on.
-        if (suggestedWordsForBatchInput.isEmpty()) {
-            // Use old suggestions if we don't have any new ones.
-            // Previous suggestions are found in InputLogic#mSuggestedWords.
-            // Since these are the most recent ones and we just recomputed
-            // new ones to update them, then the previous ones are there.
-            suggestedWordsToShowSuggestions = mInputLogic.mSuggestedWords;
-        } else {
-            suggestedWordsToShowSuggestions = suggestedWordsForBatchInput;
+        synchronized (mLock) {
+            // a result that belongs to an earlier gesture (its tail was still being decoded when the next
+            // swipe began) is still shown and committed, but leaves the state of the running gesture alone
+            final boolean current = gestureId == mGestureId;
+            if (!current && !isTailBatchInput) return; // a late preview of a finished gesture: nothing to show
+            if (!suggestedWordsForBatchInput.isEmpty()) {
+                suggestedWordsToShowSuggestions = suggestedWordsForBatchInput;
+                if (current && !isTailBatchInput) mGesturePreview = suggestedWordsForBatchInput;
+            } else if (current && mGesturePreview != null) {
+                suggestedWordsToShowSuggestions = mGesturePreview;
+            } else {
+                suggestedWordsToShowSuggestions = suggestedWordsForBatchInput;
+            }
+            if (current && isTailBatchInput) {
+                mInBatchInput = false;
+                mGesturePreview = null;
+            }
         }
         mLatinIMEHandler.showGesturePreviewAndSetSuggestions(suggestedWordsToShowSuggestions, isTailBatchInput);
         if (isTailBatchInput) {
-            mInBatchInput = false;
             // The following call schedules onEndBatchInputInternal
             // to be called on the UI thread.
             mLatinIMEHandler.showTailBatchInputResult(suggestedWordsToShowSuggestions);

@@ -1,0 +1,2 @@
+- Swipe typing: a swipe that could not be read no longer types a word from the suggestion strip (usually the first next-word prediction that was showing before the swipe). It now types nothing.
+- Fast swiping: when the next swipe starts while the previous one is still being decoded, the new swipe is no longer cut short and never takes over the previous word.
