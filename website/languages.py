@@ -4,7 +4,7 @@ Which language has what is read off the app's assets: a swipe word list is asset
 model <lang>.lmb + .lmv, a built-in tap dictionary assets/dicts/main_<lang>.dict. Update the lists here when
 a language is added (docs/adding-a-language.md, section on the website).
 """
-CONTACT = "https://cypherpunk.today/static/contact-juraj.html"
+CONTACT = "https://hackyourself.io/contact/"
 SUPPORT = "https://hackyourself.io/support/s/droneboard?ref=web&lang={lang}"
 
 X = dict(
