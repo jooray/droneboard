@@ -490,4 +490,6 @@
     <string name="delete_swipe_words">Slova</string>
     <string name="popup_edit_actions">Úpravy na A, X, C, V, Z, Y</string>
     <string name="popup_edit_actions_summary">Podržení těchto písmen nabídne i vybrat vše, vyjmout, kopírovat, vložit, zpět a znovu</string>
+    <string name="touchpad_dim">Ztlumit klávesy v režimu trackpadu</string>
+    <string name="touchpad_dim_description">Klávesy téměř zmizí, dokud mezerníkem posouváte kurzor. Vypněte, pokud vám to připadá jako blikání.</string>
 </resources>

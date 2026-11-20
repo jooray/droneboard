@@ -488,4 +488,6 @@
     <string name="space_long_press_language">Sprache oder Tastatur wechseln</string>
     <string name="popup_edit_actions">Bearbeiten auf A, X, C, V, Z, Y</string>
     <string name="popup_edit_actions_summary">Langes Drücken dieser Buchstaben bietet auch Alles auswählen, Ausschneiden, Kopieren, Einfügen, Rückgängig und Wiederholen</string>
+    <string name="touchpad_dim">Tasten im Trackpad-Modus ausblenden</string>
+    <string name="touchpad_dim_description">Die Tasten verschwinden fast, während Sie den Cursor über die Leertaste bewegen. Schalten Sie es aus, wenn es wie Flackern wirkt.</string>
 </resources>

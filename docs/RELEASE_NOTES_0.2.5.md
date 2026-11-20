@@ -1,0 +1,1 @@
+- New setting: Settings → Advanced → "Fade keys in trackpad mode". The keys almost disappear while you move the cursor by holding the space bar. Some people see that as flicker, so it can now be turned off. It stays on by default.

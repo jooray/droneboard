@@ -1006,4 +1006,6 @@ New dictionary:
     <string name="spell_check_suggestions_summary">Show suggestions when selecting a word with red underline. Requires setting app as default spell checker.</string>
     <string name="popup_edit_actions">Edit actions on A, X, C, V, Z, Y</string>
     <string name="popup_edit_actions_summary">Holding these letters also offers select all, cut, copy, paste, undo and redo</string>
+    <string name="touchpad_dim">Fade keys in trackpad mode</string>
+    <string name="touchpad_dim_description">The keys almost disappear while you move the cursor from the space bar. Turn off if it looks like flicker.</string>
 </resources>

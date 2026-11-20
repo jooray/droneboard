@@ -71,6 +71,7 @@ fun AdvancedSettingsScreen(
         Settings.PREF_SPACE_LONG_PRESS,
         if (usesTouchpad) Settings.PREF_TOUCHPAD_SENSITIVITY else null,
         if (usesTouchpad) Settings.PREF_TOUCHPAD_EDGE_SCROLL else null,
+        if (usesTouchpad) Settings.PREF_TOUCHPAD_DIM else null,
         Settings.PREF_DELETE_SWIPE,
         Settings.PREFS_LONG_PRESS_SYMBOLS_FOR_NUMPAD,
         Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY,
@@ -157,6 +158,9 @@ fun createAdvancedSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_TOUCHPAD_EDGE_SCROLL, R.string.touchpad_edge_scroll, R.string.touchpad_edge_scroll_description) {
         SwitchPreference(it, Defaults.PREF_TOUCHPAD_EDGE_SCROLL)
+    },
+    Setting(context, Settings.PREF_TOUCHPAD_DIM, R.string.touchpad_dim, R.string.touchpad_dim_description) {
+        SwitchPreference(it, Defaults.PREF_TOUCHPAD_DIM)
     },
     Setting(context, Settings.PREF_DELETE_SWIPE, R.string.delete_swipe) {
         val items = listOf(
