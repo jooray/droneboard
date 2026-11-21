@@ -91,6 +91,7 @@ fun PreferencesScreen(
         R.string.settings_category_dictation,
         Settings.PREF_DICTATION_USE_BLUETOOTH_MIC,
         Settings.PREF_DICTATION_BACKSPACE_UNDO,
+        Settings.PREF_DICTATION_SEND_PERSONAL_WORDS,
         R.string.settings_category_clipboard_history,
         Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         if (clipboardHistoryEnabled) Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME else null,
@@ -224,6 +225,11 @@ fun createPreferencesSettings(context: Context) = listOf(
         R.string.dictation_backspace_undo, R.string.dictation_backspace_undo_summary)
     {
         SwitchPreference(it, Defaults.PREF_DICTATION_BACKSPACE_UNDO)
+    },
+    Setting(context, Settings.PREF_DICTATION_SEND_PERSONAL_WORDS,
+        R.string.dictation_send_personal_words, R.string.dictation_send_personal_words_summary)
+    {
+        SwitchPreference(it, Defaults.PREF_DICTATION_SEND_PERSONAL_WORDS)
     },
     Setting(context, Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         R.string.enable_clipboard_history, R.string.enable_clipboard_history_summary)

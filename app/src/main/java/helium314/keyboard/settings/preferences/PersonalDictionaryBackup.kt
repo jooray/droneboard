@@ -7,6 +7,7 @@ import android.provider.UserDictionary
 import helium314.keyboard.latin.dictionary.ExpandableDictionaryUtils
 import helium314.keyboard.latin.dictionary.UserBinaryDictionary
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
+import helium314.keyboard.latin.voice.DictationWords
 import helium314.keyboard.settings.preferences.PersonalDictionaryImport.Entry
 import org.json.JSONArray
 import org.json.JSONObject
@@ -140,5 +141,6 @@ internal object PersonalDictionaryBackup {
     fun notifyChanged() {
         ExpandableDictionaryUtils.setNeedsUpdate(UserBinaryDictionary.NAME)
         SwipeGestureDecoder.invalidateUserWords()
+        DictationWords.invalidate()
     }
 }

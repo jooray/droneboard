@@ -223,6 +223,8 @@ class StuffReceiver(latinIME: LatinIME) {
                 ExpandableDictionaryUtils.setNeedsUpdate(UserBinaryDictionary.NAME)
                 // Droneboard: swipe typing has its own copy of the user's words
                 helium314.keyboard.latin.swipe.SwipeGestureDecoder.invalidateUserWords()
+                // Droneboard: and so has dictation, for the words it passes to the speech app
+                helium314.keyboard.latin.voice.DictationWords.invalidate()
             }
         }
     }
