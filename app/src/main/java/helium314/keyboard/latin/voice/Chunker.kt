@@ -5,8 +5,9 @@ package helium314.keyboard.latin.voice
  * Cuts a dictation into pieces the recognizer accepts. Offline Speech to Text ends a caller-audio
  * request after 60 s, so a piece is at most [maxSamples] long and is cut at the quietest
  * [frameSamples] window between [minSamples] and [maxSamples], which is usually a pause between
- * words. Pieces are handed out while recording continues, so a long dictation is mostly
- * transcribed by the time the user stops. Free of Android, for the tests.
+ * words. This is the way for an Offline Speech to Text that can't take the whole recording as a
+ * file (before 0.22): a cut can fall inside a sentence, which is why the file is preferred.
+ * Free of Android, for the tests.
  */
 class Chunker(
     private val sampleRate: Int = 16_000,

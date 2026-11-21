@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -17,17 +18,37 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
+import androidx.core.content.edit
+import helium314.keyboard.latin.utils.prefs
+import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.concurrent.Semaphore
 
 private const val TAG = "DroneboardOstt"
 
 /**
- * Sends dictation pieces to Offline Speech to Text (OSTT) through the caller-audio contract
- * (`EXTRA_AUDIO_SOURCE`, Android 13+): the keyboard records, OSTT only transcribes, so OSTT needs
- * no microphone grant and the keyboard stays on screen. One piece at a time, in order; results
- * come back on the main thread in the same order.
+ * Serves the recording of a dictation to Offline Speech to Text, and to nothing else: the file is in the app's
+ * cache folder, the provider is not exported, and OSTT gets a read grant for the one file of the running dictation.
+ * Separate from the clipboard's provider so that neither can hand out the other's files.
+ */
+class DictationAudioProvider : FileProvider() {
+    companion object {
+        /** The authority in the manifest: the app id (which differs in debug builds) plus this. */
+        fun authority(context: Context) = context.packageName + ".dictationaudio"
+    }
+}
+
+/**
+ * Sends a dictation to Offline Speech to Text (OSTT). The keyboard records, OSTT only transcribes, so OSTT needs
+ * no microphone grant and the keyboard stays on screen.
+ *
+ * A whole recording goes as one audio file ([submitRecording], OSTT 0.22+), so OSTT sees every sentence whole.
+ * An OSTT that can't take files gets the same recording cut into pieces through the caller-audio contract
+ * (`EXTRA_AUDIO_SOURCE`, Android 13+), which OSTT ends after 60 s per request. One request at a time, in order;
+ * results come back on the main thread in the same order.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class OsttTranscriber(private val context: Context, private val listener: Listener) {
@@ -44,6 +65,14 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         )
         private val BACKOFF_MS = longArrayOf(500, 1000, 2000, 3000, 5000, 5000, 8000, 10_000)
 
+        /** OSTT's extra for an audio file to transcribe: a content Uri the caller granted read access to. */
+        private const val EXTRA_AUDIO_URI = "app.offlinespeechtotext.extra.AUDIO_URI"
+        /** OSTT's screen for transcribing a file; it came in the same version as [EXTRA_AUDIO_URI]. */
+        private const val ACTION_TRANSCRIBE_AUDIO = "app.offlinespeechtotext.action.TRANSCRIBE_AUDIO"
+        private const val PREF_FILE_ROUTE = "dictation_ostt_file_route"
+        /** Pieces that wait in memory when a recording is cut up; the rest stays in the file until there is room. */
+        private const val PIECES_IN_MEMORY = 2
+
         /** OSTT's recognition service, or null when OSTT is not installed. */
         fun component(context: Context): ComponentName? = runCatching {
             context.packageManager.queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE).setPackage(OSTT_PACKAGE), 0)
@@ -55,6 +84,21 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         fun installed(context: Context): Boolean = runCatching {
             context.packageManager.getPackageInfo(OSTT_PACKAGE, 0)
             true
+        }.getOrDefault(false)
+
+        /** OSTT's version code, or -1 when it is not installed. */
+        fun versionCode(context: Context): Long = runCatching {
+            context.packageManager.getPackageInfo(OSTT_PACKAGE, 0).longVersionCode
+        }.getOrDefault(-1L)
+
+        /**
+         * Whether the installed OSTT says it takes audio files. This is asked before a file request is sent, because
+         * an OSTT that does not know the extra would treat the request as an ordinary one and open its own microphone.
+         */
+        fun declaresFileApi(context: Context): Boolean = runCatching {
+            val probe = Intent(ACTION_TRANSCRIBE_AUDIO).setPackage(OSTT_PACKAGE)
+                .setDataAndType(Uri.parse("content://droneboard.invalid/probe"), "audio/x-wav")
+            context.packageManager.queryIntentActivities(probe, 0).isNotEmpty()
         }.getOrDefault(false)
     }
 
@@ -68,15 +112,29 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         fun onTranscriptionError(message: String, busy: Boolean, last: Boolean, problem: Problem)
     }
 
-    private class Job(val pcm: ShortArray, val last: Boolean, var attempt: Int = 0)
+    /** One request: a piece of PCM through the pipe, or ([audio] set) the whole recording as a file. */
+    private class Job(
+        val pcm: ShortArray, val last: Boolean, var attempt: Int = 0,
+        val audio: Uri? = null, val durationMs: Long = 0, val osttVersion: Long = -1,
+        /** this piece holds one of the [PIECES_IN_MEMORY] places */
+        val counted: Boolean = false,
+    )
 
+    private val memory = FileRouteMemory(object : FileRouteStore {
+        override fun read(): String? = context.prefs().getString(PREF_FILE_ROUTE, null)
+        override fun write(value: String) = context.prefs().edit { putString(PREF_FILE_ROUTE, value) }
+    })
     private val main = Handler(Looper.getMainLooper())
     private val queue = ArrayDeque<Job>()
     private var running: Job? = null
     private var recognizer: SpeechRecognizer? = null
     private var pipe: Array<ParcelFileDescriptor>? = null
     private var timeout: Runnable? = null
-    private var cancelled = false
+    @Volatile private var cancelled = false
+    /** the recording that is being transcribed; deleted the moment it is not needed any more */
+    private var recording: File? = null
+    private var granted: Uri? = null
+    private val room = Semaphore(PIECES_IN_MEMORY)
 
     /** Main thread or any thread: queues a piece. */
     fun submit(pcm: ShortArray, last: Boolean) = main.post {
@@ -85,20 +143,88 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         pump()
     }
 
+    /**
+     * Main thread: the whole dictation, recorded into [file] (a WAV of [durationMs]). It is transcribed in one
+     * request when the installed OSTT takes files, else cut into pieces. The file is this object's from here on and
+     * is deleted when the text or a final error has arrived, or on [cancel]. [uri] is the file as OSTT may read it.
+     */
+    fun submitRecording(file: File, uri: Uri?, durationMs: Long) {
+        if (cancelled) {
+            file.delete()
+            return
+        }
+        recording = file
+        val version = versionCode(context)
+        val declared = declaresFileApi(context)
+        if (uri == null || !memory.useFile(version, declared)) {
+            Log.i(TAG, "recording of $durationMs ms goes in pieces (OSTT $version, takes files: $declared, remembered: ${memory.support(version)})")
+            submitInPieces(file)
+            return
+        }
+        // only OSTT, only this file, only for reading; taken back in [revokeGrant]
+        val grant = runCatching { context.grantUriPermission(OSTT_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        if (grant.isFailure) {
+            Log.w(TAG, "could not grant the recording to OSTT", grant.exceptionOrNull())
+            submitInPieces(file)
+            return
+        }
+        Log.i(TAG, "recording of $durationMs ms goes as one file (OSTT $version)")
+        granted = uri
+        queue.addLast(Job(ShortArray(0), last = true, audio = uri, durationMs = durationMs, osttVersion = version))
+        pump()
+    }
+
+    /**
+     * The way for an OSTT without the file route: [file] is read on its own thread, cut by the [Chunker] and the
+     * pieces go through the pipe in order. The thread waits while [PIECES_IN_MEMORY] pieces are not yet transcribed,
+     * so a long recording stays in the file and not in memory.
+     */
+    private fun submitInPieces(file: File) {
+        Thread({
+            val chunker = Chunker(RATE) { pcm, last ->
+                room.acquireUninterruptibly()
+                if (cancelled) return@Chunker
+                main.post {
+                    if (cancelled) return@post
+                    queue.addLast(Job(pcm, last, counted = true))
+                    pump()
+                }
+            }
+            try {
+                Wav.readPcm(file, RATE) { pcm, count ->
+                    chunker.write(pcm, count)
+                    !cancelled
+                }
+            } catch (e: IOException) {
+                Log.w(TAG, "could not read the recording to the end: ${e.message}")
+            } finally {
+                // everything is in the pieces now; the last one always goes out, so the dictation ends
+                file.delete()
+                if (!cancelled) chunker.finish()
+            }
+        }, "droneboard-ostt-pieces").start()
+    }
+
     val idle: Boolean get() = running == null && queue.isEmpty()
 
     /** Drops queued and running work (the user cancelled, or the keyboard went away). */
-    fun cancel() = main.post {
+    fun cancel() {
         cancelled = true
-        queue.clear()
-        running = null
-        cleanup(cancelRecognizer = true)
+        room.release(PIECES_IN_MEMORY + 1) // a reader waiting for room sees the cancel and stops
+        main.post {
+            queue.clear()
+            running = null
+            cleanup(cancelRecognizer = true)
+            dropRecording()
+        }
     }
 
     private fun pump() {
         if (running != null || cancelled) return
         val job = queue.removeFirstOrNull() ?: return
-        if (job.pcm.isEmpty()) {
+        if (job.pcm.isEmpty() && job.audio == null) {
+            if (job.counted) room.release()
+            if (job.last) dropRecording()
             listener.onText("", job.last)
             pump()
             return
@@ -127,6 +253,7 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                 override fun onResults(results: Bundle?) {
                     if (running !== job) return
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+                    if (job.audio != null) rememberFileRoute(job, null)
                     done(job)
                     listener.onText(text, job.last)
                     pump()
@@ -135,6 +262,13 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                 override fun onError(error: Int) {
                     if (running !== job) return
                     Log.i(TAG, "recognizer error $error (attempt ${job.attempt})")
+                    if (job.audio != null) {
+                        rememberFileRoute(job, error)
+                        if (FileRoute.verdict(error) == FileRoute.Support.UNSUPPORTED) {
+                            fileRefused(job, error)
+                            return
+                        }
+                    }
                     when {
                         error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                             done(job)
@@ -146,6 +280,24 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                     }
                 }
             })
+            if (job.audio != null) {
+                r.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                    .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                    .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    .putExtra(EXTRA_AUDIO_URI, job.audio))
+                // OSTT answers every file request; this only ends a wait when it never does. Sending a long
+                // recording again after such a wait would only double it, so there is no second try.
+                val t = Runnable {
+                    if (running !== job) return@Runnable
+                    cleanup(cancelRecognizer = true)
+                    fail(job, "no answer from Offline Speech to Text", busy = true)
+                }
+                timeout = t
+                main.postDelayed(t, FileRoute.timeoutMs(job.durationMs))
+                return
+            }
             val p = ParcelFileDescriptor.createPipe()
             pipe = p
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -191,6 +343,24 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         }
     }
 
+    /**
+     * OSTT answered the file request the way an OSTT without the file route does. Nothing is lost: the same
+     * recording goes in pieces. When OSTT has a real problem instead (it lost a permission), the first piece
+     * fails the same way and that is what the user is told.
+     */
+    private fun fileRefused(job: Job, error: Int) {
+        Log.i(TAG, "OSTT ${job.osttVersion} refused the audio file (error $error), sending pieces")
+        running = null
+        cleanup(cancelRecognizer = false)
+        revokeGrant()
+        val file = recording
+        if (file != null) submitInPieces(file) else fail(job, errorName(error), busy = false, problem = problemOf(error))
+    }
+
+    /** What the answer to a file request says about this version of OSTT ([error] null: a transcript). */
+    private fun rememberFileRoute(job: Job, error: Int?) =
+        memory.remember(job.osttVersion, versionCode(context), FileRoute.verdict(error))
+
     private fun retryOrFail(job: Job, message: String) {
         if (job.attempt < BACKOFF_MS.size) retry(job) else fail(job, message, busy = true)
     }
@@ -211,6 +381,9 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
     private fun done(job: Job) {
         if (running === job) running = null
         cleanup(cancelRecognizer = false)
+        if (job.counted) room.release()
+        // the text or the final error of the dictation is here: the audio has no reason to exist any more
+        if (job.last) dropRecording()
     }
 
     private fun cleanup(cancelRecognizer: Boolean) {
@@ -223,6 +396,19 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         recognizer = null
         pipe?.forEach { runCatching { it.close() } }
         pipe = null
+    }
+
+    private fun revokeGrant() {
+        granted?.let { uri ->
+            runCatching { context.revokeUriPermission(OSTT_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        }
+        granted = null
+    }
+
+    private fun dropRecording() {
+        revokeGrant()
+        recording?.delete()
+        recording = null
     }
 
     private fun problemOf(error: Int) = when (error) {

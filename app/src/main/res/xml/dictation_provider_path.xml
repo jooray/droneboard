@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droneboard: the one folder Offline Speech to Text may be handed a file from: the recording of the running
+     dictation, in the app's cache (never backed up). Kept apart from the clipboard's paths on purpose. -->
+<paths>
+    <cache-path
+        name="dictation"
+        path="dictation/"/>
+</paths>
