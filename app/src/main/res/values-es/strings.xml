@@ -491,8 +491,8 @@
     <string name="touchpad_dim">Atenuar las teclas en modo trackpad</string>
     <string name="touchpad_dim_description">Las teclas casi desaparecen mientras mueve el cursor desde la barra espaciadora. Desactívelo si le parece un parpadeo.</string>
     <string name="setup_step1_hint">Se abre una lista de teclados. Active el interruptor junto a %s, confirme el aviso y vuelva atrás.</string>
-    <string name="setup_step2_hint">Se abre una lista de teclados. Toque %s en ella.</string>
-    <string name="setup_step2_retry">%1$s aún no está seleccionado. Toque de nuevo el botón de arriba y elija %1$s en la lista.</string>
+    <string name="setup_step2_hint">Se abre una lista de teclados. Toque %1$s en ella. Si no ve %1$s, desplace la lista hacia arriba.</string>
+    <string name="setup_step2_retry">%1$s aún no está seleccionado. Toque de nuevo el botón de arriba y elija %1$s en la lista. La lista se abre en el teclado que usa ahora, así que quizá tenga que desplazarla hacia arriba.</string>
     <string name="setup_step2_skip">Configurar más tarde</string>
     <string name="setup_step_counter">Paso %1$d de 3</string>
 </resources>

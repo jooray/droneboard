@@ -128,7 +128,7 @@ fun WelcomeWizard(
         ) {
             Icon(icon, null, Modifier.padding(end = 10.dp).size(32.dp), tint = textColor)
             Text(actionText, Modifier.weight(1f))
-            Icon(painterResource(R.drawable.ic_arrow_right), null, Modifier.size(28.dp), tint = textColor)
+            helium314.keyboard.latin.utils.NextScreenIcon()
         }
         if (hint != null)
             Text(hint, Modifier.padding(top = 8.dp), color = titleColor.copy(alpha = 0.8f),

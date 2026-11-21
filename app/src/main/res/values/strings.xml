@@ -1009,8 +1009,8 @@ New dictionary:
     <string name="touchpad_dim">Fade keys in trackpad mode</string>
     <string name="touchpad_dim_description">The keys almost disappear while you move the cursor from the space bar. Turn off if it looks like flicker.</string>
     <string name="setup_step1_hint">A list of keyboards opens. Turn on the switch next to %s, confirm the notice, then go back.</string>
-    <string name="setup_step2_hint">A list of keyboards opens. Tap %s in it.</string>
-    <string name="setup_step2_retry">%1$s is not selected yet. Tap the button above again and choose %1$s in the list.</string>
+    <string name="setup_step2_hint">A list of keyboards opens. Tap %1$s in it. If you do not see %1$s, scroll the list up.</string>
+    <string name="setup_step2_retry">%1$s is not selected yet. Tap the button above again and choose %1$s in the list. The list opens at the keyboard you use now, so you may have to scroll it up to find %1$s.</string>
     <string name="setup_step2_skip">Set up later</string>
     <string name="setup_step_counter">Step %1$d of 3</string>
 </resources>

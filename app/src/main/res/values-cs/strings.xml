@@ -493,8 +493,8 @@
     <string name="touchpad_dim">Ztlumit klávesy v režimu trackpadu</string>
     <string name="touchpad_dim_description">Klávesy téměř zmizí, dokud mezerníkem posouváte kurzor. Vypněte, pokud vám to připadá jako blikání.</string>
     <string name="setup_step1_hint">Otevře se seznam klávesnic. Zapněte přepínač u %s, potvrďte upozornění a vraťte se zpět.</string>
-    <string name="setup_step2_hint">Otevře se seznam klávesnic. Klepněte v něm na %s.</string>
-    <string name="setup_step2_retry">%1$s ještě není vybrán. Klepněte znovu na tlačítko výše a v seznamu vyberte %1$s.</string>
+    <string name="setup_step2_hint">Otevře se seznam klávesnic. Klepněte v něm na %1$s. Pokud tam %1$s nevidíte, posuňte seznam nahoru.</string>
+    <string name="setup_step2_retry">%1$s ještě není vybrán. Klepněte znovu na tlačítko výše a v seznamu vyberte %1$s. Seznam se otevře u klávesnice, kterou právě používáte, takže ho možná bude třeba posunout nahoru.</string>
     <string name="setup_step2_skip">Nastavit později</string>
     <string name="setup_step_counter">Krok %1$d ze 3</string>
 </resources>
