@@ -75,6 +75,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_SOUND_ON = "sound_on";
     public static final String PREF_DICTATION_USE_BLUETOOTH_MIC = "dictation_use_bluetooth_mic";
     public static final String PREF_DICTATION_BACKSPACE_UNDO = "dictation_backspace_undo";
+    public static final String PREF_DICTATION_SEND_PERSONAL_WORDS = "dictation_send_personal_words";
     public static final String PREF_SUGGEST_EMOJIS = "suggest_emojis";
     public static final String PREF_INLINE_EMOJI_SEARCH = "inline_emoji_search";
     public static final String PREF_SHOW_EMOJI_DESCRIPTIONS = "show_emoji_descriptions";

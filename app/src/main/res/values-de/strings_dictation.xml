@@ -32,4 +32,6 @@
     <string name="voice_text_in_clipboard">Der diktierte Text ist in der Zwischenablage</string>
     <string name="dictation_backspace_undo">Rücktaste nimmt Diktat zurück</string>
     <string name="dictation_backspace_undo_summary">Die erste Rücktaste direkt nach dem Diktieren löscht alles, was gerade diktiert wurde</string>
+    <string name="dictation_send_personal_words">Wörter aus dem persönlichen Wörterbuch beim Diktieren verwenden</string>
+    <string name="dictation_send_personal_words_summary">Wörter aus Ihrem persönlichen Wörterbuch werden bei jedem Diktat an Offline Speech to Text übergeben, damit Namen und Fachbegriffe richtig geschrieben werden. Sie bleiben auf dem Smartphone und die Sprach-App speichert sie nicht. Ausgeschaltet werden keine Wörter übergeben.</string>
 </resources>

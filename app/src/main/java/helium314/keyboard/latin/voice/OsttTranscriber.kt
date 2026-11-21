@@ -5,6 +5,7 @@ package helium314.keyboard.latin.voice
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.net.Uri
 import android.os.Build
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognitionService
 import android.speech.RecognizerIntent
@@ -45,13 +47,24 @@ class DictationAudioProvider : FileProvider() {
  * Sends a dictation to Offline Speech to Text (OSTT). The keyboard records, OSTT only transcribes, so OSTT needs
  * no microphone grant and the keyboard stays on screen.
  *
- * A whole recording goes as one audio file ([submitRecording], OSTT 0.22+), so OSTT sees every sentence whole.
- * An OSTT that can't take files gets the same recording cut into pieces through the caller-audio contract
- * (`EXTRA_AUDIO_SOURCE`, Android 13+), which OSTT ends after 60 s per request. One request at a time, in order;
- * results come back on the main thread in the same order.
+ * Three ways, the best the installed OSTT can do:
+ * - live ([prepare], an OSTT that declares a long caller-audio session): one request that runs while the user
+ *   talks, fed through a pipe, answered once after the pipe is closed. The text comes soon after the last word.
+ * - one audio file ([submitRecording], OSTT 0.22+): the whole recording in one request after the user stopped.
+ *   Also what a live dictation falls back to when its stream breaks, so no dictation is lost to the stream.
+ * - pieces: an OSTT that can't take files gets the recording cut up through the caller-audio contract
+ *   (`EXTRA_AUDIO_SOURCE`, Android 13+), which such an OSTT ends after 60 s per request.
+ * One request at a time, in order; results come back on the main thread in the same order.
+ *
+ * [words] gives the user's own words for a request (see [DictationWords]); they go with every request, whatever
+ * the way, and are never logged.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-class OsttTranscriber(private val context: Context, private val listener: Listener) {
+class OsttTranscriber(
+    private val context: Context,
+    private val listener: Listener,
+    private val words: () -> List<String> = { emptyList() },
+) {
 
     companion object {
         const val OSTT_PACKAGE = "app.offlinespeechtotext"
@@ -72,6 +85,26 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
         private const val PREF_FILE_ROUTE = "dictation_ostt_file_route"
         /** Pieces that wait in memory when a recording is cut up; the rest stays in the file until there is room. */
         private const val PIECES_IN_MEMORY = 2
+
+        /** OSTT's service says in its manifest how long a caller-audio request may last, in seconds. */
+        private const val META_CALLER_AUDIO_MAX_SECONDS = "app.offlinespeechtotext.capability.CALLER_AUDIO_MAX_SECONDS"
+        /** OSTT's service says in its manifest how many of the caller's words it reads per request. */
+        private const val META_BIASING_STRINGS_MAX_COUNT = "app.offlinespeechtotext.capability.BIASING_STRINGS_MAX_COUNT"
+        /** RecognizerIntent.EXTRA_BIASING_STRINGS; the name is spelled out as OSTT's contract does. */
+        private const val EXTRA_BIASING_STRINGS = "android.speech.extra.BIASING_STRINGS"
+
+        /**
+         * What the installed OSTT says about itself on its recognition service [component]. The keyboard may see
+         * that service because the manifest lists OSTT under queries. An OSTT that says nothing is an old one.
+         */
+        @Suppress("DEPRECATION") // the newer overload only exists from Android 13 and does the same
+        fun capabilities(context: Context, component: ComponentName): Capabilities = runCatching {
+            val meta = context.packageManager.getServiceInfo(component, PackageManager.GET_META_DATA).metaData
+            Capabilities(
+                meta?.getInt(META_CALLER_AUDIO_MAX_SECONDS, LiveRoute.OLD_BOUND_SECONDS) ?: LiveRoute.OLD_BOUND_SECONDS,
+                meta?.getInt(META_BIASING_STRINGS_MAX_COUNT, 0) ?: 0,
+            )
+        }.getOrDefault(Capabilities(LiveRoute.OLD_BOUND_SECONDS, 0))
 
         /** OSTT's recognition service, or null when OSTT is not installed. */
         fun component(context: Context): ComponentName? = runCatching {
@@ -101,6 +134,12 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
             context.packageManager.queryIntentActivities(probe, 0).isNotEmpty()
         }.getOrDefault(false)
     }
+
+    /**
+     * [callerAudioMaxSeconds]: how long OSTT reads one caller-audio request (60 for an OSTT that does not say).
+     * [biasingMaxCount]: how many of the caller's words it reads per request (0: none).
+     */
+    data class Capabilities(val callerAudioMaxSeconds: Int, val biasingMaxCount: Int)
 
     /** Why a piece failed, for what the panel tells the user to do. */
     enum class Problem { NOT_INSTALLED, NO_MODEL, PERMISSION, OTHER }
@@ -136,6 +175,185 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
     private var granted: Uri? = null
     private val room = Semaphore(PIECES_IN_MEMORY)
 
+    /** The live request of this dictation, from [prepare] until its text is typed or the file took over. */
+    private class Live(val readEnd: ParcelFileDescriptor) {
+        val session = LiveSession()
+        lateinit var feed: LiveFeed
+        var recognizer: SpeechRecognizer? = null
+        var timeout: Runnable? = null
+        var released = false
+        // the finished recording as the file route needs it, known once the recording ended
+        var uri: Uri? = null
+        var durationMs = 0L
+        var endedAt = 0L
+    }
+    private var live: Live? = null
+
+    /**
+     * Main thread, before the recording starts: decides the way of this dictation and says so in the log.
+     * [haveFile]: the recording is written to a file. Returns the feed for the recording thread when the dictation
+     * is streamed live, else null.
+     *
+     * The request itself starts with the first recorded buffer and not here: OSTT gives up a request that gets no
+     * byte for 60 seconds, its session bound counts from the start of the request, and a Bluetooth microphone can
+     * take seconds to deliver. Until then nothing is lost, the first buffers wait in the pipe.
+     */
+    fun prepare(capabilities: Capabilities, haveFile: Boolean): LiveFeed? {
+        val version = versionCode(context)
+        val bound = capabilities.callerAudioMaxSeconds
+        val feed = if (haveFile && LiveRoute.live(bound)) openLive() else null
+        val takesFiles = memory.useFile(version, declaresFileApi(context))
+        val route = when {
+            feed != null -> "live stream"
+            !haveFile -> "pieces while recording (no place for a file)"
+            takesFiles -> "one file after the stop"
+            else -> "pieces after the stop"
+        }
+        Log.i(TAG, "dictation route: $route (OSTT $version reads caller audio for $bound s, takes files: $takesFiles, " +
+            "reads up to ${capabilities.biasingMaxCount} preferred words)")
+        return feed
+    }
+
+    private fun openLive(): LiveFeed? {
+        val p = runCatching { ParcelFileDescriptor.createPipe() }.getOrElse {
+            Log.w(TAG, "no pipe for a live stream (${it.javaClass.simpleName})")
+            return null
+        }
+        val l = Live(p[0])
+        l.feed = LiveFeed(
+            ParcelFileDescriptor.AutoCloseOutputStream(p[1]),
+            onFirstAudio = { main.post { startLive(l) } },
+            onBroken = { reason -> main.post { liveBroken(l, reason) } },
+        )
+        live = l
+        return l.feed
+    }
+
+    private fun startLive(l: Live) {
+        if (cancelled || live !== l || l.released || !l.session.streaming || l.recognizer != null) return
+        val c = component(context)
+        if (c == null) {
+            liveBroken(l, "Offline Speech to Text is not installed")
+            return
+        }
+        try {
+            val r = SpeechRecognizer.createSpeechRecognizer(context, c)
+            l.recognizer = r
+            r.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) = Unit
+                override fun onBeginningOfSpeech() = Unit
+                override fun onRmsChanged(rmsdB: Float) = Unit
+                override fun onBufferReceived(buffer: ByteArray?) = Unit
+                override fun onEndOfSpeech() = Unit
+                override fun onPartialResults(partialResults: Bundle?) = Unit
+                override fun onEvent(eventType: Int, params: Bundle?) = Unit
+                override fun onResults(results: Bundle?) =
+                    liveAnswer(l, results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty())
+
+                override fun onError(error: Int) {
+                    // "no words" is an answer like any other; everything else (busy with another job, OSTT gone,
+                    // a problem with the audio) ends the stream and leaves the dictation to the file
+                    if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) liveAnswer(l, "")
+                    else liveBroken(l, "recognizer error $error (${errorName(error)})")
+                }
+            })
+            // the read end stays open until the request is released: startListening may parcel the intent later
+            r.startListening(pipeIntent(l.readEnd))
+            Log.i(TAG, "live request started")
+        } catch (t: Throwable) {
+            liveBroken(l, "the request could not start (${t.javaClass.simpleName})")
+        }
+    }
+
+    private fun liveAnswer(l: Live, text: String) {
+        if (live !== l || cancelled) return
+        val complete = l.feed.completed
+        if (!complete && l.session.streaming)
+            Log.i(TAG, "live stream failed: OSTT answered before the recording was over; the recording goes as a file when it ends")
+        perform(l, l.session.onResult(text, complete))
+    }
+
+    private fun liveBroken(l: Live, reason: String) {
+        if (live !== l || cancelled) return
+        if (l.session.streaming) Log.i(TAG, "live stream failed: $reason; the recording goes as a file when it ends")
+        perform(l, l.session.onBroken())
+    }
+
+    private fun perform(l: Live, step: LiveSession.Step) {
+        when (step) {
+            LiveSession.Step.NOTHING -> Unit
+            // OSTT is free for the file request later; the recording goes on into the file
+            LiveSession.Step.ABANDON -> releaseLive(l, cancelRecognizer = true)
+            LiveSession.Step.WAIT -> {
+                val wait = LiveRoute.finalTimeoutMs(l.durationMs)
+                Log.i(TAG, "recording of ${l.durationMs} ms was streamed live, waiting up to $wait ms for the text")
+                val t = Runnable { liveBroken(l, "no answer from Offline Speech to Text") }
+                l.timeout = t
+                main.postDelayed(t, wait)
+            }
+            LiveSession.Step.SEND_FILE -> {
+                releaseLive(l, cancelRecognizer = true)
+                live = null
+                val file = recording
+                if (file == null) {
+                    listener.onTranscriptionError("the recording is gone", busy = false, last = true, problem = Problem.OTHER)
+                    return
+                }
+                Log.i(TAG, "falling back from the live stream to the recorded file")
+                sendRecording(file, l.uri, l.durationMs)
+            }
+            LiveSession.Step.TYPE -> {
+                Log.i(TAG, "live request answered ${SystemClock.elapsedRealtime() - l.endedAt} ms after the recording ended " +
+                    "(${l.feed.bytesWritten} bytes streamed)")
+                releaseLive(l, cancelRecognizer = false)
+                live = null
+                dropRecording()
+                listener.onText(l.session.text.orEmpty(), true)
+            }
+        }
+    }
+
+    /** Frees the live request: its recognizer, its pipe, its timer. Safe to call twice. */
+    private fun releaseLive(l: Live, cancelRecognizer: Boolean) {
+        l.timeout?.let { main.removeCallbacks(it) }
+        l.timeout = null
+        if (l.released) return
+        l.released = true
+        l.feed.abort()
+        l.recognizer?.let { r ->
+            if (cancelRecognizer) runCatching { r.cancel() }
+            runCatching { r.destroy() }
+        }
+        l.recognizer = null
+        runCatching { l.readEnd.close() }
+    }
+
+    /** Main thread: the recording ended without a single sample, so there is nothing a live request could answer. */
+    fun abandonLive() {
+        live?.let { releaseLive(it, cancelRecognizer = true) }
+        live = null
+    }
+
+    /** Every request carries the user's own words when the installed OSTT reads them. Only their number is logged. */
+    private fun recognitionIntent(): Intent {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        val own = runCatching(words).getOrDefault(emptyList())
+        if (own.isNotEmpty()) intent.putStringArrayListExtra(EXTRA_BIASING_STRINGS, ArrayList(own))
+        Log.i(TAG, "request carries ${own.size} preferred words")
+        return intent
+    }
+
+    /** A request whose audio comes through the pipe [readEnd]: 16 kHz mono PCM16. */
+    private fun pipeIntent(readEnd: ParcelFileDescriptor): Intent = recognitionIntent()
+        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, readEnd)
+        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
+        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
+        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, RATE)
+
     /** Main thread or any thread: queues a piece. */
     fun submit(pcm: ShortArray, last: Boolean) = main.post {
         if (cancelled) return@post
@@ -144,9 +362,11 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
     }
 
     /**
-     * Main thread: the whole dictation, recorded into [file] (a WAV of [durationMs]). It is transcribed in one
-     * request when the installed OSTT takes files, else cut into pieces. The file is this object's from here on and
-     * is deleted when the text or a final error has arrived, or on [cancel]. [uri] is the file as OSTT may read it.
+     * Main thread: the whole dictation, recorded into [file] (a WAV of [durationMs]). When it was streamed live, the
+     * text of the stream is waited for and the file is only the reserve. Otherwise, and when the stream broke, it is
+     * transcribed in one request when the installed OSTT takes files, else cut into pieces. The file is this
+     * object's from here on and is deleted when the text or a final error has arrived, or on [cancel]. [uri] is the
+     * file as OSTT may read it.
      */
     fun submitRecording(file: File, uri: Uri?, durationMs: Long) {
         if (cancelled) {
@@ -154,6 +374,18 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
             return
         }
         recording = file
+        val l = live
+        if (l != null) {
+            l.uri = uri
+            l.durationMs = durationMs
+            l.endedAt = SystemClock.elapsedRealtime()
+            perform(l, l.session.onRecordingEnded())
+            return
+        }
+        sendRecording(file, uri, durationMs)
+    }
+
+    private fun sendRecording(file: File, uri: Uri?, durationMs: Long) {
         val version = versionCode(context)
         val declared = declaresFileApi(context)
         if (uri == null || !memory.useFile(version, declared)) {
@@ -215,6 +447,7 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
             queue.clear()
             running = null
             cleanup(cancelRecognizer = true)
+            abandonLive()
             dropRecording()
         }
     }
@@ -281,12 +514,7 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
                 }
             })
             if (job.audio != null) {
-                r.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                    .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                    .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                    .putExtra(EXTRA_AUDIO_URI, job.audio))
+                r.startListening(recognitionIntent().putExtra(EXTRA_AUDIO_URI, job.audio))
                 // OSTT answers every file request; this only ends a wait when it never does. Sending a long
                 // recording again after such a wait would only double it, so there is no second try.
                 val t = Runnable {
@@ -300,18 +528,9 @@ class OsttTranscriber(private val context: Context, private val listener: Listen
             }
             val p = ParcelFileDescriptor.createPipe()
             pipe = p
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, p[0])
-                .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
-                .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
-                .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, RATE)
             // the read end stays open until cleanup: startListening may parcel the intent later,
             // once the service is bound
-            r.startListening(intent)
+            r.startListening(pipeIntent(p[0]))
             val writeEnd = p[1]
             Thread({ feed(writeEnd, job.pcm) }, "droneboard-ostt-feed").start()
             // a newer request from another app can retire ours without an answer

@@ -32,4 +32,6 @@
     <string name="voice_text_in_clipboard">Nadiktovaný text je v schránke</string>
     <string name="dictation_backspace_undo">Backspace vráti diktovanie</string>
     <string name="dictation_backspace_undo_summary">Prvý backspace hneď po diktovaní zmaže všetko, čo sa práve nadiktovalo</string>
+    <string name="dictation_send_personal_words">Použiť slová z osobného slovníka pri diktovaní</string>
+    <string name="dictation_send_personal_words_summary">Slová z vášho osobného slovníka sa pri každom diktovaní odovzdajú aplikácii Offline Speech to Text, aby boli mená a odborné výrazy napísané správne. Zostávajú v telefóne a aplikácia na rozpoznávanie reči si ich neukladá. Po vypnutí sa neodovzdávajú žiadne slová.</string>
 </resources>

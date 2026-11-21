@@ -32,4 +32,6 @@
     <string name="voice_text_in_clipboard">El texto dictado está en el portapapeles</string>
     <string name="dictation_backspace_undo">Retroceso deshace el dictado</string>
     <string name="dictation_backspace_undo_summary">El primer retroceso justo después de dictar borra todo lo que se acaba de dictar</string>
+    <string name="dictation_send_personal_words">Usar palabras del diccionario personal al dictar</string>
+    <string name="dictation_send_personal_words_summary">Las palabras de su diccionario personal se pasan a Offline Speech to Text en cada dictado para que los nombres y los términos especiales se escriban bien. No salen del teléfono y la aplicación de voz no las guarda. Si lo desactiva, no se pasa ninguna palabra.</string>
 </resources>

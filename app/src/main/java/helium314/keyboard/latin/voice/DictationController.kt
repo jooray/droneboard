@@ -36,8 +36,10 @@ private const val TAG = "DroneboardDictation"
  * One-tap dictation inside the keyboard: the keyboard records (phone or Bluetooth headset, the
  * Third Ear way), Offline Speech to Text transcribes, and the text lands at the cursor. No
  * keyboard switching. Tap the mic to start, tap again to stop; there is no stop on silence.
- * Nothing is transcribed while the user talks: the recording goes to a file and is sent whole when they stop, so
- * no sentence is cut in the middle. The price is that the text of a long dictation takes a while to appear.
+ * A dictation is one request, so no sentence is cut in the middle. With an Offline Speech to Text that can do it,
+ * the audio is streamed while the user talks and the text comes soon after they stop ([LiveRoute]). The recording
+ * also goes to a file: that is what an older Offline Speech to Text gets when the user stops (the text of a long
+ * dictation then takes a while to appear), and what stands in when the stream breaks.
  * Everything here runs on the main thread except the recording loop.
  * Only reachable on Android 13+ ([supported] gates [onMicKey], the one entry point).
  */
@@ -81,6 +83,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private var typedBlockAt = 0L
     private var typing = false
     private var focusRequest: AudioFocusRequest? = null
+    /** a dictation has passed words of the personal dictionary along since the keyboard started; see [onStartInputView] */
+    private var wordsUsed = false
     private val rotation = RotationGuard()
     private val rotationTimeout = Runnable {
         // the keyboard did not come back after the rotation: the user left, as in [onFinishInputView]
@@ -134,7 +138,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     }
 
     private fun start() {
-        if (OsttTranscriber.component(ime) == null) {
+        val ostt = OsttTranscriber.component(ime)
+        if (ostt == null) {
             showOsttProblem(if (OsttTranscriber.installed(ime)) OsttTranscriber.Problem.OTHER else OsttTranscriber.Problem.NOT_INSTALLED)
             return
         }
@@ -151,15 +156,26 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         lastStatus = null
         rotation.reset()
         main.removeCallbacks(rotationTimeout)
-        val t = OsttTranscriber(ime, this)
+        // decided here, before the microphone opens: how this dictation reaches Offline Speech to Text
+        val capabilities = OsttTranscriber.capabilities(ime, ostt)
+        // names from the personal dictionary go with every request of this dictation, if the user lets them
+        if (capabilities.biasingMaxCount > 0) {
+            wordsUsed = true
+            DictationWords.refresh(ime)
+        }
+        val t = OsttTranscriber(ime, this) { DictationWords.forRequest(ime, capabilities.biasingMaxCount) }
         transcriber = t
+        // a live request is only read for so long, so a streamed recording ends before that
+        val maxSeconds = if (LiveRoute.live(capabilities.callerAudioMaxSeconds))
+            LiveRoute.maxRecordingSeconds(capabilities.callerAudioMaxSeconds, MAX_RECORDING_MINUTES * 60)
+        else MAX_RECORDING_MINUTES * 60
         // no dictation is running here, so any file in the folder is a leftover
         val dir = recordingDir()
         runCatching { dir?.let { DictationFiles.clear(it) } }
         var file = dir?.let { DictationFiles.create(it) }
         val toFile = file?.let { f ->
             runCatching {
-                WavRecordingSink(f, SAMPLE_RATE, MAX_RECORDING_MINUTES * 60L * SAMPLE_RATE) {
+                WavRecordingSink(f, SAMPLE_RATE, maxSeconds.toLong() * SAMPLE_RATE) {
                     // from the recording thread: the longest dictation is reached (or the storage is full)
                     main.post { if (transcriber === t && state == State.RECORDING) stopRecording() }
                 }
@@ -171,9 +187,15 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             file?.delete()
             file = null
         }
+        // with a stream, every buffer goes to the file and to Offline Speech to Text at once
+        val feed = t.prepare(capabilities, haveFile = toFile != null)
         val e = RecordingEngine(
             sources = AndroidSources(ime),
-            sink = toFile ?: Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) },
+            sink = when {
+                toFile == null -> Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) }
+                feed != null -> LiveRecordingSink(toFile, feed)
+                else -> toFile
+            },
             sampleRate = SAMPLE_RATE,
             preferBluetooth = ime.prefs().getBoolean(Settings.PREF_DICTATION_USE_BLUETOOTH_MIC, Defaults.PREF_DICTATION_USE_BLUETOOTH_MIC),
             bluetoothAvailable = { BluetoothMics.available(ime) },
@@ -233,6 +255,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     /** The keyboard is on screen (again): a dictation that is still running shows its panel, in its current state. */
     fun onStartInputView() {
         rotation.onStartInputView()
+        // somebody who dictates has the words for the next dictation ready; nobody else has the dictionary read
+        if (wordsUsed) runCatching { DictationWords.refresh(ime) }
         if (state != State.IDLE) showProgress()
     }
 
@@ -292,10 +316,11 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
                 if (file == null) return@post // the pieces are already on their way
                 if (samples == 0L) {
                     file.delete()
+                    t.abandonLive()
                     t.submit(ShortArray(0), true)
                     return@post
                 }
-                // the whole recording, in one request
+                // the whole recording: the reserve of a live stream, else sent in one request now
                 val uri = runCatching { FileProvider.getUriForFile(ime, DictationAudioProvider.authority(ime), file) }
                 if (uri.isFailure) Log.w(TAG, "the recording can't be shared as a file", uri.exceptionOrNull())
                 t.submitRecording(file, uri.getOrNull(), samples * 1000 / SAMPLE_RATE)
