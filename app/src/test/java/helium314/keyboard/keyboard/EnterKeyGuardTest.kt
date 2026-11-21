@@ -3,6 +3,7 @@ package helium314.keyboard.keyboard
 
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.Constants
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,7 +30,10 @@ class EnterKeyGuardTest {
         assertFalse(EnterKeyGuard.blocks(Constants.CODE_SPACE, 1, 250))
     }
 
-    @Test fun everyChoiceStaysBelowTheDefaultLongPressTime() {
-        assertTrue(EnterKeyGuard.CHOICES.all { it < 300 })
+    @Test fun thePopupOpensLaterWhileTheHoldIsOnSoThereIsRoomToRelease() {
+        assertEquals(300, EnterKeyGuard.longPressTimeout(Constants.CODE_ENTER, 300, 0))
+        assertEquals(650, EnterKeyGuard.longPressTimeout(Constants.CODE_ENTER, 300, 250))
+        assertEquals(900, EnterKeyGuard.longPressTimeout(Constants.CODE_ENTER, 900, 100))
+        assertEquals(300, EnterKeyGuard.longPressTimeout('a'.code, 300, 250))
     }
 }

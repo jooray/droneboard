@@ -1320,7 +1320,8 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     private int getLongPressTimeout(int code) {
-        int longpressTimeout = Settings.getValues().mKeyLongpressTimeout;
+        int longpressTimeout = EnterKeyGuard.longPressTimeout(code, Settings.getValues().mKeyLongpressTimeout,
+                Settings.getValues().mEnterKeyDelay);
         return switch (code) {
             case Constants.CODE_SPACE, KeyCode.SHIFT, KeyCode.SYMBOL_ALPHA
                 // We use slightly longer timeout for space, shift-lock, and the numpad long-press.
