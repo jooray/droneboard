@@ -497,4 +497,6 @@
     <string name="setup_step_counter">Paso %1$d de 3</string>
     <string name="setup_step2_profile">%1$s está instalado en un perfil de trabajo u otro perfil separado. El teclado de ese perfil se elige en los ajustes de Android: abra los ajustes de teclado y elija %1$s como teclado en pantalla de ese perfil. La lista de arriba puede cambiar solo el teclado de su perfil principal.</string>
     <string name="setup_step2_profile_action">Abrir ajustes de teclado</string>
+    <string name="enter_key_delay">Mantener Intro para confirmar</string>
+    <string name="enter_key_delay_summary">La tecla Intro (nueva línea, enviar) solo actúa si la mantiene pulsada este tiempo. Ayuda si la pulsa por error en lugar de retroceso.</string>
 </resources>

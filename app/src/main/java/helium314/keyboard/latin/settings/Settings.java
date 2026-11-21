@@ -178,6 +178,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_MORE_POPUP_KEYS = "more_popup_keys";
     public static final String PREF_SHOW_TLD_POPUP_KEYS = "show_tld_popup_keys";
     public static final String PREF_POPUP_EDIT_ACTIONS = "popup_edit_actions";
+    /** Droneboard: how long (ms) the Enter key has to be held before it acts; 0 = a tap is enough */
+    public static final String PREF_ENTER_KEY_DELAY = "enter_key_delay";
 
     public static final String PREF_SPACE_TO_CHANGE_LANG = "prefs_long_press_keyboard_to_change_lang";
     /** what a long press on the space bar does: {@link Defaults#SPACE_LONG_PRESS_TRACKPAD}, ..._LANGUAGE or ..._NONE */

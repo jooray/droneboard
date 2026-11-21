@@ -60,6 +60,7 @@ fun PreferencesScreen(
         Settings.PREF_SHOW_POPUP_HINTS,
         Settings.PREF_SHOW_TLD_POPUP_KEYS,
         Settings.PREF_POPUP_EDIT_ACTIONS,
+        Settings.PREF_ENTER_KEY_DELAY,
         Settings.PREF_POPUP_ON,
         if (AudioAndHapticFeedbackManager.getInstance().hasVibrator())
             Settings.PREF_VIBRATE_ON else null,
@@ -148,6 +149,13 @@ fun createPreferencesSettings(context: Context) = listOf(
         R.string.show_tld_popup_keys_summary
     ) {
         SwitchPreference(it, Defaults.PREF_SHOW_TLD_POPUP_KEYS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+    },
+    Setting(context, Settings.PREF_ENTER_KEY_DELAY, R.string.enter_key_delay, R.string.enter_key_delay_summary) {
+        val off = stringResource(R.string.auto_correction_threshold_mode_off)
+        val items = helium314.keyboard.keyboard.EnterKeyGuard.CHOICES.map {
+            (if (it == 0) off else stringResource(R.string.abbreviation_unit_milliseconds, it.toString())) to it
+        }
+        ListPreference(it, items, Defaults.PREF_ENTER_KEY_DELAY)
     },
     Setting(
         context, Settings.PREF_POPUP_EDIT_ACTIONS, R.string.popup_edit_actions,

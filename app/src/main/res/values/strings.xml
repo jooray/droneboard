@@ -1015,4 +1015,6 @@ New dictionary:
     <string name="setup_step_counter">Step %1$d of 3</string>
     <string name="setup_step2_profile">%1$s is installed in a work profile or another separate profile. Android chooses the keyboard of such a profile in its own settings: open the keyboard settings and pick %1$s as the on-screen keyboard of that profile. The list above may only change the keyboard of your main profile.</string>
     <string name="setup_step2_profile_action">Open keyboard settings</string>
+    <string name="enter_key_delay">Hold Enter to confirm</string>
+    <string name="enter_key_delay_summary">The Enter key (new line, send) only acts when you hold it this long. Helps when you hit it by accident instead of backspace.</string>
 </resources>

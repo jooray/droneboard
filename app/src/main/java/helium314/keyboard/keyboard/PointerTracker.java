@@ -1347,6 +1347,13 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
 
         final int code = key.getCode();
+        // Droneboard: optional guard against hitting Enter (often "send") by accident, for example instead of
+        // the backspace above it: the key only acts when it was held for the chosen time. Off by default.
+        if (EnterKeyGuard.blocks(code, eventTime - mDownTime, Settings.getValues().mEnterKeyDelay)) {
+            callListenerOnCancelInput();
+            callListenerOnRelease(key, code, true);
+            return;
+        }
         callListenerOnCodeInput(key, code, x, y, eventTime, false);
         callListenerOnRelease(key, code, false);
     }

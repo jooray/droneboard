@@ -497,4 +497,6 @@
     <string name="setup_step_counter">Schritt %1$d von 3</string>
     <string name="setup_step2_profile">%1$s ist in einem Arbeitsprofil oder einem anderen getrennten Profil installiert. Die Tastatur eines solchen Profils wählt Android in den eigenen Einstellungen: Öffnen Sie die Tastatureinstellungen und wählen Sie %1$s als Bildschirmtastatur dieses Profils. Die Liste oben ändert möglicherweise nur die Tastatur Ihres Hauptprofils.</string>
     <string name="setup_step2_profile_action">Tastatureinstellungen öffnen</string>
+    <string name="enter_key_delay">Enter zum Bestätigen halten</string>
+    <string name="enter_key_delay_summary">Die Eingabetaste (neue Zeile, Senden) reagiert erst, wenn Sie sie so lange halten. Hilft, wenn Sie sie versehentlich statt der Löschtaste treffen.</string>
 </resources>
