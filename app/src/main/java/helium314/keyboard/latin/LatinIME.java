@@ -507,6 +507,8 @@ public class LatinIME extends InputMethodService implements
         helium314.keyboard.latin.swipe.SwipeGestureDecoder.setUserWordsProvider(
                 max -> mDictionaryFacilitator.getUserWordsForSwipe(max));
         mClipboardHistoryManager.onCreate();
+        // Droneboard: no recording of a dictation outlives the process that made it
+        mDictation.onCreate();
         mHandler.onCreate();
         mReceiver.register(this);
 
@@ -645,6 +647,8 @@ public class LatinIME extends InputMethodService implements
         SubtypeSettings.INSTANCE.reloadSystemLocales(this);
         if (settingsValues.mDisplayOrientation != conf.orientation) {
             mHandler.startOrientationChanging();
+            // Droneboard: a dictation goes on while the phone is rotated
+            mDictation.onOrientationChange();
             mInputLogic.onOrientationChange(mSettings.getCurrent());
         }
         if (settingsValues.mHasHardwareKeyboard != Settings.readHasHardwareKeyboard(conf)) {
@@ -711,6 +715,9 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
         mHandler.onStartInputView(editorInfo, restarting);
+        // Droneboard: a dictation that is still running shows its panel again. Called here and not in
+        // onStartInputViewInternal, which mHandler skips for the second start that follows a rotation.
+        mDictation.onStartInputView();
         mStatsUtilsManager.onStartInputView();
     }
 

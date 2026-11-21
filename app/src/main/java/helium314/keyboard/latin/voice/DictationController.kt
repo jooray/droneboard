@@ -20,6 +20,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -27,6 +28,7 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.support.SupportAsk
 import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.prefs
+import java.io.File
 
 private const val TAG = "DroneboardDictation"
 
@@ -34,6 +36,8 @@ private const val TAG = "DroneboardDictation"
  * One-tap dictation inside the keyboard: the keyboard records (phone or Bluetooth headset, the
  * Third Ear way), Offline Speech to Text transcribes, and the text lands at the cursor. No
  * keyboard switching. Tap the mic to start, tap again to stop; there is no stop on silence.
+ * Nothing is transcribed while the user talks: the recording goes to a file and is sent whole when they stop, so
+ * no sentence is cut in the middle. The price is that the text of a long dictation takes a while to appear.
  * Everything here runs on the main thread except the recording loop.
  * Only reachable on Android 13+ ([supported] gates [onMicKey], the one entry point).
  */
@@ -46,6 +50,12 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         val supported get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         /** how long after the last dictated piece one backspace still takes the whole block back */
         private const val UNDO_WINDOW_MS = 30_000L
+        /**
+         * The longest single dictation. After this the recording ends as if the user had tapped the mic, and what
+         * was said is transcribed. Half an hour is far more than anyone dictates in one go, and it bounds the file
+         * (58 MB) and the wait for the text when a recording is left running by mistake.
+         */
+        const val MAX_RECORDING_MINUTES = 30
         private const val HELP_BASE = "https://cypherpunk.today/droneboard/"
         /** Languages the website has a dictation page in, besides English at the root. */
         private val HELP_LANGUAGES = setOf("sk", "cs", "de", "es")
@@ -71,8 +81,37 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private var typedBlockAt = 0L
     private var typing = false
     private var focusRequest: AudioFocusRequest? = null
+    private val rotation = RotationGuard()
+    private val rotationTimeout = Runnable {
+        // the keyboard did not come back after the rotation: the user left, as in [onFinishInputView]
+        if (rotation.onTimeout() == RotationGuard.Finish.STOP) {
+            if (state == State.RECORDING) {
+                stopRecording()
+                hidePanel()
+            }
+        } else if (state != State.IDLE && panel == null && ime.isInputViewShown) {
+            // the keyboard stayed on screen and nothing announced it again: the panel still has to come back
+            showProgress()
+        }
+    }
 
     val isActive get() = state != State.IDLE || panel != null
+
+    /** The keyboard process started: a recording left on the phone by a crash is deleted. */
+    fun onCreate() {
+        runCatching { recordingDir()?.let { DictationFiles.clear(it) } }
+    }
+
+    /**
+     * Where the recording of a dictation is kept until it is transcribed: the app's cache folder, which Android
+     * never backs up and which is encrypted with the user's credentials. Null before the first unlock, or if the
+     * folder were ever the one that is readable before unlock: speech does not go there.
+     */
+    private fun recordingDir(): File? = runCatching {
+        val ctx = ime.applicationContext ?: ime
+        if (!DirectBoot.isUnlocked(ime) || ctx.isDeviceProtectedStorage) null
+        else File(ctx.cacheDir, DictationFiles.DIR)
+    }.getOrNull()
 
     /** The mic key or toolbar button. Returns false when dictation can't run here (old Android). */
     fun onMicKey(): Boolean {
@@ -88,7 +127,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         }
         when (state) {
             State.RECORDING -> stopRecording()
-            State.TRANSCRIBING -> Unit // still typing out the last words
+            State.TRANSCRIBING -> showProgress() // the text is on its way; the panel says so
             State.IDLE -> if (panel != null) hidePanel() else start()
         }
         return true
@@ -109,16 +148,36 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         typedAny = false
         untyped.setLength(0)
         typedBlock.setLength(0)
+        lastStatus = null
+        rotation.reset()
+        main.removeCallbacks(rotationTimeout)
         val t = OsttTranscriber(ime, this)
         transcriber = t
-        val chunker = Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) }
+        // no dictation is running here, so any file in the folder is a leftover
+        val dir = recordingDir()
+        runCatching { dir?.let { DictationFiles.clear(it) } }
+        var file = dir?.let { DictationFiles.create(it) }
+        val toFile = file?.let { f ->
+            runCatching {
+                WavRecordingSink(f, SAMPLE_RATE, MAX_RECORDING_MINUTES * 60L * SAMPLE_RATE) {
+                    // from the recording thread: the longest dictation is reached (or the storage is full)
+                    main.post { if (transcriber === t && state == State.RECORDING) stopRecording() }
+                }
+            }.getOrNull()
+        }
+        if (toFile == null) {
+            // no private place for a file: the recording is cut and transcribed while it runs, as it always was
+            Log.w(TAG, "no file for the recording, transcribing in pieces while recording")
+            file?.delete()
+            file = null
+        }
         val e = RecordingEngine(
             sources = AndroidSources(ime),
-            sink = chunker,
+            sink = toFile ?: Chunker(SAMPLE_RATE) { pcm, last -> t.submit(pcm, last) },
             sampleRate = SAMPLE_RATE,
             preferBluetooth = ime.prefs().getBoolean(Settings.PREF_DICTATION_USE_BLUETOOTH_MIC, Defaults.PREF_DICTATION_USE_BLUETOOTH_MIC),
             bluetoothAvailable = { BluetoothMics.available(ime) },
-            listener = engineListener,
+            listener = engineListener(t, file),
         )
         engine = e
         state = State.RECORDING
@@ -130,7 +189,7 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     private fun stopRecording() {
         val e = engine ?: return
         state = State.TRANSCRIBING
-        panel?.show(VoiceInputView.Mode.TRANSCRIBING, ime.getString(R.string.voice_transcribing), micLabel(lastStatus))
+        showProgress()
         e.stop()
     }
 
@@ -143,21 +202,57 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         transcriber = null
         untyped.setLength(0)
         state = State.IDLE
+        rotation.reset()
+        main.removeCallbacks(rotationTimeout)
         hidePanel()
     }
 
     /**
      * The keyboard went away (screen off, a notification, another app): a running recording is not dropped, it
      * ends here and is written down. The text is typed when the field is still there, else it goes to the clipboard.
+     * Not so while the phone is being rotated: then only the panel goes, see [RotationGuard].
      */
     fun onFinishInputView() {
-        if (state == State.RECORDING) stopRecording()
+        if (rotation.onFinishInputView() == RotationGuard.Finish.STOP && state == State.RECORDING) stopRecording()
         hidePanel()
+    }
+
+    /**
+     * The phone was rotated. Android builds the keyboard again and hides it for a moment; a dictation goes on
+     * through that, and the panel returns with the keyboard in [onStartInputView].
+     */
+    fun onOrientationChange() {
+        // the panel hangs on the views of the old orientation, which are off the screen now
+        hidePanel()
+        if (state == State.IDLE) return
+        rotation.onOrientationChange()
+        main.removeCallbacks(rotationTimeout)
+        main.postDelayed(rotationTimeout, RotationGuard.TIMEOUT_MS)
+    }
+
+    /** The keyboard is on screen (again): a dictation that is still running shows its panel, in its current state. */
+    fun onStartInputView() {
+        rotation.onStartInputView()
+        if (state != State.IDLE) showProgress()
+    }
+
+    /** The panel for where the running dictation is: listening, or waiting for the text. */
+    private fun showProgress() {
+        when (state) {
+            State.RECORDING -> {
+                showPanel(VoiceInputView.Mode.STARTING, ime.getString(R.string.voice_starting), null)
+                lastStatus?.let { s -> panel?.let { showRecording(it, s, wasWaiting = false) } }
+            }
+            State.TRANSCRIBING ->
+                showPanel(VoiceInputView.Mode.TRANSCRIBING, ime.getString(R.string.voice_transcribing), micLabel(lastStatus))
+            State.IDLE -> Unit
+        }
     }
 
     // ---- recording ----
 
-    private val engineListener = object : RecordingEngine.Listener {
+    /** For one dictation: [t] is its transcriber, [file] its recording (null when it is transcribed in pieces while recording). */
+    private fun engineListener(t: OsttTranscriber, file: File?) = object : RecordingEngine.Listener {
         override fun onStatus(status: EngineStatus) {
             main.post { onEngineStatus(status) }
         }
@@ -174,14 +269,36 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         override fun onFinished(samples: Long, failure: String?) {
             main.post {
                 if (failure != null) Log.w(TAG, "recording ended: $failure")
+                if (transcriber !== t) {
+                    // cancelled, or the user has started another dictation since: this recording is not wanted
+                    file?.delete()
+                    return@post
+                }
                 engine = null
                 resumeOtherAudio()
-                if (failure != null && samples == 0L && state != State.IDLE) {
-                    transcriber?.cancel()
+                if (failure != null && samples == 0L) {
+                    file?.delete()
+                    t.cancel()
                     transcriber = null
                     state = State.IDLE
                     showPanel(VoiceInputView.Mode.ERROR, ime.getString(R.string.voice_mic_failed), failure)
+                    return@post
                 }
+                if (state == State.RECORDING) {
+                    // the microphone gave up in the middle: what was said until then is still written down
+                    state = State.TRANSCRIBING
+                    if (panel != null) showProgress()
+                }
+                if (file == null) return@post // the pieces are already on their way
+                if (samples == 0L) {
+                    file.delete()
+                    t.submit(ShortArray(0), true)
+                    return@post
+                }
+                // the whole recording, in one request
+                val uri = runCatching { FileProvider.getUriForFile(ime, DictationAudioProvider.authority(ime), file) }
+                if (uri.isFailure) Log.w(TAG, "the recording can't be shared as a file", uri.exceptionOrNull())
+                t.submitRecording(file, uri.getOrNull(), samples * 1000 / SAMPLE_RATE)
             }
         }
     }
@@ -191,6 +308,10 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         lastStatus = s
         val p = panel ?: return
         if (state != State.RECORDING) return
+        showRecording(p, s, wasWaiting)
+    }
+
+    private fun showRecording(p: VoiceInputView, s: EngineStatus, wasWaiting: Boolean) {
         when {
             s.starting || s.switching -> p.show(VoiceInputView.Mode.STARTING, ime.getString(R.string.voice_starting), micLabel(s))
             s.waitingForBluetooth -> p.show(VoiceInputView.Mode.WAITING_BLUETOOTH, ime.getString(R.string.voice_waiting_bluetooth), micLabel(s))
@@ -361,8 +482,11 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         primary: VoiceInputView.Button? = null, secondary: VoiceInputView.Button? = null,
     ) {
         var p = panel
-        if (p == null || p.parent == null) {
-            val w = wrapper() ?: return
+        val current = wrapper()
+        // a panel on another wrapper than the one on screen is a leftover of the keyboard's previous views
+        // (Android builds them again on rotation): it has a parent, but nobody sees it
+        if (p == null || p.parent !== current) {
+            val w = current ?: return
             p?.let { (it.parent as? ViewGroup)?.removeView(it) }
             p = VoiceInputView(ime, this)
             w.addView(p, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))

@@ -125,6 +125,18 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:resource="@xml/clipboard_provider_path"/>
         </provider>
 
+        <!-- Droneboard: hands the recording of a dictation to Offline Speech to Text, which transcribes it.
+             Not exported: only an app given a read grant for one file can open it, and only OSTT is given one. -->
+        <provider android:name="helium314.keyboard.latin.voice.DictationAudioProvider"
+            android:authorities="${applicationId}.dictationaudio"
+            android:enabled="true"
+            android:grantUriPermissions="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/dictation_provider_path"/>
+        </provider>
+
     </application>
 
     <queries>
