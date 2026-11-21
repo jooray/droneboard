@@ -1,0 +1,2 @@
+- New setting: Settings → Preferences → "Hold Enter to confirm". When it is on, the Enter key (new line, send, search) only acts when you hold it for the chosen time (100 to 250 ms), so a finger that lands on it instead of backspace does not send the message. Off by default.
+- Setup wizard in a work profile or another separate profile (Island, Shelter, a company profile): it now explains that Android chooses that profile's keyboard in its own settings and offers a button there.
