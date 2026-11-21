@@ -201,7 +201,8 @@ fun createAboutSettings(context: Context) = listOf(
                     os.writer().use { writer ->
                         val logcat = Runtime.getRuntime().exec("logcat -d -b all *:W").inputStream.use { it.reader().readText() }
                         val internal = Log.getLog().joinToString("\n")
-                        writer.write(logcat + "\n\n" + internal)
+                        val state = runCatching { helium314.keyboard.latin.utils.PredictionDiagnostics.report(ctx) }.getOrElse { "state: $it" }
+                        writer.write(logcat + "\n\n" + internal + "\n\n" + state + "\n")
                     }
                 }
             }

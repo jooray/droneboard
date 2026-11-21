@@ -71,6 +71,37 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
      *  facilitator only, not the spell checker's) */
     @Volatile
     var useLanguageModel = false
+        set(value) {
+            field = value
+            if (value) keyboardInstance = java.lang.ref.WeakReference(this)
+        }
+
+    @Volatile private var loggedNoLocales = false
+    @Volatile private var mainDictionaryRetryAt = 0L
+
+    /**
+     * Self-healing: a main dictionary that did not load when the keyboard started (for example because its
+     * file could not be read at that moment) used to stay missing until the process restarted. Loads the
+     * missing ones again, at most every [MAIN_DICTIONARY_RETRY_MS]. Returns the languages it retried.
+     */
+    fun retryMissingMainDictionaries(context: Context): List<String> {
+        val missing = dictionaryGroups.filter { it.locale.language.isNotEmpty() && it.getDict(Dictionary.TYPE_MAIN)?.isInitialized != true }
+        if (missing.isEmpty() || mLatchForWaitingLoadingMainDictionaries.count > 0) return emptyList()
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - mainDictionaryRetryAt < MAIN_DICTIONARY_RETRY_MS) return emptyList()
+        mainDictionaryRetryAt = now
+        synchronized(this) { asyncReloadUninitializedMainDictionaries(context, dictionaryGroups.map { it.locale }, null) }
+        return missing.map { it.locale.toLanguageTag() }
+    }
+
+    /** The languages of this facilitator and which of their dictionaries are loaded, for the saved log. */
+    fun debugState(): String = runCatching {
+        "dictionaries: " + dictionaryGroups.joinToString("; ") { g ->
+            val main = g.getDict(Dictionary.TYPE_MAIN)
+            "${g.locale.toLanguageTag().ifEmpty { "(none)" }} main=${if (main == null) "missing" else if (main.isInitialized) "ok" else "loading"}" +
+                " other=${DictionaryFacilitator.ALL_DICTIONARY_TYPES.filter { it != Dictionary.TYPE_MAIN && g.hasDict(it) }}"
+        }
+    }.getOrElse { "dictionaries: $it" }
 
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
@@ -559,7 +590,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         val typed = composedData.mTypedWord
         if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return
         val locales = dictionaryGroups.map { it.locale }.filter { it.language.isNotEmpty() }
-        if (locales.isEmpty()) return
+        if (locales.isEmpty()) {
+            if (!loggedNoLocales) { loggedNoLocales = true; Log.w(TAG, "no language model suggestions: no language in ${dictionaryGroups.map { it.locale }}") }
+            return
+        }
+        loggedNoLocales = false
         NeuralLanguageModel.lastAnswerTemporary.set(false)
         val predictions = try {
             model.predict(LanguageModelSuggestions.contextWords(ngramContext), typed, locales, 8)
@@ -696,6 +731,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
     companion object {
         private val TAG = DictionaryFacilitatorImpl::class.java.simpleName
+
+        private const val MAIN_DICTIONARY_RETRY_MS = 30_000L
+
+        /** the keyboard's facilitator (not the spell checker's), for [debugState] in the saved log */
+        @Volatile
+        @JvmStatic
+        var keyboardInstance: java.lang.ref.WeakReference<DictionaryFacilitatorImpl>? = null
 
         // HACK: This threshold is being used when adding a capitalized entry in the User History dictionary.
         private const val CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT = 140

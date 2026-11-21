@@ -147,7 +147,6 @@ object SwipeGestureDecoder {
     private val extractLock = Any()
     private val extractLocks = ConcurrentHashMap<String, Any>()
     private var assetDir: File? = null
-    private var availableLanguages: Set<String>? = null
 
     private var layoutSignature: String? = null
     private var activeLanguages: List<String> = emptyList()
@@ -175,23 +174,42 @@ object SwipeGestureDecoder {
         if (!DirectBoot.isUnlocked(app)) return
         if (!FutoSwipe.isAvailable) return
         // secondary (multilingual) locales live in the subtype's extra value, e.g. EN keyboard + SK
-        val locales = runCatching {
-            SubtypeSettings.getEnabledSubtypes(true).flatMap { listOf(it.locale()) + getSecondaryLocales(it.extraValue) }
-        }.getOrDefault(emptyList())
+        val locales = enabledLocales()
+        if (locales.isEmpty()) Log.w(TAG, "no enabled languages at start, nothing preloaded")
         preload(app, locales)
         runCatching { NeuralLanguageModel.preload(app, locales.map { it.engineKey }) }
+            .onFailure { Log.w(TAG, "could not preload the neural models", it) }
+    }
+
+    /** Every language the user can type in: the enabled keyboards and their secondary (multilingual) languages. */
+    fun enabledLocales(): List<Locale> = runCatching {
+        SubtypeSettings.getEnabledSubtypes(true).flatMap { listOf(it.locale()) + getSecondaryLocales(it.extraValue) }
+            .filter { it.language.isNotEmpty() && it.language != "zz" }.distinct()
+    }.onFailure { Log.w(TAG, "could not read the enabled languages", it) }.getOrDefault(emptyList())
+
+    /**
+     * Self-healing: starts loading every dictionary of [locales] that ships in the APK and is neither loaded nor
+     * loading (called whenever the keyboard is shown). Returns the languages a load was started for.
+     */
+    fun ensureLoaded(context: Context, locales: List<Locale>): List<String> {
+        if (appContext == null) appContext = context.applicationContext ?: context
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return emptyList()
+        val available = languagesWithDictionary(context)
+        return locales.map { it.engineKey }.distinct().filter { it in available }.filter { lang ->
+            if (dictionaries[lang] != null || loading[lang]?.let { it.count > 0 } == true) return@filter false
+            val wasFailed = failedAt.containsKey(lang)
+            requestLoad(context, lang)
+            // a recent failure is retried only after RETRY_FAILED_MS; then nothing was started now
+            !wasFailed || loading[lang]?.let { it.count > 0 } == true
+        }
     }
 
     @JvmStatic
     fun isAvailable(context: Context): Boolean =
-        DirectBoot.isUnlocked(context) && FutoSwipe.isAvailable && languagesWithDictionary(context).isNotEmpty()
+        DirectBoot.isUnlocked(context) && FutoSwipe.isAvailable && EngineAssets.exists(context, ENCODER)
 
-    /** Languages with a .kpd swipe dictionary in the APK. */
-    fun languagesWithDictionary(context: Context): Set<String> = availableLanguages ?: run {
-        val files = runCatching { context.assets.list(ASSET_DIR)?.toSet() }.getOrNull() ?: emptySet()
-        files.filter { it.endsWith(".kpd") }.map { it.substringBefore('.') }.toSet()
-            .also { availableLanguages = it }
-    }
+    /** Languages with a .kpd swipe dictionary in the APK (see [EngineAssets] for why this is not a cached listing). */
+    fun languagesWithDictionary(context: Context): Set<String> = EngineAssets.languages(context, ".kpd")
 
     /**
      * Copies the model and dictionaries out of the APK once per installation (native code needs files).
@@ -270,6 +288,8 @@ object SwipeGestureDecoder {
             failedAt.remove(language)
             if (dictionaries[language] == null) loading.remove(language)
         }
+        // a load that finished without a dictionary and without a recorded failure would otherwise never be retried
+        loading[language]?.let { if (it.count == 0L && dictionaries[language] == null && !failedAt.containsKey(language)) loading.remove(language) }
         return loading.computeIfAbsent(language) {
             val latch = CountDownLatch(1)
             loader.execute {
@@ -509,4 +529,16 @@ object SwipeGestureDecoder {
         }
         return results
     }
+
+    fun filesMissingFromListing(context: Context): List<String> = EngineAssets.missingFromListing(context)
+
+    /** State of the swipe decoder and its dictionaries, for the saved log. No typed text. */
+    fun debugState(): String = runCatching {
+        val now = System.currentTimeMillis()
+        "swipe: context=${appContext != null} native=${FutoSwipe.isAvailable} unlocked=${DirectBoot.isUnlocked()}" +
+            " session=${session != 0L} inApk=${appContext?.let { languagesWithDictionary(it).sorted() }}" +
+            " loaded=${dictionaries.keys.sorted()} loading=${loading.filter { it.value.count > 0 }.keys.sorted()}" +
+            " failed=${failedAt.mapValues { (now - it.value) / 1000 }} active=$activeLanguages dir=${assetDir?.name}" +
+            " missingFromListing=${appContext?.let { EngineAssets.missingFromListing(it) }}"
+    }.getOrElse { "swipe: $it" }
 }

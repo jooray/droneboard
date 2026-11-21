@@ -50,7 +50,6 @@ object NeuralLanguageModel : LanguageModel {
     private val lock = ReentrantReadWriteLock()
     private val models = ConcurrentHashMap<String, Long>()
     private val loading = ConcurrentHashMap.newKeySet<String>()
-    private var available: Set<String>? = null
 
     // one worker; a newer request replaces one still waiting in the queue
     private val executor = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(1),
@@ -95,16 +94,25 @@ object NeuralLanguageModel : LanguageModel {
         }
         val temporaryFallback = { lastAnswerTemporary.set(true); fallback() }
         // direct boot: no model files before the first unlock, and no predictions from personal data
-        if (maxResults <= 0 || !DirectBoot.isUnlocked() || !FutoSwipe.isAvailable) return emptyList()
-        if (!Settings.getValues().mNeuralPredictions) return fallback()
-        val app = SwipeGestureDecoder.appContext ?: return fallback()
-        if (languages.isEmpty() || !languages.all { it in neuralLanguages(app) }) return fallback()
+        if (maxResults <= 0) return emptyList()
+        if (!DirectBoot.isUnlocked()) { note("no predictions: the user is locked"); return emptyList() }
+        if (!FutoSwipe.isAvailable) { note("no predictions: the native library is missing"); return emptyList() }
+        if (!Settings.getValues().mNeuralPredictions) return fallback() // the user's choice, not a fault
+        val app = SwipeGestureDecoder.appContext
+        if (app == null) { note("n-grams only: the swipe decoder has no context yet"); return fallback() }
+        if (languages.isEmpty()) { note("n-grams only: no languages in $locales"); return fallback() }
+        if (!languages.all { it in neuralLanguages(app) }) {
+            note("n-grams only: no neural model for ${languages.filter { it !in neuralLanguages(app) }}")
+            return fallback()
+        }
         releaseOthers(languages)
         val handles = languages.map { models[it] }
         if (handles.any { it == null }) {
             languages.forEach { requestLoad(app, it) }
+            note("n-grams only: loading ${languages.filter { models[it] == null }}")
             return temporaryFallback()
         }
+        note("neural: $languages")
         val (tokens, bos) = tokensBeforeCursor(textBeforeCursor.get(), context, prefix)
         val key = languages.joinToString(",") + "|" + bos + "|" + tokens.joinToString(" ") + "|" + prefix + "|" + maxResults
         synchronized(cache) { cache[key] }?.let { return it }
@@ -168,11 +176,28 @@ object NeuralLanguageModel : LanguageModel {
             .map { WordPrediction(it.best.word, Math.log(it.p + 1e-30).toFloat(), it.best.locale) }
     }
 
-    /** Languages with a neural model in the APK. */
-    fun neuralLanguages(context: Context): Set<String> = available ?: run {
-        val files = runCatching { context.assets.list(ASSET_DIR)?.toSet() }.getOrNull() ?: emptySet()
-        files.filter { it.endsWith(".lmb") }.map { it.substringBefore('.') }
-            .filter { "$it.lmv" in files }.toSet().also { available = it }
+    /** Languages with a neural model in the APK (see EngineAssets for why this is not a cached listing). */
+    fun neuralLanguages(context: Context): Set<String> =
+        helium314.keyboard.latin.swipe.EngineAssets.languages(context, ".lmb", ".lmv")
+
+    /** Where the last prediction came from. Logged when it changes, so that the saved log shows why predictions
+     *  are weaker than usual; languages and reasons only, never text. */
+    @Volatile private var lastNote: String? = null
+    private fun note(what: String) {
+        if (what == lastNote) return
+        lastNote = what
+        Log.i(TAG, what)
+    }
+
+    /**
+     * Self-healing: starts loading every model of [languages] that should be loaded and is neither loaded nor
+     * loading (called whenever the keyboard is shown). Returns the languages a load was started for.
+     */
+    fun ensureLoaded(context: Context, languages: Collection<String>): List<String> {
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable || Settings.getValues()?.mNeuralPredictions != true)
+            return emptyList()
+        val wanted = languages.distinct().filter { it in neuralLanguages(context) }
+        return wanted.filter { requestLoad(context, it) }
     }
 
     /** Loads the models of [languages] in the background (called when the keyboard starts). */
@@ -181,9 +206,10 @@ object NeuralLanguageModel : LanguageModel {
         languages.filter { it in neuralLanguages(context) }.forEach { requestLoad(context, it) }
     }
 
-    private fun requestLoad(context: Context, language: String) {
-        if (!DirectBoot.isUnlocked(context) || models.containsKey(language) || !loading.add(language)) return
-        loader.execute {
+    /** @return true when a load was started now */
+    private fun requestLoad(context: Context, language: String): Boolean {
+        if (!DirectBoot.isUnlocked(context) || models.containsKey(language) || !loading.add(language)) return false
+        val task = Runnable {
             try {
                 val start = SystemClock.elapsedRealtime()
                 val lmb = SwipeGestureDecoder.extract(context, "$language.lmb")
@@ -200,6 +226,15 @@ object NeuralLanguageModel : LanguageModel {
             } finally {
                 loading.remove(language)
             }
+        }
+        return try {
+            loader.execute(task)
+            true
+        } catch (e: Throwable) {
+            // a task that never runs must not leave the language marked as loading for the rest of the process
+            loading.remove(language)
+            Log.w(TAG, "could not start loading $language", e)
+            false
         }
     }
 
@@ -289,4 +324,12 @@ object NeuralLanguageModel : LanguageModel {
         val bos = wholeField && tokens.size <= MAX_TOKENS
         return tokens.takeLast(MAX_TOKENS) to bos
     }
+
+    /** State of every condition a neural prediction depends on, for the saved log. No typed text. */
+    fun debugState(): String = runCatching {
+        val app = SwipeGestureDecoder.appContext
+        "neural: setting=${Settings.getValues()?.mNeuralPredictions} inApk=${app?.let { neuralLanguages(it).sorted() }}" +
+            " loaded=${models.keys.sorted()} loading=${loading.sorted()} swipeLanguages=$swipeLanguages" +
+            " queue=${loader.queue.size} loaderThreads=${loader.poolSize}"
+    }.getOrElse { "neural: $it" }
 }

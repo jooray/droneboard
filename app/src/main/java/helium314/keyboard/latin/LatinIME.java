@@ -782,6 +782,8 @@ public class LatinIME extends InputMethodService implements
         super.onStartInputView(editorInfo, restarting);
         // the settings are not reloaded when the same field restarts with other options (e.g. incognito)
         helium314.keyboard.latin.swipe.TypingSwipeRecorder.onStartInputView(editorInfo);
+        // Droneboard: whatever did not load when the process started is loaded now (self-healing)
+        helium314.keyboard.latin.utils.PredictionHealth.check(this);
         // Droneboard: a day of use for the support ask (a number only; the ask itself is never in the keyboard)
         helium314.keyboard.latin.support.SupportAsk.onInputViewStarted(this);
 
