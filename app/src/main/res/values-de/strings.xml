@@ -490,4 +490,9 @@
     <string name="popup_edit_actions_summary">Langes Drücken dieser Buchstaben bietet auch Alles auswählen, Ausschneiden, Kopieren, Einfügen, Rückgängig und Wiederholen</string>
     <string name="touchpad_dim">Tasten im Trackpad-Modus ausblenden</string>
     <string name="touchpad_dim_description">Die Tasten verschwinden fast, während Sie den Cursor über die Leertaste bewegen. Schalten Sie es aus, wenn es wie Flackern wirkt.</string>
+    <string name="setup_step1_hint">Es öffnet sich eine Liste der Tastaturen. Schalten Sie %s ein, bestätigen Sie den Hinweis und gehen Sie zurück.</string>
+    <string name="setup_step2_hint">Es öffnet sich eine Liste der Tastaturen. Tippen Sie darin auf %s.</string>
+    <string name="setup_step2_retry">%1$s ist noch nicht ausgewählt. Tippen Sie noch einmal auf die Schaltfläche oben und wählen Sie %1$s in der Liste.</string>
+    <string name="setup_step2_skip">Später einrichten</string>
+    <string name="setup_step_counter">Schritt %1$d von 3</string>
 </resources>

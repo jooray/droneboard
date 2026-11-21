@@ -32,6 +32,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -68,6 +69,8 @@ fun WelcomeWizard(
         else -> 3
     }
     var step by rememberSaveable { mutableIntStateOf(determineStep()) }
+    // Droneboard: the picker was opened at least once and the keyboard is still not selected (shows what to do next)
+    var pickerOpened by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope { Dispatchers.IO }
     LaunchedEffect(step) {
         if (step == 2)
@@ -104,29 +107,32 @@ fun WelcomeWizard(
         }
     }
     @Composable
-    fun ColumnScope.Step(step: Int, title: String, instruction: String, actionText: String, icon: Painter, action: () -> Unit) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("1", color = if (step == 1) titleColor else textColorDim)
-            Text("2", color = if (step == 2) titleColor else textColorDim)
-            Text("3", color = if (step == 3) titleColor else textColorDim)
+    fun ColumnScope.Step(step: Int, title: String, instruction: String, actionText: String, icon: Painter,
+                         hint: String? = null, action: () -> Unit) {
+        // Droneboard: the explanation used to be a box of the same colour as the button under it, and people
+        // tapped the explanation or the wrong box. Now only what can be tapped looks like a button, and a line
+        // under it says what will open and what to do there.
+        Text(stringResource(R.string.setup_step_counter, step), color = titleColor,
+            style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.clickable { action() }.padding(vertical = 8.dp)) {
+            Text(title, color = titleColor)
+            Text(instruction, style = MaterialTheme.typography.bodyLarge.merge(color = titleColor))
         }
-        Column(Modifier
-            .background(color = stepBackgroundColor)
-            .padding(16.dp)
-        ) {
-            Text(title)
-            Text(instruction, style = MaterialTheme.typography.bodyLarge.merge(color = textColor))
-        }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
         Row(
-            Modifier.clickable { action() }
-                .background(color = stepBackgroundColor)
+            Modifier.fillMaxWidth()
+                .clickable { action() }
+                .background(color = stepBackgroundColor, shape = MaterialTheme.shapes.medium)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, Modifier.padding(end = 6.dp).size(32.dp), tint = textColor)
+            Icon(icon, null, Modifier.padding(end = 10.dp).size(32.dp), tint = textColor)
             Text(actionText, Modifier.weight(1f))
+            Icon(painterResource(R.drawable.ic_arrow_right), null, Modifier.size(28.dp), tint = textColor)
         }
+        if (hint != null)
+            Text(hint, Modifier.padding(top = 8.dp), color = titleColor.copy(alpha = 0.8f),
+                style = MaterialTheme.typography.bodyMedium)
     }
     @Composable fun steps() {
         if (step == 0)
@@ -142,7 +148,8 @@ fun WelcomeWizard(
                         stringResource(R.string.setup_step1_title, appName),
                         stringResource(R.string.setup_step1_instruction, appName),
                         stringResource(R.string.setup_step1_action),
-                        painterResource(R.drawable.ic_setup_key)
+                        painterResource(R.drawable.ic_setup_key),
+                        stringResource(R.string.setup_step1_hint, appName)
                     ) {
                         val intent = Intent()
                         intent.action = Settings.ACTION_INPUT_METHOD_SETTINGS
@@ -156,23 +163,21 @@ fun WelcomeWizard(
                         stringResource(R.string.setup_step2_instruction, appName),
                         stringResource(R.string.setup_step2_action),
                         painterResource(R.drawable.ic_setup_select),
-                        imm::showInputMethodPicker
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        Modifier.clickable { close() }
-                            .background(color = stepBackgroundColor)
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        if (pickerOpened) stringResource(R.string.setup_step2_retry, appName)
+                        else stringResource(R.string.setup_step2_hint, appName)
                     ) {
-                        Icon(
-                            painterResource(R.drawable.sym_keyboard_language_switch),
-                            null,
-                            Modifier.padding(end = 6.dp).size(32.dp),
-                            tint = textColor
-                        )
-                        Text(stringResource(R.string.setup_step3_action), Modifier.weight(1f))
+                        pickerOpened = true
+                        imm.showInputMethodPicker()
                     }
+                    // Droneboard: leaving without switching is possible but no longer looks like the next step
+                    // (it was a second button of the same size, and it skips the step the user is stuck on)
+                    Text(
+                        stringResource(R.string.setup_step2_skip),
+                        Modifier.padding(top = 28.dp).clickable { close() }.padding(vertical = 8.dp),
+                        color = titleColor.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                    )
                 } else { // step 3
                     Step(
                         step,
@@ -180,12 +185,12 @@ fun WelcomeWizard(
                         stringResource(R.string.setup_step3_instruction, appName),
                         stringResource(R.string.setup_step3_action),
                         painterResource(R.drawable.sym_keyboard_language_switch),
-                        close
+                        action = close
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
-                        Modifier.clickable { finish() }
-                            .background(color = stepBackgroundColor)
+                        Modifier.fillMaxWidth().clickable { finish() }
+                            .background(color = stepBackgroundColor, shape = MaterialTheme.shapes.medium)
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
