@@ -32,6 +32,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,6 +72,11 @@ fun WelcomeWizard(
     var step by rememberSaveable { mutableIntStateOf(determineStep()) }
     // Droneboard: the picker was opened at least once and the keyboard is still not selected (shows what to do next)
     var pickerOpened by rememberSaveable { mutableStateOf(false) }
+    val inSeparateProfile = remember {
+        val um = ctx.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+        runCatching { um?.isManagedProfile == true }.getOrDefault(false)
+            || (android.os.Build.VERSION.SDK_INT >= 30 && runCatching { um?.isProfile == true }.getOrDefault(false))
+    }
     val scope = rememberCoroutineScope { Dispatchers.IO }
     LaunchedEffect(step) {
         if (step == 2)
@@ -168,6 +174,28 @@ fun WelcomeWizard(
                     ) {
                         pickerOpened = true
                         imm.showInputMethodPicker()
+                    }
+                    // Droneboard: in a work profile (Island, Shelter, a company profile) or another separate
+                    // profile, the picker opened above belongs to the main profile, while this wizard waits for
+                    // the keyboard of its own profile, which Android sets in the system settings. Without this
+                    // the wizard stayed on step 2 for good (reported from a work profile made with Island).
+                    if (inSeparateProfile) {
+                        Text(stringResource(R.string.setup_step2_profile, appName), Modifier.padding(top = 20.dp),
+                            color = titleColor, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    launcher.launch(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS).addCategory(Intent.CATEGORY_DEFAULT))
+                                }
+                                .background(color = stepBackgroundColor, shape = MaterialTheme.shapes.medium)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(painterResource(R.drawable.ic_setup_key), null, Modifier.padding(end = 10.dp).size(32.dp), tint = textColor)
+                            Text(stringResource(R.string.setup_step2_profile_action), Modifier.weight(1f))
+                            helium314.keyboard.latin.utils.NextScreenIcon()
+                        }
                     }
                     // Droneboard: leaving without switching is possible but no longer looks like the next step
                     // (it was a second button of the same size, and it skips the step the user is stuck on)

@@ -497,4 +497,6 @@
     <string name="setup_step2_retry">%1$s ještě není vybrán. Klepněte znovu na tlačítko výše a v seznamu vyberte %1$s. Seznam se otevře u klávesnice, kterou právě používáte, takže ho možná bude třeba posunout nahoru.</string>
     <string name="setup_step2_skip">Nastavit později</string>
     <string name="setup_step_counter">Krok %1$d ze 3</string>
+    <string name="setup_step2_profile">%1$s je nainstalován v pracovním nebo jiném odděleném profilu. Klávesnici takového profilu vybírá Android ve vlastním nastavení: otevřete nastavení klávesnice a vyberte %1$s jako klávesnici na obrazovce pro tento profil. Seznam výše může měnit jen klávesnici hlavního profilu.</string>
+    <string name="setup_step2_profile_action">Otevřít nastavení klávesnice</string>
 </resources>

@@ -495,4 +495,6 @@
     <string name="setup_step2_retry">%1$s ist noch nicht ausgewählt. Tippen Sie noch einmal auf die Schaltfläche oben und wählen Sie %1$s in der Liste. Die Liste öffnet sich bei der Tastatur, die Sie gerade verwenden. Schieben Sie sie nach oben, wenn %1$s nicht zu sehen ist.</string>
     <string name="setup_step2_skip">Später einrichten</string>
     <string name="setup_step_counter">Schritt %1$d von 3</string>
+    <string name="setup_step2_profile">%1$s ist in einem Arbeitsprofil oder einem anderen getrennten Profil installiert. Die Tastatur eines solchen Profils wählt Android in den eigenen Einstellungen: Öffnen Sie die Tastatureinstellungen und wählen Sie %1$s als Bildschirmtastatur dieses Profils. Die Liste oben ändert möglicherweise nur die Tastatur Ihres Hauptprofils.</string>
+    <string name="setup_step2_profile_action">Tastatureinstellungen öffnen</string>
 </resources>

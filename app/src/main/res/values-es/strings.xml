@@ -495,4 +495,6 @@
     <string name="setup_step2_retry">%1$s aún no está seleccionado. Toque de nuevo el botón de arriba y elija %1$s en la lista. La lista se abre en el teclado que usa ahora, así que quizá tenga que desplazarla hacia arriba.</string>
     <string name="setup_step2_skip">Configurar más tarde</string>
     <string name="setup_step_counter">Paso %1$d de 3</string>
+    <string name="setup_step2_profile">%1$s está instalado en un perfil de trabajo u otro perfil separado. El teclado de ese perfil se elige en los ajustes de Android: abra los ajustes de teclado y elija %1$s como teclado en pantalla de ese perfil. La lista de arriba puede cambiar solo el teclado de su perfil principal.</string>
+    <string name="setup_step2_profile_action">Abrir ajustes de teclado</string>
 </resources>
