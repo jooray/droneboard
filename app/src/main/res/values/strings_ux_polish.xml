@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- P0-2: Suggestion removal confirmation & accessibility -->
+    <string name="remove_suggestion_action">Remove suggestion</string>
+    <string name="remove_suggestion_confirm">Remove “%1$s”?</string>
+    <string name="cancel_remove_suggestion">Cancel</string>
+
+    <!-- P1-3: Discoverable More Suggestions button -->
+    <string name="more_suggestions_button_description">More suggestions</string>
+
+    <!-- P0-3: Clipboard suggestion dismiss -->
+    <string name="dismiss_clipboard_suggestion">Dismiss</string>
+
+    <!-- P0-4 / P2-3: Voice dictation retry -->
+    <string name="voice_try_again">Try again</string>
+
+    <!-- P3-1: Resize overlay accessibility step actions -->
+    <string name="resize_increase_size">Increase size</string>
+    <string name="resize_decrease_size">Decrease size</string>
+
+    <!-- P3-2: Compact mode gutter controls -->
+    <string name="compact_switch_side">Switch side</string>
+    <string name="compact_expand_full">Expand to full width</string>
+    <string name="compact_resize">Resize keyboard</string>
+
+    <!-- P3-3: Dynamic toolbar expand key descriptions -->
+    <string name="toolbar_open_description">Open toolbar</string>
+    <string name="toolbar_close_description">Close toolbar</string>
+    <string name="toolbar_incognito_open_description">Incognito active — open toolbar</string>
+    <string name="toolbar_incognito_close_description">Incognito active — close toolbar</string>
+</resources>

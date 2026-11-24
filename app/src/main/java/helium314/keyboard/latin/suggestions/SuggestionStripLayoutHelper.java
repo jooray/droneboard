@@ -35,6 +35,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.keyboard.KeyboardTypeface;
@@ -65,6 +66,14 @@ final class SuggestionStripLayoutHelper {
     public final float mMinMoreSuggestionsWidth;
     public final int mMoreSuggestionsBottomGap;
     private boolean mMoreSuggestionsAvailable;
+
+    // Track currently attached strip structure to update word views in place without removeAllViews() churn.
+    private static final int LAYOUT_MODE_NONE = 0;
+    private static final int LAYOUT_MODE_SINGLE = 1;
+    private static final int LAYOUT_MODE_MULTI = 2;
+    private static final int LAYOUT_MODE_PUNCTUATIONS = 3;
+    private int mCurrentLayoutMode = LAYOUT_MODE_NONE;
+    private int mCurrentPunctuationCount = 0;
 
     // The index of these {@link ArrayList} is the position in the suggestion strip. The indices
     // increase towards the right for LTR scripts and the left for RTL scripts, starting with 0.
@@ -152,6 +161,16 @@ final class SuggestionStripLayoutHelper {
 
     public int getMaxMoreSuggestionsRow() {
         return mMaxMoreSuggestionsRow;
+    }
+
+    public boolean isMoreSuggestionsAvailable() {
+        return mMoreSuggestionsAvailable;
+    }
+
+    public void resetLayoutState() {
+        mCurrentLayoutMode = LAYOUT_MODE_NONE;
+        mCurrentPunctuationCount = 0;
+        mMoreSuggestionsAvailable = false;
     }
 
     private int getMoreSuggestionsHeight() {
@@ -335,8 +354,16 @@ final class SuggestionStripLayoutHelper {
             final int countInStrip = 1;
             mMoreSuggestionsAvailable = (wordCountToShow > countInStrip);
             layoutWord(context, mCenterPositionInStrip, stripWidth - mPadding);
-            stripView.addView(centerWordView);
-            setLayoutWeight(centerWordView, 1.0f, ViewGroup.LayoutParams.MATCH_PARENT);
+            final boolean canReuseSingle = mCurrentLayoutMode == LAYOUT_MODE_SINGLE
+                    && stripView.getChildCount() == 1
+                    && stripView.getChildAt(0) == centerWordView;
+            if (!canReuseSingle) {
+                stripView.removeAllViews();
+                stripView.addView(centerWordView);
+                setLayoutWeight(centerWordView, 1.0f, ViewGroup.LayoutParams.MATCH_PARENT);
+                mCurrentLayoutMode = LAYOUT_MODE_SINGLE;
+                mCurrentPunctuationCount = 0;
+            }
             if (SuggestionStripView.DEBUG_SUGGESTIONS) {
                 layoutDebugInfo(mCenterPositionInStrip, placerView, stripWidth);
             }
@@ -346,26 +373,39 @@ final class SuggestionStripLayoutHelper {
 
         final int countInStrip = mSuggestionsCountInStrip;
         mMoreSuggestionsAvailable = (wordCountToShow > countInStrip);
+        final int expectedChildren = countInStrip * 2 - 1;
+        final boolean canReuseMulti = mCurrentLayoutMode == LAYOUT_MODE_MULTI
+                && stripView.getChildCount() == expectedChildren
+                && stripView.getChildAt(0) == mWordViews.get(0);
+        if (!canReuseMulti) {
+            stripView.removeAllViews();
+        }
         @SuppressWarnings("unused")
         int x = 0;
         for (int positionInStrip = 0; positionInStrip < countInStrip; positionInStrip++) {
             if (positionInStrip != 0) {
                 final View divider = mDividerViews.get(positionInStrip);
-                // Add divider if this isn't the left most suggestion in suggestions strip.
-                addDivider(stripView, divider);
+                if (!canReuseMulti) {
+                    // Add divider if this isn't the left most suggestion in suggestions strip.
+                    addDivider(stripView, divider);
+                }
                 x += divider.getMeasuredWidth();
             }
 
             final int width = getSuggestionWidth(positionInStrip, stripWidth);
             final TextView wordView = layoutWord(context, positionInStrip, width);
-            stripView.addView(wordView);
-            setLayoutWeight(wordView, getSuggestionWeight(positionInStrip), ViewGroup.LayoutParams.MATCH_PARENT);
+            if (!canReuseMulti) {
+                stripView.addView(wordView);
+                setLayoutWeight(wordView, getSuggestionWeight(positionInStrip), ViewGroup.LayoutParams.MATCH_PARENT);
+            }
             x += wordView.getMeasuredWidth();
 
             if (SuggestionStripView.DEBUG_SUGGESTIONS) {
                 layoutDebugInfo(positionInStrip, placerView, (int) stripView.getX() + x);
             }
         }
+        mCurrentLayoutMode = LAYOUT_MODE_MULTI;
+        mCurrentPunctuationCount = 0;
         return startIndexOfMoreSuggestions;
     }
 
@@ -388,12 +428,14 @@ final class SuggestionStripLayoutHelper {
     private TextView layoutWord(final Context context, final int positionInStrip, final int width) {
         final TextView wordView = mWordViews.get(positionInStrip);
         final CharSequence word = wordView.getText();
-        if (positionInStrip == mCenterPositionInStrip && mMoreSuggestionsAvailable) {
-            wordView.setCompoundDrawablesWithIntrinsicBounds(null, null, null, mMoreSuggestionsHint);
-            // HACK: Align with other TextViews that have no compound drawables.
-            wordView.setCompoundDrawablePadding(-mMoreSuggestionsHint.getIntrinsicHeight());
+        // Discoverable More Suggestions overflow button replaces the legacy bottom-edge ellipsis drawable.
+        wordView.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+        // Announce availability of additional suggestions to TalkBack on the primary center slot.
+        if (positionInStrip == mCenterPositionInStrip && mMoreSuggestionsAvailable && !TextUtils.isEmpty(word)) {
+            ViewCompat.setStateDescription(wordView,
+                    context.getResources().getString(R.string.more_suggestions_button_description));
         } else {
-            wordView.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+            ViewCompat.setStateDescription(wordView, null);
         }
         // {@link StyleSpan} in a content description may cause an issue of TTS/TalkBack.
         // Use a simple {@link String} to avoid the issue.
@@ -481,8 +523,16 @@ final class SuggestionStripLayoutHelper {
     private int layoutPunctuationsAndReturnStartIndexOfMoreSuggestions(
             final PunctuationSuggestions punctuationSuggestions, final ViewGroup stripView) {
         final int countInStrip = Math.min(punctuationSuggestions.size(), PUNCTUATIONS_IN_STRIP);
+        final int expectedChildren = countInStrip == 0 ? 0 : countInStrip * 2 - 1;
+        final boolean canReuse = mCurrentLayoutMode == LAYOUT_MODE_PUNCTUATIONS
+                && mCurrentPunctuationCount == countInStrip
+                && stripView.getChildCount() == expectedChildren
+                && (countInStrip == 0 || stripView.getChildAt(0) == mWordViews.get(0));
+        if (!canReuse) {
+            stripView.removeAllViews();
+        }
         for (int positionInStrip = 0; positionInStrip < countInStrip; positionInStrip++) {
-            if (positionInStrip != 0) {
+            if (positionInStrip != 0 && !canReuse) {
                 // Add divider if this isn't the left most suggestion in suggestions strip.
                 addDivider(stripView, mDividerViews.get(positionInStrip));
             }
@@ -494,13 +544,19 @@ final class SuggestionStripLayoutHelper {
             wordView.setTag(positionInStrip);
             wordView.setText(punctuation);
             wordView.setContentDescription(punctuation);
+            ViewCompat.setStateDescription(wordView, null);
             wordView.setTextScaleX(1.0f);
             wordView.setCompoundDrawables(null, null, null, null);
             wordView.setTextColor(mColorAutoCorrect);
+            wordView.setEnabled(true);
             KeyboardTypeface.applyToTextView(wordView);
-            stripView.addView(wordView);
-            setLayoutWeight(wordView, 1.0f, mSuggestionsStripHeight);
+            if (!canReuse) {
+                stripView.addView(wordView);
+                setLayoutWeight(wordView, 1.0f, mSuggestionsStripHeight);
+            }
         }
+        mCurrentLayoutMode = LAYOUT_MODE_PUNCTUATIONS;
+        mCurrentPunctuationCount = countInStrip;
         mMoreSuggestionsAvailable = (punctuationSuggestions.size() > countInStrip);
         return countInStrip;
     }
