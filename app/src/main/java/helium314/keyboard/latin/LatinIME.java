@@ -105,6 +105,8 @@ public class LatinIME extends InputMethodService implements
     public final KeyboardActionListener mKeyboardActionListener;
     private int mOriginalNavBarColor = 0;
     private int mOriginalNavBarFlags = 0;
+    // true while our navigation bar color is applied, i.e. mOriginalNavBar* hold the system's values
+    private boolean mNavBarColorApplied = false;
 
     // UIHandler is needed when creating InputLogic
     public final UIHandler mHandler = new UIHandler(this);
@@ -1601,13 +1603,20 @@ public class LatinIME extends InputMethodService implements
         final Window window = getWindow().getWindow();
         if (window == null)
             return;
-        mOriginalNavBarColor = window.getNavigationBarColor();
-        window.setNavigationBarColor(color);
+        final View view = window.getDecorView();
+        // remember the system's values only once: when shown again without being hidden in between,
+        // the current values are already ours and would be restored as the "original" ones
+        if (!mNavBarColorApplied) {
+            mOriginalNavBarColor = window.getNavigationBarColor();
+            mOriginalNavBarFlags = view.getSystemUiVisibility();
+            mNavBarColorApplied = true;
+        }
+        // Android 15+ draws the navigation bar edge-to-edge and ignores the color, so only the icon shade is set there
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM)
+            window.setNavigationBarColor(color);
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
-        final View view = window.getDecorView();
-        mOriginalNavBarFlags = view.getSystemUiVisibility();
         if (ColorUtilKt.isBrightColor(color)) {
             view.setSystemUiVisibility(mOriginalNavBarFlags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         } else {
@@ -1619,14 +1628,16 @@ public class LatinIME extends InputMethodService implements
     //  see https://developer.android.com/reference/android/view/Window#setNavigationBarColor(int)
     //  plus it needs someone with a new enough OS
     private void clearNavigationBarColor() {
-        final SettingsValues settingsValues = mSettings.getCurrent();
-        if (!settingsValues.mCustomNavBarColor)
+        // depends on what we applied, not on the setting, which may have been switched off meanwhile
+        if (!mNavBarColorApplied)
             return;
         final Window window = getWindow().getWindow();
         if (window == null) {
             return;
         }
-        window.setNavigationBarColor(mOriginalNavBarColor);
+        mNavBarColorApplied = false;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM)
+            window.setNavigationBarColor(mOriginalNavBarColor);
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
             return;
