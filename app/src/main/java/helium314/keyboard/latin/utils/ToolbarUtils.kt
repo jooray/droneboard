@@ -3,25 +3,32 @@ package helium314.keyboard.latin.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.core.content.edit
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.forEach
 import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.ColorType
+import helium314.keyboard.latin.common.Colors
 import helium314.keyboard.latin.common.Constants.Separators
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ToolbarKey.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.EnumMap
 import java.util.Locale
 
@@ -30,31 +37,57 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     button.scaleType = ImageView.ScaleType.CENTER
     button.tag = key
     button.contentDescription = key.name.lowercase().getStringResourceOrName("", context)
-    setToolbarButtonActivatedState(button)
     button.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(key.name, context))
+    setToolbarButtonActivatedState(button)
     return button
+}
+
+fun isToggleToolbarKey(key: ToolbarKey): Boolean =
+    key == INCOGNITO || key == ONE_HANDED || key == SPLIT || key == AUTOCORRECT
+
+fun isToolbarToggleActive(context: Context, key: ToolbarKey): Boolean = when (key) {
+    INCOGNITO -> context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
+    ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
+    SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
+    AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
+    else -> false
 }
 
 fun setToolbarButtonsActivatedStateOnPrefChange(buttonsGroup: ViewGroup, key: String?) {
     // settings need to be updated when buttons change
     if (key != Settings.PREF_AUTO_CORRECTION
         && key != Settings.PREF_ALWAYS_INCOGNITO_MODE
-        && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) == false)
+        && key?.startsWith(Settings.PREF_ONE_HANDED_MODE_PREFIX) != true
+        && key?.startsWith(Settings.PREF_ENABLE_SPLIT_KEYBOARD) != true)
         return
 
     GlobalScope.launch {
         delay(10) // need to wait until SettingsValues are reloaded
-        buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+        withContext(Dispatchers.Main) {
+            buttonsGroup.forEach { if (it is ImageButton) setToolbarButtonActivatedState(it) }
+        }
     }
 }
 
-private fun setToolbarButtonActivatedState(button: ImageButton) {
-    button.isActivated = when (button.tag) {
-        INCOGNITO -> button.context.prefs().getBoolean(Settings.PREF_ALWAYS_INCOGNITO_MODE, Defaults.PREF_ALWAYS_INCOGNITO_MODE)
-        ONE_HANDED -> Settings.getValues().mOneHandedModeEnabled
-        SPLIT -> Settings.getValues().mIsSplitKeyboardEnabled
-        AUTOCORRECT -> Settings.getValues().mAutoCorrectionEnabledPerUserSettings
-        else -> true
+fun setToolbarButtonActivatedState(button: ImageButton, colors: Colors = Settings.getValues().mColors) {
+    val tag = button.tag as? ToolbarKey
+    val isToggle = tag != null && isToggleToolbarKey(tag)
+    val isActive = isToggle && isToolbarToggleActive(button.context, tag)
+    button.isActivated = if (isToggle) isActive else true
+    if (!isToggle) return
+
+    if (isActive) {
+        val density = button.resources.displayMetrics.density
+        val pill = GradientDrawable().apply {
+            cornerRadius = 100f * density
+            setColor(ColorUtils.setAlphaComponent(colors.get(ColorType.ACTION_KEY_BACKGROUND), 115))
+        }
+        val insetX = (3f * density).toInt()
+        val insetY = (5f * density).toInt()
+        button.background = InsetDrawable(pill, insetX, insetY, insetX, insetY)
+    } else {
+        button.background = null
+        colors.setBackground(button, ColorType.STRIP_BACKGROUND)
     }
 }
 

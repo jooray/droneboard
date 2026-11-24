@@ -8,7 +8,10 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
+import android.os.Bundle
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
@@ -19,6 +22,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.common.ColorType
@@ -111,7 +117,7 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
                 chip.setOnClickListener { setMode(mode) }
                 row.addView(chip, chipParams())
             }
-            panel.addView(row, wrap().apply { topMargin = dpi(4f) })
+            panel.addView(row, wrap().apply { topMargin = dpi(2f) })
         }
         sideChips.forEach { (side, chip) ->
             chip.text = context.getString(side.label)
@@ -119,7 +125,7 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
             chip.setOnClickListener { setSide(side) }
             sideRow.addView(chip, chipParams())
         }
-        panel.addView(sideRow, wrap().apply { topMargin = dpi(4f) })
+        panel.addView(sideRow, wrap().apply { topMargin = dpi(2f) })
         val actionRow = row()
         resetButton.text = context.getString(R.string.resize_reset)
         doneButton.text = context.getString(R.string.resize_done)
@@ -129,7 +135,7 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
         doneButton.setOnClickListener { hide() }
         actionRow.addView(resetButton, chipParams())
         actionRow.addView(doneButton, chipParams())
-        panel.addView(actionRow, wrap().apply { topMargin = dpi(10f) })
+        panel.addView(actionRow, wrap().apply { topMargin = dpi(6f) })
         addView(panel, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
     }
 
@@ -140,8 +146,9 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
     private fun TextView.styleAsChip() {
         gravity = Gravity.CENTER
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        setPadding(dpi(12f), dpi(6f), dpi(12f), dpi(6f))
-        minHeight = dpi(36f)
+        setPadding(dpi(12f), dpi(9f), dpi(12f), dpi(9f))
+        // 48dp touch target with a 3dp vertical inset yields a 42dp visual pill height.
+        minHeight = dpi(48f)
         maxLines = 1
         isClickable = true
         isFocusable = true
@@ -199,9 +206,13 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
         isSelected = selected
     }
 
-    private fun pill(color: Int) = GradientDrawable().apply {
-        cornerRadius = dp(100f)
-        setColor(color)
+    private fun pill(color: Int): Drawable {
+        val shape = GradientDrawable().apply {
+            cornerRadius = dp(100f)
+            setColor(color)
+        }
+        val vInset = dpi(3f)
+        return InsetDrawable(shape, 0, vInset, 0, vInset)
     }
 
     private fun currentMode(): Mode {
@@ -427,6 +438,79 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
         switcher.updateFloatingPlacement()
     }
 
+    /** Accessible ±5% step resize triggered via TalkBack scroll actions on a resize handle. */
+    @SuppressLint("RtlHardcoded")
+    private fun stepResize(handle: Handle, deltaFraction: Float) {
+        val switcher = KeyboardSwitcher.getInstance()
+        val settings = Settings.getInstance()
+        val sv = Settings.getValues()
+        val mode = currentMode()
+        performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+        if (mode == Mode.FLOATING) {
+            val dm = resources.displayMetrics
+            val availableW = FloatingKeyboardUtils.availableWidth().takeIf { it > 0 } ?: dm.widthPixels
+            val availableH = FloatingKeyboardUtils.availableHeightForKeyboard().takeIf { it > 0 } ?: dm.heightPixels
+            val minWidth = (min(dm.widthPixels, dm.heightPixels) * 0.2f).roundToInt().coerceAtLeast(200)
+            val minHeight = (minWidth * 0.5f).roundToInt()
+            var newW = sv.mFloatingWidth
+            var newH = sv.mFloatingHeight
+            if (handle.left || handle.right) {
+                newW = (sv.mFloatingWidth + (availableW * deltaFraction).roundToInt())
+                    .coerceIn(minWidth, max(minWidth, availableW))
+            }
+            if (handle.top || handle.bottom) {
+                newH = (sv.mFloatingHeight + (availableH * deltaFraction).roundToInt())
+                    .coerceIn(minHeight, max(minHeight, (availableH * 0.9f).roundToInt()))
+            }
+            val pos = switcher.floatingRoot?.let { FloatingKeyboardUtils.currentPosition(it) } ?: (0 to 0)
+            val x = pos.first + if (handle.left) sv.mFloatingWidth - newW else 0
+            val y = pos.second + if (handle.top) sv.mFloatingHeight - newH else 0
+            setFloatingSize(context, newW, newH)
+            switcher.reloadKeyboard()
+            switcher.floatingRoot?.let { FloatingKeyboardUtils.moveTo(it, x, y) }
+            switcher.updateFloatingPlacement()
+        } else {
+            var reload = false
+            if (handle.top || handle.bottom) {
+                val curScale = settings.readCurrentHeightScale()
+                val newScale = (curScale + deltaFraction).coerceIn(MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE)
+                if (newScale != curScale) {
+                    settings.writeCurrentHeightScale(newScale)
+                    reload = true
+                }
+            }
+            if ((handle.left || handle.right) && mode != Mode.SPLIT) {
+                if (mode == Mode.ONE_HANDED) {
+                    val base = resources.getFraction(R.fraction.config_one_handed_mode_width, 1, 1)
+                    val curFraction = 1f - sv.mOneHandedModeScale * (1f - base)
+                    val nextFraction = (curFraction + deltaFraction).coerceIn(MIN_ONE_HANDED_WIDTH, 1f)
+                    if (nextFraction >= 0.995f) {
+                        switcher.setOneHandedModeEnabled(false, true)
+                    } else {
+                        settings.writeOneHandedModeScale((1f - nextFraction) / (1f - base))
+                        switcher.setOneHandedModeEnabled(true, true)
+                    }
+                    reload = false
+                } else {
+                    val curFraction = if (mode == Mode.COMPACT) sv.mCompactWidth else 1f
+                    val nextFraction = (curFraction + deltaFraction).coerceIn(minCompactWidth(context), 1f)
+                    if (nextFraction >= 0.995f) {
+                        if (sv.mCompactEnabled) switcher.setCompactKeyboard(false)
+                    } else {
+                        val gravity = if (mode == Mode.COMPACT) sv.mCompactGravity
+                        else if (handle.left) Gravity.RIGHT else Gravity.LEFT
+                        switcher.setCompactKeyboard(true, width = nextFraction, gravity = gravity)
+                    }
+                    reload = false
+                }
+            }
+            if (reload) switcher.reloadKeyboard()
+        }
+        refresh()
+        announceForAccessibility(label.text)
+    }
+
     // ---- layout and drawing ----------------------------------------------------------------------------------
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -444,9 +528,9 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
     }
 
     private fun handleSize(h: Handle): Pair<Int, Int> = when {
-        h.isCorner -> dpi(44f) to dpi(44f)
-        h.top || h.bottom -> dpi(96f) to dpi(36f)
-        else -> dpi(36f) to dpi(96f)
+        h.isCorner -> dpi(48f) to dpi(48f)
+        h.top || h.bottom -> dpi(96f) to dpi(48f)
+        else -> dpi(48f) to dpi(96f)
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) = placeContent()
@@ -474,13 +558,17 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
             }
             v.layout(x, y, x + w, y + hh)
         }
-        // the panel fits into the keyboard between the side handles (a small keyboard scales it down)
+        // Keep the control panel legible and tappable (minimum 0.85x scale floor).
         val pw = panel.measuredWidth
         val ph = panel.measuredHeight
         val room = keyboardRect.width() - dp(2 * 36f)
-        val scale = min(1f, min(room / pw.coerceAtLeast(1), (keyboardRect.height() - dp(2 * 30f)) / ph.coerceAtLeast(1))).coerceAtLeast(0.4f)
-        val px = (keyboardRect.centerX() - pw / 2f).roundToInt()
-        val py = (keyboardRect.centerY() - ph / 2f).roundToInt()
+        val scale = min(1f, min(room / pw.coerceAtLeast(1), (keyboardRect.height() - dp(2 * 30f)) / ph.coerceAtLeast(1))).coerceAtLeast(0.85f)
+        val halfScaledW = pw * scale * 0.5f
+        val halfScaledH = ph * scale * 0.5f
+        val centerX = keyboardRect.centerX().coerceIn(halfScaledW, (width - halfScaledW).coerceAtLeast(halfScaledW))
+        val centerY = keyboardRect.centerY().coerceIn(halfScaledH, (h - halfScaledH).coerceAtLeast(halfScaledH))
+        val px = (centerX - pw / 2f).roundToInt()
+        val py = (centerY - ph / 2f).roundToInt()
         panel.layout(px, py, px + pw, py + ph)
         panel.pivotX = pw / 2f
         panel.pivotY = ph / 2f
@@ -501,7 +589,7 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent) = true
 
-    /** An edge bar or an L-shaped corner, with a finger-sized touch area. */
+    /** An edge bar or an L-shaped corner, with a finger-sized 48dp touch area and TalkBack step-resize actions. */
     @SuppressLint("ViewConstructor", "ClickableViewAccessibility")
     private inner class HandleView(context: Context, val handle: Handle) : View(context) {
         var color = 0
@@ -518,6 +606,35 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
             contentDescription = context.getString(handle.description)
             isFocusable = true
             setOnTouchListener { _, event -> onHandleTouch(handle, event) }
+            ViewCompat.setAccessibilityDelegate(this, object : AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.addAction(
+                        AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD,
+                            context.getString(R.string.resize_increase_size)
+                        )
+                    )
+                    info.addAction(
+                        AccessibilityNodeInfoCompat.AccessibilityActionCompat(
+                            AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD,
+                            context.getString(R.string.resize_decrease_size)
+                        )
+                    )
+                }
+
+                override fun performAccessibilityAction(host: View, action: Int, args: Bundle?): Boolean = when (action) {
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD -> {
+                        stepResize(handle, STEP_RESIZE_FRACTION)
+                        true
+                    }
+                    AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD -> {
+                        stepResize(handle, -STEP_RESIZE_FRACTION)
+                        true
+                    }
+                    else -> super.performAccessibilityAction(host, action, args)
+                }
+            })
         }
 
         override fun onDraw(canvas: Canvas) {
@@ -549,6 +666,7 @@ class KeyboardResizeOverlay @JvmOverloads constructor(
 
     companion object {
         private const val SNAP = 0.03f
+        private const val STEP_RESIZE_FRACTION = 0.05f
         private const val MIN_ONE_HANDED_WIDTH = 0.35f
         // same range as the height setting in Appearance
         private const val MIN_HEIGHT_SCALE = 0.3f

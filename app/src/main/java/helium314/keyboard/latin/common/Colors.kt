@@ -99,6 +99,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
     private val background = getBackground(context)
     private val keyBackground = getKeyBackground(context)
     private val functionalKey = getFunctionalKey(context)
+    private val gesturePreview = getGesturePreview(context)
     private val spaceBar = getKeyBackground(context)
     private val keyText = getKeyText(context)
     private val keyHintText = getKeyHintText(context)
@@ -128,8 +129,15 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
     private fun getFunctionalKey(context: Context) = when {
         m3 && isNight -> color(context, android.R.color.system_surface_container_highest_dark)
         m3 -> color(context, android.R.color.system_surface_container_highest_light)
-        isNight -> ContextCompat.getColor(context, android.R.color.system_accent2_300)
+        isNight -> ContextCompat.getColor(context, android.R.color.system_neutral1_700)
         else -> ContextCompat.getColor(context, android.R.color.system_accent2_100)
+    }
+    /** Elevated floating swipe preview pill surface, distinct from letter keys */
+    private fun getGesturePreview(context: Context) = when {
+        m3 && isNight -> color(context, android.R.color.system_surface_container_highest_dark)
+        m3 -> color(context, android.R.color.system_surface_container_highest_light)
+        isNight -> ContextCompat.getColor(context, android.R.color.system_neutral1_700)
+        else -> ContextCompat.getColor(context, android.R.color.system_neutral1_100)
     }
     private fun getKeyText(context: Context) = when {
         m3 && isNight -> color(context, android.R.color.system_on_surface_dark)
@@ -168,6 +176,9 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
                 || background != getBackground(context)
                 || keyBackground != getKeyBackground(context)
                 || functionalKey != getFunctionalKey(context)
+                || gesturePreview != getGesturePreview(context)
+                || actionKey != getActionKey(context)
+                || actionKeyIcon != getActionKeyIcon(context)
                 || keyText != getKeyText(context)
                 || keyHintText != getKeyHintText(context)
                 || spaceBarText != getSpaceBarText(context)
@@ -195,11 +206,8 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
     private val spaceBarStateList: ColorStateList
     private val adjustedBackgroundStateList: ColorStateList
     private val stripBackgroundList: ColorStateList
-    private val toolbarKeyStateList = activatedStateList(
-        keyText,
-        if (isBrightColor(keyText)) darken(darken(keyText))
-        else brighten(brighten(keyText))
-    )
+    // Inactive toolbar icons render at uniform keyText color; active toggles are highlighted with a tonal pill background.
+    private val toolbarKeyStateList = activatedStateList(keyText, keyText)
 
     /** darkened variant of [accent] because the accent color is always light for dynamic colors */
     private val adjustedAccent: Int = darken(accent)
@@ -277,7 +285,7 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
             functionalKeyStateList =
                 if (m3) pressedStateList(brightenOrDarken(functionalKey, true), functionalKey)
                 else if (!isNight) pressedStateList(doubleAdjustedFunctionalKey, functionalKey)
-                else pressedStateList(functionalKey, doubleAdjustedKeyBackground)
+                else pressedStateList(brighten(functionalKey), functionalKey)
 
             actionKeyStateList =
                 if (m3) pressedStateList(brightenOrDarken(actionKey, true), actionKey)
@@ -330,15 +338,16 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         ACTION_KEY_BACKGROUND -> if (m3) actionKey else accent
         TOOL_BAR_KEY_ENABLED_BACKGROUND, EMOJI_CATEGORY_SELECTED, CLIPBOARD_PIN -> accent
         SHIFT_KEY_ICON -> if (accentShiftedIcon) accent else keyText
-        AUTOFILL_BACKGROUND_CHIP, GESTURE_PREVIEW, POPUP_KEYS_BACKGROUND, MORE_SUGGESTIONS_BACKGROUND, KEY_PREVIEW_BACKGROUND -> adjustedBackground
+        AUTOFILL_BACKGROUND_CHIP, POPUP_KEYS_BACKGROUND, MORE_SUGGESTIONS_BACKGROUND, KEY_PREVIEW_BACKGROUND -> adjustedBackground
+        GESTURE_PREVIEW -> gesturePreview
         TOOL_BAR_EXPAND_KEY_BACKGROUND -> if (!isNight) accent else doubleAdjustedBackground
         GESTURE_TRAIL -> gesture
-        KEY_TEXT, SUGGESTION_AUTO_CORRECT, REMOVE_SUGGESTION_ICON, EMOJI_KEY_TEXT, KEY_PREVIEW_TEXT, POPUP_KEY_TEXT,
+        KEY_TEXT, SUGGESTION_AUTO_CORRECT, SUGGESTION_VALID_WORD, REMOVE_SUGGESTION_ICON, EMOJI_KEY_TEXT, KEY_PREVIEW_TEXT, POPUP_KEY_TEXT,
             KEY_ICON, POPUP_KEY_ICON, ONE_HANDED_MODE_BUTTON, EMOJI_CATEGORY, TOOL_BAR_KEY, FUNCTIONAL_KEY_TEXT,
             EMOJI_SEARCH_TEXT, CLIPBOARD_SUGGESTION_ICON -> keyText
         KEY_HINT_TEXT -> keyHintText
         SPACE_BAR_TEXT -> spaceBarText
-        FUNCTIONAL_KEY_BACKGROUND, EMOJI_SEARCH_BACKGROUND -> if (!isNight || m3) functionalKey else doubleAdjustedKeyBackground
+        FUNCTIONAL_KEY_BACKGROUND, EMOJI_SEARCH_BACKGROUND -> functionalKey
         SPACE_BAR_BACKGROUND -> spaceBar
         MORE_SUGGESTIONS_WORD_BACKGROUND, MAIN_BACKGROUND -> background
         KEY_BACKGROUND -> keyBackground
@@ -346,7 +355,9 @@ class DynamicColors(context: Context, override val themeStyle: String, override 
         STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
         CLIPBOARD_SUGGESTION_BACKGROUND -> keyBackground
         NAVIGATION_BAR -> navBar
-        MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedKeyText
+        SUGGESTED_WORD -> ColorUtils.setAlphaComponent(keyText, 215)
+        SUGGESTION_TYPED_WORD -> ColorUtils.setAlphaComponent(keyText, 175)
+        MORE_SUGGESTIONS_HINT -> adjustedKeyText
         ACTION_KEY_ICON -> if (m3) actionKeyIcon else Color.WHITE
         TOOL_BAR_EXPAND_KEY -> Color.WHITE
     }
@@ -458,11 +469,7 @@ class DefaultColors (
     private val spaceBarStateList: ColorStateList
     private val adjustedBackgroundStateList: ColorStateList
     private val stripBackgroundList: ColorStateList
-    private val toolbarKeyStateList = activatedStateList(
-        suggestionText,
-        if (isBrightColor(suggestionText)) darken(darken(suggestionText))
-        else brighten(brighten(suggestionText))
-    )
+    private val toolbarKeyStateList = activatedStateList(suggestionText, suggestionText)
     private var backgroundSetupDone = false
 
     init {
@@ -531,8 +538,8 @@ class DefaultColors (
         TOOL_BAR_KEY_ENABLED_BACKGROUND, EMOJI_CATEGORY_SELECTED, ACTION_KEY_BACKGROUND, CLIPBOARD_PIN -> accent
         SHIFT_KEY_ICON -> if (accentShiftedIcon) accent else keyText
         AUTOFILL_BACKGROUND_CHIP -> if (themeStyle == STYLE_MATERIAL && !hasKeyBorders) background else adjustedBackground
-        GESTURE_PREVIEW, POPUP_KEYS_BACKGROUND, MORE_SUGGESTIONS_BACKGROUND, KEY_PREVIEW_BACKGROUND -> adjustedBackground
-        TOOL_BAR_EXPAND_KEY_BACKGROUND, CLIPBOARD_SUGGESTION_BACKGROUND -> doubleAdjustedBackground
+        POPUP_KEYS_BACKGROUND, MORE_SUGGESTIONS_BACKGROUND, KEY_PREVIEW_BACKGROUND -> adjustedBackground
+        GESTURE_PREVIEW, TOOL_BAR_EXPAND_KEY_BACKGROUND, CLIPBOARD_SUGGESTION_BACKGROUND -> doubleAdjustedBackground
         GESTURE_TRAIL -> gesture
         KEY_TEXT, REMOVE_SUGGESTION_ICON, FUNCTIONAL_KEY_TEXT, KEY_ICON, EMOJI_KEY_TEXT,
             POPUP_KEY_TEXT, POPUP_KEY_ICON, KEY_PREVIEW_TEXT, EMOJI_SEARCH_TEXT, CLIPBOARD_SUGGESTION_ICON -> keyText
@@ -545,8 +552,10 @@ class DefaultColors (
         ACTION_KEY_POPUP_KEYS_BACKGROUND -> if (themeStyle == STYLE_HOLO) adjustedBackground else accent
         STRIP_BACKGROUND -> if (!hasKeyBorders && themeStyle == STYLE_MATERIAL) adjustedBackground else background
         NAVIGATION_BAR -> navBar
-        SUGGESTION_AUTO_CORRECT, EMOJI_CATEGORY, TOOL_BAR_KEY, TOOL_BAR_EXPAND_KEY, ONE_HANDED_MODE_BUTTON -> suggestionText
-        MORE_SUGGESTIONS_HINT, SUGGESTED_WORD, SUGGESTION_TYPED_WORD, SUGGESTION_VALID_WORD -> adjustedSuggestionText
+        SUGGESTION_AUTO_CORRECT, SUGGESTION_VALID_WORD, EMOJI_CATEGORY, TOOL_BAR_KEY, TOOL_BAR_EXPAND_KEY, ONE_HANDED_MODE_BUTTON -> suggestionText
+        SUGGESTED_WORD -> ColorUtils.setAlphaComponent(suggestionText, 215)
+        SUGGESTION_TYPED_WORD -> ColorUtils.setAlphaComponent(suggestionText, 175)
+        MORE_SUGGESTIONS_HINT -> adjustedSuggestionText
         ACTION_KEY_ICON -> Color.WHITE
     }
 

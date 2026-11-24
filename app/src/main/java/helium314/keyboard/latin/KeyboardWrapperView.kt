@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -67,16 +68,29 @@ class KeyboardWrapperView @JvmOverloads constructor(
 
         stopOneHandedModeBtn.setOnClickListener(this)
         switchOneHandedModeBtn.setOnClickListener(this)
+        resizeOneHandedModeBtn.setOnClickListener(this)
 
+        val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+        var downX = 0f
         var x = 0f
-        resizeOneHandedModeBtn.setOnTouchListener { _, motionEvent ->
+        var dragged = false
+        resizeOneHandedModeBtn.setOnTouchListener { v, motionEvent ->
+            if (!oneHandedModeEnabled) {
+                // In compact mode, let standard click handling open KeyboardResizeOverlay cleanly.
+                return@setOnTouchListener false
+            }
             when (motionEvent.action) {
-                MotionEvent.ACTION_DOWN -> x = motionEvent.rawX
+                MotionEvent.ACTION_DOWN -> {
+                    downX = motionEvent.rawX
+                    x = downX
+                    dragged = false
+                }
                 MotionEvent.ACTION_MOVE -> {
-                    // performance is not great because settings are reloaded and keyboard is redrawn
-                    // on every move, but it's good enough
+                    if (!dragged && abs(motionEvent.rawX - downX) > touchSlop) {
+                        dragged = true
+                    }
+                    if (!dragged) return@setOnTouchListener true
                     val sign = -switchOneHandedModeBtn.scaleX
-                    // factor 2 to make it more sensitive (maybe could be tuned a little)
                     val changePercent = 2 * sign * (x - motionEvent.rawX) / context.resources.displayMetrics.density
                     if (abs(changePercent) < 1) return@setOnTouchListener true
                     x = motionEvent.rawX
@@ -88,7 +102,17 @@ class KeyboardWrapperView @JvmOverloads constructor(
                     Settings.getInstance().writeOneHandedModeScale(newScale)
                     KeyboardSwitcher.getInstance().setOneHandedModeEnabled(true, true)
                 }
-                else -> x = 0f
+                MotionEvent.ACTION_UP -> {
+                    if (!dragged) {
+                        v.performClick()
+                    }
+                    x = 0f
+                    dragged = false
+                }
+                else -> {
+                    x = 0f
+                    dragged = false
+                }
             }
             true
         }
@@ -107,18 +131,71 @@ class KeyboardWrapperView @JvmOverloads constructor(
         oneHandedGravity = if (oneHandedGravity == Gravity.LEFT) Gravity.RIGHT else Gravity.LEFT
     }
 
+    @SuppressLint("RtlHardcoded")
+    private fun isCompactGutterActive(): Boolean {
+        val sv = Settings.getValues()
+        return !oneHandedModeEnabled
+                && sv.mCompactEnabled
+                && !sv.mIsFloatingKeyboard
+                && !sv.mIsSplitKeyboardEnabled
+                && (sv.mCompactGravity == Gravity.LEFT || sv.mCompactGravity == Gravity.RIGHT)
+    }
+
     private fun updateViewsVisibility() {
-        stopOneHandedModeBtn.visibility = if (oneHandedModeEnabled) VISIBLE else GONE
-        switchOneHandedModeBtn.visibility = if (oneHandedModeEnabled) VISIBLE else GONE
-        resizeOneHandedModeBtn.visibility = if (oneHandedModeEnabled) VISIBLE else GONE
+        if (!::stopOneHandedModeBtn.isInitialized) return
+        val showCompactGutter = isCompactGutterActive()
+        val show = oneHandedModeEnabled || showCompactGutter
+        val vis = if (show) VISIBLE else GONE
+        stopOneHandedModeBtn.visibility = vis
+        switchOneHandedModeBtn.visibility = vis
+        resizeOneHandedModeBtn.visibility = vis
+
+        val alpha = if (showCompactGutter) 0.72f else 1.0f
+        stopOneHandedModeBtn.alpha = alpha
+        switchOneHandedModeBtn.alpha = alpha
+        resizeOneHandedModeBtn.alpha = alpha
+
+        if (showCompactGutter) {
+            stopOneHandedModeBtn.contentDescription = context.getString(R.string.compact_expand_full)
+            switchOneHandedModeBtn.contentDescription = context.getString(R.string.compact_switch_side)
+            resizeOneHandedModeBtn.contentDescription = context.getString(R.string.compact_resize)
+            updateSwitchButtonSide()
+        } else {
+            stopOneHandedModeBtn.contentDescription = context.getString(R.string.label_stop_onehanded_mode_key)
+            switchOneHandedModeBtn.contentDescription = context.getString(R.string.label_switch_onehanded_key)
+            resizeOneHandedModeBtn.contentDescription = context.getString(R.string.label_resize_onehanded_key)
+            updateSwitchButtonSide()
+        }
     }
 
     @SuppressLint("RtlHardcoded")
     private fun updateSwitchButtonSide() {
-        switchOneHandedModeBtn.scaleX = if (oneHandedGravity == Gravity.LEFT) -1f else 1f
+        if (!::switchOneHandedModeBtn.isInitialized) return
+        val gravity = if (oneHandedModeEnabled) oneHandedGravity else Settings.getValues().mCompactGravity
+        switchOneHandedModeBtn.scaleX = if (gravity == Gravity.LEFT) -1f else 1f
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        updateViewsVisibility()
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    @SuppressLint("RtlHardcoded")
     override fun onClick(view: View) {
+        if (view === resizeOneHandedModeBtn) {
+            KeyboardSwitcher.getInstance().toggleResizeOverlay()
+            return
+        }
+        if (isCompactGutterActive()) {
+            val switcher = KeyboardSwitcher.getInstance()
+            if (view === stopOneHandedModeBtn) {
+                switcher.setCompactKeyboard(false)
+            } else if (view === switchOneHandedModeBtn) {
+                val nextGravity = if (Settings.getValues().mCompactGravity == Gravity.LEFT) Gravity.RIGHT else Gravity.LEFT
+                switcher.setCompactKeyboard(true, gravity = nextGravity)
+            }
+            return
+        }
         if (view === stopOneHandedModeBtn) {
             keyboardActionListener?.onCodeInput(KeyCode.TOGGLE_ONE_HANDED_MODE,
                 Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE,
@@ -130,7 +207,7 @@ class KeyboardWrapperView @JvmOverloads constructor(
         }
     }
 
-    /** The suggestion strip and toolbar sit right above a compact keyboard, not across the whole screen. */
+    /** The suggestion strip and toolbar sit right above a compact or one-handed keyboard, not across the whole screen. */
     private fun alignStrip(leftMargin: Int, rightMargin: Int) {
         val strip = KeyboardSwitcher.getInstance().stripContainer ?: return
         val lp = strip.layoutParams as? MarginLayoutParams ?: return
@@ -141,6 +218,29 @@ class KeyboardWrapperView @JvmOverloads constructor(
             lp.rightMargin = rightMargin
             strip.layoutParams = lp
         }
+    }
+
+    private fun layoutGutterButtons(isLeftGravity: Boolean, keyboardWidth: Int, keyboardHeight: Int, spareWidth: Int) {
+        val minGutterPx = (40f * resources.displayMetrics.density).toInt()
+        if (spareWidth < minGutterPx) {
+            stopOneHandedModeBtn.layout(0, 0, 0, 0)
+            switchOneHandedModeBtn.layout(0, 0, 0, 0)
+            resizeOneHandedModeBtn.layout(0, 0, 0, 0)
+            return
+        }
+        val scale = Settings.getValues().mKeyboardHeightScale
+        val heightScale = if (scale < 0.8f) scale + 0.2f else 1f
+        val buttonsLeft = if (isLeftGravity) keyboardWidth else 0
+        val btnW = stopOneHandedModeBtn.measuredWidth.coerceAtMost(spareWidth)
+        val buttonXLeft = buttonsLeft + (spareWidth - btnW) / 2
+        val buttonXRight = buttonXLeft + btnW
+        val buttonHeight = (heightScale * stopOneHandedModeBtn.measuredHeight).toInt()
+        fun View.setLayout(yPosition: Int) {
+            layout(buttonXLeft, yPosition - buttonHeight / 2, buttonXRight, yPosition + buttonHeight / 2)
+        }
+        stopOneHandedModeBtn.setLayout((keyboardHeight * 0.2f).toInt())
+        switchOneHandedModeBtn.setLayout((keyboardHeight * 0.5f).toInt())
+        resizeOneHandedModeBtn.setLayout((keyboardHeight * 0.8f).toInt())
     }
 
     @SuppressLint("RtlHardcoded")
@@ -159,18 +259,20 @@ class KeyboardWrapperView @JvmOverloads constructor(
                 }
                 keyboardView.layout(keyboardLeft, 0, keyboardLeft + keyboardView.measuredWidth, keyboardView.measuredHeight)
                 alignStrip(keyboardLeft, spare - keyboardLeft)
+                if (isCompactGutterActive()) {
+                    layoutGutterButtons(sv.mCompactGravity == Gravity.LEFT, keyboardView.measuredWidth, keyboardView.measuredHeight, spare)
+                }
                 findViewById<KeyboardResizeOverlay>(R.id.resize_overlay)?.placeContent()
             } else {
                 alignStrip(0, 0)
             }
             return
         }
-        alignStrip(0, 0)
 
         val isLeftGravity = oneHandedGravity == Gravity.LEFT
         val width = right - left
         val keyboardView = KeyboardSwitcher.getInstance().visibleKeyboardView ?: return
-        val spareWidth = width - keyboardView.measuredWidth
+        val spareWidth = (width - keyboardView.measuredWidth).coerceAtLeast(0)
 
         val keyboardLeft = if (isLeftGravity) 0 else spareWidth
         keyboardView.layout(
@@ -179,20 +281,8 @@ class KeyboardWrapperView @JvmOverloads constructor(
                 keyboardLeft + keyboardView.measuredWidth,
                 keyboardView.measuredHeight
         )
-
-        val scale = Settings.getValues().mKeyboardHeightScale
-        // scale one-handed mode button height if keyboard height scale is < 80%
-        val heightScale = if (scale < 0.8f) scale + 0.2f else 1f
-        val buttonsLeft = if (isLeftGravity) keyboardView.measuredWidth else 0
-        val buttonXLeft = buttonsLeft + (spareWidth - stopOneHandedModeBtn.measuredWidth) / 2
-        val buttonXRight = buttonsLeft + (spareWidth + stopOneHandedModeBtn.measuredWidth) / 2
-        val buttonHeight = (heightScale * stopOneHandedModeBtn.measuredHeight).toInt()
-        fun View.setLayout(yPosition: Int) {
-            layout(buttonXLeft, yPosition - buttonHeight / 2, buttonXRight, yPosition + buttonHeight / 2)
-        }
-        stopOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.2f).toInt())
-        switchOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.5f).toInt())
-        resizeOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.8f).toInt())
+        alignStrip(keyboardLeft, spareWidth - keyboardLeft)
+        layoutGutterButtons(isLeftGravity, keyboardView.measuredWidth, keyboardView.measuredHeight, spareWidth)
         // the "Size & position" overlay covers the whole wrapper; it places its handles on the keyboard itself
         findViewById<View>(R.id.resize_overlay)?.takeIf { it.visibility != GONE }
             ?.let { it.layout(0, 0, width, it.measuredHeight) }
