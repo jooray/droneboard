@@ -2,6 +2,16 @@
 
 package helium314.keyboard.latin
 
+import android.content.res.ColorStateList
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.RectF
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.widget.TextView
 import android.widget.LinearLayout
 import android.view.Gravity
@@ -18,6 +28,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.inputmethod.InputContentInfoCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -28,6 +40,7 @@ import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.ColorType
+import helium314.keyboard.latin.common.Colors
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.isValidNumber
 import helium314.keyboard.latin.database.ClipboardDao
@@ -205,9 +218,20 @@ class ClipboardHistoryManager(
 
         // create the view
         val binding = ClipboardSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
+        val colors = latinIME.mSettings.current.mColors
+        val density = latinIME.resources.displayMetrics.density
+        val iconSizePx = (15f * density).toInt()
+        val chipHeightPx = (32f * density).toInt()
+        val chipPadPx = (10f * density).toInt()
+        val chipGapPx = (6f * density).toInt()
+
         val textView = binding.clipboardSuggestionText
-        val clipIcon = KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
-        clipIcon?.setBounds(0, 0, textView.lineHeight, textView.lineHeight) // scale the icon to the text
+        val mainChip = binding.clipboardSuggestionMainChip
+        val chipsRow = binding.clipboardSuggestionChips
+        val clipIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.PASTE.name, latinIME)?.apply {
+            setBounds(0, 0, iconSizePx, iconSizePx)
+            colors.setColor(this, ColorType.CLIPBOARD_SUGGESTION_ICON)
+        }
         textView.setCompoundDrawablesRelative(clipIcon, null, null, null)
         val inputType = editorInfo?.inputType ?: InputType.TYPE_NULL
         if (hasText) {
@@ -224,35 +248,46 @@ class ClipboardHistoryManager(
                 Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false))
             AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
             binding.root.isGone = true
+            latinIME.setNeutralSuggestionStrip()
         }
+        mainChip.setOnClickListener(onClickListener)
         textView.setOnClickListener(onClickListener)
 
-        // Droneboard quick clips: an e-mail address, a link or a one-time code from the copied text get their own chips
+        // Droneboard quick clips: an e-mail address, a link or a one-time code from the copied text get their own pills
         val quickClips = if (hasText && !isClipSensitive(inputType) && !InputTypeUtils.isNumberInputType(inputType))
             QuickClips.extract(content) else emptyList()
         val quickClipViews = quickClips.mapIndexed { index, clip ->
+            val semanticIcon = makeQuickClipIcon(clip.type, iconSizePx, colors, density)
             TextView(latinIME).apply {
                 text = QuickClips.label(clip)
                 contentDescription = clip.text
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, textView.textSize)
                 typeface = textView.typeface
-                gravity = Gravity.CENTER
+                gravity = Gravity.CENTER_VERTICAL
                 isSingleLine = true
+                ellipsize = TextUtils.TruncateAt.END
                 isHapticFeedbackEnabled = false
                 isSoundEffectsEnabled = false
-                val pad = (12 * resources.displayMetrics.density).toInt()
-                setPaddingRelative(pad, 0, pad, 0)
+                compoundDrawablePadding = (5f * density).toInt()
+                setCompoundDrawablesRelative(semanticIcon, null, null, null)
+                setPaddingRelative(chipPadPx, 0, chipPadPx, 0)
+                background = makeChipPillDrawable(colors, density)
+                setTextColor(colors.get(ColorType.KEY_TEXT))
                 setOnClickListener {
                     dontShowCurrentSuggestion = true
                     latinIME.onTextInput(clip.text)
                     AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, it, HapticEvent.KEY_PRESS)
                     binding.root.isGone = true
+                    latinIME.setNeutralSuggestionStrip()
                 }
-                binding.root.addView(this, index, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT))
+                val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, chipHeightPx).apply {
+                    marginEnd = chipGapPx
+                }
+                chipsRow.addView(this, index, lp)
             }
         }
-        if (quickClipViews.isNotEmpty()) // the whole clip stays available, but the pieces come first and it gets what is left
-            textView.maxWidth = (120 * latinIME.resources.displayMetrics.density).toInt()
+        textView.maxWidth = ((if (quickClipViews.isNotEmpty()) 180f else 260f) * density).toInt()
+        mainChip.background = makeChipPillDrawable(colors, density)
 
         if (hasImage) {
             if (InputTypeUtils.isNumberInputType(inputType)) return null
@@ -268,24 +303,92 @@ class ClipboardHistoryManager(
         }
 
         val closeButton = binding.clipboardSuggestionClose
-        closeButton.setImageDrawable(KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
-        // don't, because this makes the button harder to hit (but the size is nice)
-        // closeButton.layoutParams.width = textView.lineHeight // scale the icon to the text
-        // closeButton.layoutParams.height = textView.lineHeight
-        // just shrink the image a little, but don't change button size
-        closeButton.scaleX = 0.8f
-        closeButton.scaleY = 0.8f
+        closeButton.setImageDrawable(KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.CLOSE_HISTORY.name, latinIME))
         closeButton.setOnClickListener { removeClipboardSuggestion() }
 
-        val colors = latinIME.mSettings.current.mColors
         textView.setTextColor(colors.get(ColorType.KEY_TEXT))
-        quickClipViews.forEach { it.setTextColor(colors.get(ColorType.KEY_TEXT)) }
-        clipIcon?.let { colors.setColor(it, ColorType.CLIPBOARD_SUGGESTION_ICON) }
         colors.setColor(closeButton, ColorType.REMOVE_SUGGESTION_ICON)
-        colors.setBackground(binding.root, ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
 
         clipboardSuggestionView = binding.root
         return clipboardSuggestionView
+    }
+
+    private fun makeChipPillDrawable(colors: Colors, density: Float): Drawable {
+        val fillColor = colors.get(ColorType.CLIPBOARD_SUGGESTION_BACKGROUND)
+        val strokeColor = ColorUtils.setAlphaComponent(colors.get(ColorType.KEY_TEXT), 38)
+        val rippleColor = ColorUtils.setAlphaComponent(colors.get(ColorType.KEY_TEXT), 28)
+        val shape = GradientDrawable().apply {
+            cornerRadius = 16f * density
+            setColor(fillColor)
+            setStroke((1f * density).toInt().coerceAtLeast(1), strokeColor)
+        }
+        return RippleDrawable(ColorStateList.valueOf(rippleColor), shape, null)
+    }
+
+    private fun makeQuickClipIcon(type: QuickClips.Type, sizePx: Int, colors: Colors, density: Float): Drawable? {
+        val iconColor = colors.get(ColorType.CLIPBOARD_SUGGESTION_ICON)
+        val drawable: Drawable? = when (type) {
+            QuickClips.Type.LINK -> ContextCompat.getDrawable(latinIME, R.drawable.ic_link)?.mutate()?.also {
+                colors.setColor(it, ColorType.CLIPBOARD_SUGGESTION_ICON)
+            }
+            QuickClips.Type.EMAIL -> SemanticGlyphDrawable(SemanticGlyphDrawable.Kind.EMAIL, iconColor, density)
+            QuickClips.Type.CODE -> SemanticGlyphDrawable(SemanticGlyphDrawable.Kind.OTP, iconColor, density)
+        }
+        drawable?.setBounds(0, 0, sizePx, sizePx)
+        return drawable
+    }
+
+    /** Compact vector-drawn semantic icons for email and OTP Quick Clip chips. */
+    private class SemanticGlyphDrawable(
+        private val kind: Kind,
+        color: Int,
+        density: Float
+    ) : Drawable() {
+        enum class Kind { EMAIL, OTP }
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            style = Paint.Style.STROKE
+            strokeWidth = 1.5f * density
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        private val rect = RectF()
+        private val path = Path()
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            val w = b.width().toFloat()
+            val h = b.height().toFloat()
+            if (w <= 0f || h <= 0f) return
+            val pad = w * 0.12f
+            when (kind) {
+                Kind.EMAIL -> {
+                    rect.set(b.left + pad, b.top + h * 0.2f, b.right - pad, b.bottom - h * 0.2f)
+                    canvas.drawRoundRect(rect, w * 0.1f, w * 0.1f, paint)
+                    path.reset()
+                    path.moveTo(rect.left + w * 0.04f, rect.top + h * 0.06f)
+                    path.lineTo(rect.centerX(), rect.centerY() + h * 0.05f)
+                    path.lineTo(rect.right - w * 0.04f, rect.top + h * 0.06f)
+                    canvas.drawPath(path, paint)
+                }
+                Kind.OTP -> {
+                    // Crisp "#" hash / pin glyph for one-time passcodes
+                    val x1 = b.left + w * 0.36f
+                    val x2 = b.left + w * 0.66f
+                    val y1 = b.top + h * 0.35f
+                    val y2 = b.top + h * 0.65f
+                    canvas.drawLine(x1 + w * 0.04f, b.top + pad, x1 - w * 0.04f, b.bottom - pad, paint)
+                    canvas.drawLine(x2 + w * 0.04f, b.top + pad, x2 - w * 0.04f, b.bottom - pad, paint)
+                    canvas.drawLine(b.left + pad, y1, b.right - pad, y1, paint)
+                    canvas.drawLine(b.left + pad, y2, b.right - pad, y2, paint)
+                }
+            }
+        }
+
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     private fun removeClipboardSuggestion() {
