@@ -158,14 +158,11 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     override fun onCustomRequest(request: KeyboardActionListener.CustomAction) = when (request) {
         KeyboardActionListener.CustomAction.SHOW_INPUT_METHOD_PICKER -> latinIME.showInputPickerDialog()
         KeyboardActionListener.CustomAction.TOUCHPAD_ON -> {
-            // Droneboard: clearly visible (0.5 was hard to notice on dark themes, and without vibration it
-            // was the only sign that the trackpad is on); like Gboard, the keys almost disappear
-            // can be turned off: some people see the fading as flicker
-            if (Settings.getValues().mTouchpadDim) keyboardSwitcher.mainKeyboardView?.alpha = 0.15f
+            keyboardSwitcher.mainKeyboardView?.setTouchpadModeVisuals(true, Settings.getValues().mTouchpadDim)
             true
         }
         KeyboardActionListener.CustomAction.TOUCHPAD_OFF -> {
-            keyboardSwitcher.mainKeyboardView?.alpha = 1f
+            keyboardSwitcher.mainKeyboardView?.setTouchpadModeVisuals(false, Settings.getValues().mTouchpadDim)
             true
         }
         KeyboardActionListener.CustomAction.PERFORM_HAPTIC -> {

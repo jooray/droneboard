@@ -6,7 +6,9 @@
 
 package helium314.keyboard.keyboard.internal;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
+import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -27,6 +29,8 @@ import java.util.HashMap;
  * - how key previews should be shown and dismissed.
  */
 public final class KeyPreviewChoreographer {
+    private static final long DISMISS_FADE_DURATION_MS = 60L;
+
     // Free {@link KeyPreviewView} pool that can be used for key preview.
     private final ArrayDeque<KeyPreviewView> mFreeKeyPreviewViews = new ArrayDeque<>();
     // Map from {@link Key} to {@link KeyPreviewView} that is currently being displayed as key
@@ -42,10 +46,14 @@ public final class KeyPreviewChoreographer {
     public KeyPreviewView getKeyPreviewView(final Key key, final ViewGroup placerView) {
         KeyPreviewView keyPreviewView = mShowingKeyPreviewViews.remove(key);
         if (keyPreviewView != null) {
+            keyPreviewView.animate().cancel();
+            keyPreviewView.setAlpha(1.0f);
             return keyPreviewView;
         }
         keyPreviewView = mFreeKeyPreviewViews.poll();
         if (keyPreviewView != null) {
+            keyPreviewView.animate().cancel();
+            keyPreviewView.setAlpha(1.0f);
             return keyPreviewView;
         }
         final Context context = placerView.getContext();
@@ -60,18 +68,41 @@ public final class KeyPreviewChoreographer {
     }
 
     public void dismissKeyPreview(final Key key) {
+        dismissKeyPreview(key, false);
+    }
+
+    public void dismissKeyPreview(final Key key, final boolean withAnimation) {
         if (key == null) {
             return;
         }
-        final KeyPreviewView keyPreviewView = mShowingKeyPreviewViews.get(key);
+        final KeyPreviewView keyPreviewView = mShowingKeyPreviewViews.remove(key);
         if (keyPreviewView == null) {
             return;
         }
-        // Dismiss preview
-        mShowingKeyPreviewViews.remove(key);
         keyPreviewView.setTag(null);
-        keyPreviewView.setVisibility(View.INVISIBLE);
-        mFreeKeyPreviewViews.add(keyPreviewView);
+        final boolean animate = withAnimation
+                && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled());
+        if (animate) {
+            keyPreviewView.animate().cancel();
+            keyPreviewView.animate()
+                    .alpha(0.0f)
+                    .setDuration(DISMISS_FADE_DURATION_MS)
+                    .withEndAction(() -> {
+                        keyPreviewView.setVisibility(View.INVISIBLE);
+                        keyPreviewView.setAlpha(1.0f);
+                        if (!mFreeKeyPreviewViews.contains(keyPreviewView)) {
+                            mFreeKeyPreviewViews.add(keyPreviewView);
+                        }
+                    })
+                    .start();
+        } else {
+            keyPreviewView.animate().cancel();
+            keyPreviewView.setAlpha(1.0f);
+            keyPreviewView.setVisibility(View.INVISIBLE);
+            if (!mFreeKeyPreviewViews.contains(keyPreviewView)) {
+                mFreeKeyPreviewViews.add(keyPreviewView);
+            }
+        }
     }
 
     public void placeAndShowKeyPreview(final Key key, final KeyboardIconsSet iconsSet,
@@ -121,6 +152,8 @@ public final class KeyPreviewChoreographer {
     }
 
     void showKeyPreview(final Key key, final KeyPreviewView keyPreviewView) {
+        keyPreviewView.animate().cancel();
+        keyPreviewView.setAlpha(1.0f);
         keyPreviewView.setVisibility(View.VISIBLE);
         mShowingKeyPreviewViews.put(key, keyPreviewView);
     }

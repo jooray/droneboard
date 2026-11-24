@@ -45,8 +45,10 @@ fun createPopupKeysArray(popupSet: PopupSet<*>?, params: KeyboardParams, label: 
             POPUP_KEYS_LANGUAGE_PRIORITY -> params.mLocaleKeyboardInfos.getPriorityPopupKeys(label)?.let { popupKeys.addAll(it) }
         }
     }
-    // Droneboard: hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo. The action is the last popup key,
-    // so accents and symbols stay where they were and a plain long press still gives the first of them.
+    // Droneboard: hold A/X/C/V/Z/Y for select all, cut, copy, paste, undo and redo.
+    // Place the edit action at index 1 (right after the preselected primary hint/accent)
+    // so a plain long press still yields the primary hint while the action is immediately reachable
+    // without traversing all language diacritics.
     val editAction = if (params.mId.element.isAlphabet && params.mPopupEditActions) editActionPopupKey(label) else null
     if (!popupKeysDelegate.isInitialized() || popupKeys.isEmpty())
         return editAction?.let { arrayOf(it) }
@@ -65,8 +67,13 @@ fun createPopupKeysArray(popupSet: PopupSet<*>?, params: KeyboardParams, label: 
     }
     // autoColumnOrder should be fine
 
-    if (editAction != null) popupKeys.add(editAction)
-    val array = popupKeys.toTypedArray()
+    val orderedList = popupKeys.toMutableList()
+    if (editAction != null && editAction !in orderedList) {
+        val firstKeyIndex = orderedList.indexOfFirst { !(it.startsWith("!") && it.endsWith("!")) }
+        val insertIndex = if (firstKeyIndex >= 0) firstKeyIndex + 1 else orderedList.size
+        orderedList.add(insertIndex, editAction)
+    }
+    val array = orderedList.toTypedArray()
     for (i in array.indices) {
         array[i] = transformLabel(array[i], params)
     }

@@ -10,6 +10,8 @@ import static java.lang.Math.abs;
 
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 
@@ -176,6 +178,25 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     // Touchpad mode for cursor control
     private final TouchpadHandler mTouchpadHandler = new TouchpadHandler();
 
+    // EnterKeyGuard armed haptic & visual cue timer
+    private final Handler mEnterGuardHandler = new Handler(Looper.getMainLooper());
+    @Nullable
+    private Key mEnterGuardKey;
+    private final Runnable mEnterGuardArmedRunnable = new Runnable() {
+        @Override
+        public void run() {
+            final Key guardedKey = mEnterGuardKey;
+            if (guardedKey == null || mCurrentKey != guardedKey
+                    || mIsTrackingForActionDisabled || sInGesture) {
+                return;
+            }
+            final MainKeyboardView mkv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+            if (mkv != null) {
+                mkv.onEnterKeyGuardArmed(guardedKey);
+            }
+        }
+    };
+
     private final BatchInputArbiter mBatchInputArbiter;
     private final GestureStrokeDrawingPoints mGestureStrokeDrawingPoints;
 
@@ -308,7 +329,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return false;
         }
         if (key.isEnabled()) {
-            final HapticEvent hapticEvent = repeatCount == 0 ? HapticEvent.KEY_PRESS : HapticEvent.KEY_REPEAT;
+            final boolean suppressEnterDownHaptic = repeatCount == 0
+                    && EnterKeyGuard.isGuarded(key.getCode(), Settings.getValues().mEnterKeyDelay);
+            final HapticEvent hapticEvent = suppressEnterDownHaptic
+                    ? HapticEvent.NO_HAPTICS
+                    : (repeatCount == 0 ? HapticEvent.KEY_PRESS : HapticEvent.KEY_REPEAT);
             sListener.onPressKey(key.getCode(), repeatCount, getActivePointerTrackerCount(), hapticEvent);
             final boolean keyboardLayoutHasBeenChanged = mKeyboardLayoutHasBeenChanged;
             mKeyboardLayoutHasBeenChanged = false;
@@ -611,7 +636,31 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sListener.onEndBatchInput(aggregatedPointers);
     }
 
+    private void startEnterKeyGuardTimer(@Nullable final Key key) {
+        cancelEnterKeyGuardTimer();
+        if (key == null || sInGesture) {
+            return;
+        }
+        final int delayMs = Settings.getValues().mEnterKeyDelay;
+        if (EnterKeyGuard.isGuarded(key.getCode(), delayMs)) {
+            mEnterGuardKey = key;
+            mEnterGuardHandler.postDelayed(mEnterGuardArmedRunnable, delayMs);
+        }
+    }
+
+    private void cancelEnterKeyGuardTimer() {
+        mEnterGuardHandler.removeCallbacks(mEnterGuardArmedRunnable);
+        if (mEnterGuardKey != null) {
+            mEnterGuardKey = null;
+            final MainKeyboardView mkv = KeyboardSwitcher.getInstance().getMainKeyboardView();
+            if (mkv != null) {
+                mkv.clearEnterKeyGuardArmed();
+            }
+        }
+    }
+
     private void cancelBatchInput() {
+        cancelEnterKeyGuardTimer();
         cancelAllPointerTrackers();
         mIsDetectingGesture = false;
         if (!sInGesture) {
@@ -745,6 +794,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
             startRepeatKey(key);
             startLongPressTimer(key);
+            startEnterKeyGuardTimer(key);
             setPressedKeyGraphics(key, eventTime);
             mStartX = x;
             mStartY = y;
@@ -812,7 +862,9 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             if (key != null) {
                 mBatchInputArbiter.updateBatchInput(eventTime, this);
             }
-            showGestureTrail();
+            if (isMajorEvent) {
+                showGestureTrail();
+            }
         }
     }
 
@@ -862,6 +914,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return;
         }
         startLongPressTimer(key);
+        startEnterKeyGuardTimer(key);
         setPressedKeyGraphics(key, eventTime);
     }
 
@@ -885,6 +938,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     private void processDraggingFingerOutFromOldKey(final Key oldKey) {
+        cancelEnterKeyGuardTimer();
         setReleasedKeyGraphics(oldKey, true);
         callListenerOnRelease(oldKey, oldKey.getCode(), true);
         startKeySelectionByDraggingFinger(oldKey);
@@ -1078,6 +1132,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private void onUpEventInternal(final int x, final int y, final long eventTime) {
         sTimerProxy.cancelKeyTimersOf(this);
+        cancelEnterKeyGuardTimer();
         final boolean isInDraggingFinger = mIsInDraggingFinger;
         final boolean isInSlidingKeyInput = mIsInSlidingKeyInput;
         resetKeySelectionByDraggingFinger();
@@ -1174,6 +1229,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     public void onLongPressed() {
         sTimerProxy.cancelLongPressTimersOf(this);
+        cancelEnterKeyGuardTimer();
         if (isShowingPopupKeysPanel()) {
             return;
         }
@@ -1249,6 +1305,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
 
     private void onCancelEventInternal() {
         sTimerProxy.cancelKeyTimersOf(this);
+        cancelEnterKeyGuardTimer();
         setReleasedKeyGraphics(mCurrentKey, true);
         resetKeySelectionByDraggingFinger();
         dismissPopupKeysPanel();

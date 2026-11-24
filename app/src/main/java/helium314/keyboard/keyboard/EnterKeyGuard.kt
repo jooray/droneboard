@@ -14,6 +14,11 @@ object EnterKeyGuard {
     /** offered in the settings, in milliseconds; 0 is off */
     @JvmField val CHOICES = intArrayOf(0, 100, 150, 200, 250)
 
+    /** true when [code] is guarded by the hold delay with the setting at [delayMs] */
+    @JvmStatic
+    fun isGuarded(code: Int, delayMs: Int): Boolean =
+        delayMs > 0 && guards(code)
+
     /** true when a key with [code] released after [heldMs] must not act, with the setting at [delayMs] */
     @JvmStatic
     fun blocks(code: Int, heldMs: Long, delayMs: Int): Boolean =
