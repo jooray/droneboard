@@ -14,12 +14,13 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
-import android.os.Handler;
+import android.os.SystemClock;
 import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
 
 import helium314.keyboard.keyboard.PointerTracker;
+import helium314.keyboard.latin.common.CoordinateUtils;
 
 /**
  * Draw preview graphics of multiple gesture trails during gesture input.
@@ -28,6 +29,8 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
     private final SparseArray<GestureTrailDrawingPoints> mGestureTrails = new SparseArray<>();
     private final GestureTrailDrawingParams mDrawingParams;
     private final Paint mGesturePaint;
+    private final Paint mHardwareTrailPaint;
+    private final int[] mLastCoords = CoordinateUtils.newInstance();
     private int mOffscreenWidth;
     private int mOffscreenHeight;
     private int mOffscreenOffsetY;
@@ -37,7 +40,8 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
     private final Rect mDirtyRect = new Rect();
     private final Rect mGestureTrailBoundsRect = new Rect(); // per trail
 
-    private final Handler mDrawingHandler = new Handler();
+    private DrawingPreviewPlacerView mPlacerView;
+    private boolean mFrameScheduled;
 
     public GestureTrailsDrawingPreview(final TypedArray mainKeyboardViewAttr) {
         mDrawingParams = new GestureTrailDrawingParams(mainKeyboardViewAttr);
@@ -45,6 +49,18 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
         gesturePaint.setAntiAlias(true);
         gesturePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
         mGesturePaint = gesturePaint;
+
+        final Paint hwPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        hwPaint.setStyle(Paint.Style.FILL);
+        hwPaint.setStrokeCap(Paint.Cap.ROUND);
+        hwPaint.setStrokeJoin(Paint.Join.ROUND);
+        mHardwareTrailPaint = hwPaint;
+    }
+
+    @Override
+    public void setDrawingView(@NonNull final DrawingPreviewPlacerView drawingView) {
+        super.setDrawingView(drawingView);
+        mPlacerView = drawingView;
     }
 
     @Override
@@ -59,6 +75,10 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
 
     @Override
     public void onDeallocateMemory() {
+        if (mPlacerView != null) {
+            mPlacerView.removeCallbacks(this);
+        }
+        mFrameScheduled = false;
         freeOffscreenBuffer();
     }
 
@@ -83,7 +103,7 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
         mOffscreenCanvas.translate(0, mOffscreenOffsetY);
     }
 
-    private boolean drawGestureTrails(final Canvas offscreenCanvas, final Paint paint,
+    private boolean drawGestureTrailsSoftware(final Canvas offscreenCanvas, final Paint paint,
             final Rect dirtyRect) {
         // Clear previous dirty rectangle.
         if (!dirtyRect.isEmpty()) {
@@ -108,9 +128,30 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
         return needsUpdatingGestureTrail;
     }
 
+    private boolean drawGestureTrailsHardware(final Canvas canvas) {
+        boolean needsUpdatingGestureTrail = false;
+        synchronized (mGestureTrails) {
+            final int trailsCount = mGestureTrails.size();
+            for (int index = 0; index < trailsCount; index++) {
+                final GestureTrailDrawingPoints trail = mGestureTrails.valueAt(index);
+                needsUpdatingGestureTrail |= trail.drawGestureTrailHardware(
+                        canvas, mHardwareTrailPaint, mDrawingParams);
+            }
+        }
+        return needsUpdatingGestureTrail;
+    }
+
+    private void scheduleNextFrame() {
+        if (!mFrameScheduled && mPlacerView != null) {
+            mFrameScheduled = true;
+            mPlacerView.postOnAnimation(this);
+        }
+    }
+
     @Override
     public void run() {
-        // Update preview.
+        mFrameScheduled = false;
+        // Update preview synchronized to the display VSync (60/90/120 Hz).
         invalidateDrawingView();
     }
 
@@ -123,21 +164,28 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
         if (!isPreviewEnabled()) {
             return;
         }
+        if (canvas.isHardwareAccelerated()) {
+            if (mOffscreenBuffer != null) {
+                freeOffscreenBuffer();
+            }
+            if (drawGestureTrailsHardware(canvas)) {
+                scheduleNextFrame();
+            }
+            return;
+        }
+
+        // Software canvas fallback (non-hardware-accelerated windows / tests).
         mayAllocateOffscreenBuffer();
-        // Draw gesture trails to offscreen buffer.
-        final boolean needsUpdatingGestureTrail = drawGestureTrails(
+        final boolean needsUpdatingGestureTrail = drawGestureTrailsSoftware(
                 mOffscreenCanvas, mGesturePaint, mDirtyRect);
         if (needsUpdatingGestureTrail) {
-            mDrawingHandler.removeCallbacks(this);
-            mDrawingHandler.postDelayed(this, mDrawingParams.mUpdateInterval);
+            scheduleNextFrame();
         }
         // Transfer offscreen buffer to screen.
         if (!mDirtyRect.isEmpty()) {
             mOffscreenSrcRect.set(mDirtyRect);
             mOffscreenSrcRect.offset(0, mOffscreenOffsetY);
             canvas.drawBitmap(mOffscreenBuffer, mOffscreenSrcRect, mDirtyRect, null);
-            // Note: Defer clearing the dirty rectangle here because we will get cleared
-            // rectangle on the canvas.
         }
     }
 
@@ -159,8 +207,10 @@ public final class GestureTrailsDrawingPreview extends AbstractDrawingPreview im
             }
         }
         trail.addStroke(tracker.getGestureStrokeDrawingPoints(), tracker.getDownTime());
+        tracker.getLastCoordinates(mLastCoords);
+        trail.setLiveTip(CoordinateUtils.x(mLastCoords), CoordinateUtils.y(mLastCoords),
+                SystemClock.uptimeMillis());
 
-        // TODO: Should narrow the invalidate region.
         invalidateDrawingView();
     }
 }

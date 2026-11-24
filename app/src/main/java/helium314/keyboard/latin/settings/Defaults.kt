@@ -148,8 +148,8 @@ object Defaults {
     @JvmField
     var PREF_GESTURE_DYNAMIC_PREVIEW_FOLLOW_SYSTEM = true
     const val PREF_GESTURE_SPACE_AWARE = false
-    const val PREF_GESTURE_FAST_TYPING_COOLDOWN = 500
-    const val PREF_GESTURE_TRAIL_FADEOUT_DURATION = 800
+    const val PREF_GESTURE_FAST_TYPING_COOLDOWN = 200
+    const val PREF_GESTURE_TRAIL_FADEOUT_DURATION = 380
     /** beam width of the final swipe decode (the live preview always uses 32) */
     const val PREF_SWIPE_BEAM_WIDTH = 200
     const val PREF_RECORD_TYPING_SWIPES = false
