@@ -61,27 +61,30 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         fun onGetSuggestedWords(suggestedWords: SuggestedWords)
     }
 
+    @JvmOverloads
     fun getSuggestedWords(wordComposer: WordComposer, textAtCursor: TextAtCursor?, ngramContext: NgramContext, keyboard: Keyboard,
                           settingsValuesForSuggestion: SettingsValuesForSuggestion, isCorrectionEnabled: Boolean,
-                          inputStyle: InputStyle, sequenceNumber: Int): SuggestedWords =
+                          inputStyle: InputStyle, sequenceNumber: Int,
+                          composedDataSnapshot: ComposedData? = null): SuggestedWords =
         if (wordComposer.isBatchMode) {
             getSuggestedWordsForBatchInput(wordComposer, ngramContext, keyboard, settingsValuesForSuggestion,
                 inputStyle, isCorrectionEnabled, sequenceNumber)
         } else {
             getSuggestedWordsForNonBatchInput(wordComposer, textAtCursor, ngramContext, keyboard, settingsValuesForSuggestion,
-                inputStyle, isCorrectionEnabled, sequenceNumber)
+                inputStyle, isCorrectionEnabled, sequenceNumber, composedDataSnapshot)
         }
 
     // Retrieves suggestions for non-batch input (typing, recorrection, predictions...)
     // and calls the callback function with the suggestions.
     private fun getSuggestedWordsForNonBatchInput(wordComposer: WordComposer, textAtCursor: TextAtCursor?, ngramContext: NgramContext, keyboard: Keyboard,
                       settingsValuesForSuggestion: SettingsValuesForSuggestion, inputStyleIfNotPrediction: InputStyle,
-                      isCorrectionEnabled: Boolean, sequenceNumber: Int): SuggestedWords {
+                      isCorrectionEnabled: Boolean, sequenceNumber: Int,
+                      composedDataSnapshot: ComposedData? = null): SuggestedWords {
         val typedWordString = wordComposer.typedWord
         val resultsArePredictions = !wordComposer.isComposingWord
         val suggestionResults = if (typedWordString.isEmpty())
                 getNextWordSuggestions(ngramContext, keyboard, inputStyleIfNotPrediction, settingsValuesForSuggestion)
-            else mDictionaryFacilitator.getSuggestionResults(wordComposer.composedDataSnapshot, ngramContext, keyboard,
+            else mDictionaryFacilitator.getSuggestionResults(composedDataSnapshot ?: wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyleIfNotPrediction)
         val trailingSingleQuotesCount = StringUtils.getTrailingSingleQuotesCount(typedWordString)
         val capsMode = getCapsModeForTyping(wordComposer, keyboard)
@@ -172,8 +175,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 )
             }
         }
-        if (typedWordString.isNotEmpty()) moveEmojiToRightSlot(suggestionsList)
-        val isTypedWordValid = firstOccurrenceOfTypedWordInSuggestions > -1 || (!resultsArePredictions && !allowsToBeAutoCorrected)
+        if (typedWordString.isEmpty() || firstOccurrenceOfTypedWordInSuggestions > -1) moveEmojiToRightSlot(suggestionsList)
+        val isTypedWordValid = firstOccurrenceOfTypedWordInSuggestions > -1
         return SuggestedWords(suggestionsList, suggestionResults.rawSuggestions, typedWordInfo,
             isTypedWordValid, hasAutoCorrection || correctToCapitalizedWord, false, inputStyle, sequenceNumber)
     }
