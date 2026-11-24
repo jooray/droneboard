@@ -2,6 +2,7 @@
 package helium314.keyboard.latin.lm
 
 import android.content.Context
+import android.content.res.AssetFileDescriptor
 import android.os.SystemClock
 import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.settings.Settings
@@ -9,13 +10,17 @@ import helium314.keyboard.latin.swipe.FutoSwipe
 import helium314.keyboard.latin.swipe.SwipeGestureDecoder
 import helium314.keyboard.latin.utils.DirectBoot
 import helium314.keyboard.latin.utils.Log
+import java.io.FileNotFoundException
 import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Future
+import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -33,10 +38,11 @@ import kotlin.concurrent.write
 object NeuralLanguageModel : LanguageModel {
     private const val TAG = "NeuralLanguageModel"
     private const val ASSET_DIR = "swipe"
-    private const val MAX_TOKENS = 31
-    private const val TEXT_CHARS = 300
+    private const val MAX_TOKENS = 63
+    private const val TEXT_CHARS = 500
     const val TIMEOUT_MS = 60L
     private const val CACHE_SIZE = 64
+    private const val TOKEN_CACHE_SIZE = 4
     private const val CANDIDATES = 20
     private const val LAMBDA = 0.7
 
@@ -51,15 +57,44 @@ object NeuralLanguageModel : LanguageModel {
     private val models = ConcurrentHashMap<String, Long>()
     private val loading = ConcurrentHashMap.newKeySet<String>()
 
-    // one worker; a newer request replaces one still waiting in the queue
-    private val executor = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(1),
+    @Volatile private var hasNativeLoadNeuralFd = true
+    @Volatile private var hasNativePrefetch = true
+    @Volatile private var lastPrefetchedKey: String? = null
+
+    // one worker; a newer request replaces one still waiting in the queue and cancels its Future so
+    // evicted callers wake up immediately instead of stalling for TIMEOUT_MS
+    private val executor = ThreadPoolExecutor(
+        1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(1),
         { r -> Thread(r, "neural-lm").apply { priority = Thread.NORM_PRIORITY } },
-        ThreadPoolExecutor.DiscardOldestPolicy())
-    private val loader = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, java.util.concurrent.LinkedBlockingQueue(),
-        { r -> Thread(r, "neural-lm-load") })
+        RejectedExecutionHandler { r, e ->
+            if (!e.isShutdown) {
+                val evicted = e.queue.poll()
+                (evicted as? Future<*>)?.cancel(false)
+                if (!e.queue.offer(r)) {
+                    (r as? Future<*>)?.cancel(false)
+                }
+            }
+        }
+    )
+    // lightweight helper to run NgramLanguageModel.predict() in parallel with nativePredictNeural()
+    private val ngramExecutor = ThreadPoolExecutor(
+        1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2),
+        { r -> Thread(r, "ngram-lm").apply { priority = Thread.NORM_PRIORITY } },
+        ThreadPoolExecutor.CallerRunsPolicy()
+    ).apply { allowCoreThreadTimeOut(true) }
+    // 2 loader threads so multilingual language pairs (e.g. SK + EN) load in parallel on cold start
+    private val loader = ThreadPoolExecutor(
+        2, 2, 30, TimeUnit.SECONDS, java.util.concurrent.LinkedBlockingQueue(),
+        { r -> Thread(r, "neural-lm-load") }
+    ).apply { allowCoreThreadTimeOut(true) }
 
     private val cache = object : LinkedHashMap<String, List<WordPrediction>>(CACHE_SIZE, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<WordPrediction>>?) = size > CACHE_SIZE
+    }
+
+    private class CachedTokens(val tokens: List<String>, val overflowed: Boolean)
+    private val tokenCache = object : LinkedHashMap<String, CachedTokens>(TOKEN_CACHE_SIZE * 2, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedTokens>?) = size > TOKEN_CACHE_SIZE
     }
 
     // latency statistics for the log
@@ -129,6 +164,8 @@ object NeuralLanguageModel : LanguageModel {
         } catch (e: TimeoutException) {
             Log.i(TAG, "no answer within $TIMEOUT_MS ms, using n-grams")
             temporaryFallback()
+        } catch (_: CancellationException) {
+            temporaryFallback()
         } catch (e: Exception) {
             Log.w(TAG, "prediction failed", e)
             temporaryFallback()
@@ -144,15 +181,33 @@ object NeuralLanguageModel : LanguageModel {
         val dicts = SwipeGestureDecoder.loadedDictionaries(languages).toMap()
         val scores = FloatArray(CANDIDATES)
         val index = IntArray(CANDIDATES)
+        val ngramDurationNs = AtomicLong(0L)
+        val ngramFuture: Future<List<WordPrediction>> = ngramExecutor.submit<List<WordPrediction>> {
+            val nt0 = SystemClock.elapsedRealtimeNanos()
+            val res = NgramLanguageModel.predict(ngramContext, prefix, locales, CANDIDATES)
+            ngramDurationNs.set(SystemClock.elapsedRealtimeNanos() - nt0)
+            res
+        }
         val t0 = SystemClock.elapsedRealtimeNanos()
-        val words = FutoSwipe.nativePredictNeural(
-            handles.toLongArray(), languages.map { dicts[it] ?: 0L }.toLongArray(), tokens.toTypedArray(), bos,
-            prefix, CANDIDATES, scores, index
-        )
+        val words = try {
+            FutoSwipe.nativePredictNeural(
+                handles.toLongArray(), languages.map { dicts[it] ?: 0L }.toLongArray(), tokens.toTypedArray(), bos,
+                prefix, CANDIDATES, scores, index
+            )
+        } catch (t: Throwable) {
+            ngramFuture.cancel(false)
+            throw t
+        }
+        val neuralMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1e6f
+        lastPrefetchedKey = languages.joinToString(",") + "|" + bos + "|" + tokens.joinToString(" ")
         val neural = words.mapIndexed { i, w -> WordPrediction(w, scores[i], byLanguage.getValue(languages[index[i]])) }
-        val t1 = SystemClock.elapsedRealtimeNanos()
-        val ngram = NgramLanguageModel.predict(ngramContext, prefix, locales, CANDIDATES)
-        lastSplit = floatArrayOf((t1 - t0) / 1e6f, (SystemClock.elapsedRealtimeNanos() - t1) / 1e6f)
+        val ngram = try {
+            ngramFuture.get()
+        } catch (e: Throwable) {
+            Log.w(TAG, "n-gram prediction failed", e)
+            emptyList()
+        }
+        lastSplit = floatArrayOf(neuralMs, ngramDurationNs.get() / 1e6f)
         interpolate(neural, ngram, maxResults)
     }
 
@@ -206,15 +261,42 @@ object NeuralLanguageModel : LanguageModel {
         languages.filter { it in neuralLanguages(context) }.forEach { requestLoad(context, it) }
     }
 
+    /** Loads via zero-copy APK mmap when uncompressed, falling back to extraction otherwise. */
+    private fun loadNeuralModel(context: Context, language: String): Long {
+        if (hasNativeLoadNeuralFd) {
+            var lmbAfd: AssetFileDescriptor? = null
+            var lmvAfd: AssetFileDescriptor? = null
+            try {
+                lmbAfd = context.assets.openFd("$ASSET_DIR/$language.lmb")
+                lmvAfd = context.assets.openFd("$ASSET_DIR/$language.lmv")
+                val handle = FutoSwipe.nativeLoadNeuralFd(
+                    lmbAfd.parcelFileDescriptor.fd, lmbAfd.startOffset, lmbAfd.length,
+                    lmvAfd.parcelFileDescriptor.fd, lmvAfd.startOffset, lmvAfd.length
+                )
+                if (handle != 0L) return handle
+            } catch (_: UnsatisfiedLinkError) {
+                hasNativeLoadNeuralFd = false
+            } catch (_: FileNotFoundException) {
+                // compressed asset or test environment: fall back to extraction
+            } catch (e: Throwable) {
+                Log.w(TAG, "zero-copy mmap load failed for $language, falling back to extraction", e)
+            } finally {
+                runCatching { lmbAfd?.close() }
+                runCatching { lmvAfd?.close() }
+            }
+        }
+        val lmb = SwipeGestureDecoder.extract(context, "$language.lmb")
+        val lmv = SwipeGestureDecoder.extract(context, "$language.lmv")
+        return FutoSwipe.nativeLoadNeural(lmb.absolutePath, lmv.absolutePath)
+    }
+
     /** @return true when a load was started now */
     private fun requestLoad(context: Context, language: String): Boolean {
         if (!DirectBoot.isUnlocked(context) || models.containsKey(language) || !loading.add(language)) return false
         val task = Runnable {
             try {
                 val start = SystemClock.elapsedRealtime()
-                val lmb = SwipeGestureDecoder.extract(context, "$language.lmb")
-                val lmv = SwipeGestureDecoder.extract(context, "$language.lmv")
-                val handle = FutoSwipe.nativeLoadNeural(lmb.absolutePath, lmv.absolutePath)
+                val handle = loadNeuralModel(context, language)
                 if (handle != 0L) {
                     models[language] = handle
                     Log.i(TAG, "loaded $language in ${SystemClock.elapsedRealtime() - start} ms")
@@ -235,6 +317,44 @@ object NeuralLanguageModel : LanguageModel {
             loading.remove(language)
             Log.w(TAG, "could not start loading $language", e)
             false
+        }
+    }
+
+    /**
+     * Submits a non-blocking prefetch on swipe finger-down so the native models' KV cache and logit
+     * distribution are already warm when the finger lifts 300-600 ms later.
+     */
+    fun prefetchForSwipe(
+        context: Context,
+        languages: List<String>,
+        contextWords: List<String>,
+        textBeforeCursor: CharSequence?
+    ) {
+        if (!hasNativePrefetch || languages.isEmpty() || !DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return
+        if (Settings.getValues()?.mNeuralPredictions != true) return
+        if (languages.any { models[it] == null }) return
+        if (executor.queue.isNotEmpty()) return
+        val (tokens, bos) = tokensBeforeCursor(textBeforeCursor, contextWords, "")
+        val ctxKey = languages.joinToString(",") + "|" + bos + "|" + tokens.joinToString(" ")
+        if (ctxKey == lastPrefetchedKey) return
+        val langSnapshot = languages.toList()
+        val tokenArray = tokens.toTypedArray()
+        try {
+            executor.execute {
+                lock.read {
+                    val handles = langSnapshot.map { models[it] ?: return@read }
+                    try {
+                        FutoSwipe.nativePrefetchNeural(handles.toLongArray(), tokenArray, bos)
+                        lastPrefetchedKey = ctxKey
+                    } catch (_: UnsatisfiedLinkError) {
+                        hasNativePrefetch = false
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "neural prefetch failed", e)
+                    }
+                }
+            }
+        } catch (_: Throwable) {
+            // best-effort prefetch; never disrupt swipe onset
         }
     }
 
@@ -274,6 +394,7 @@ object NeuralLanguageModel : LanguageModel {
                     Log.i(TAG, "released $lang")
                 }
                 synchronized(cache) { cache.clear() }
+                lastPrefetchedKey = null
             }
         }
     }
@@ -315,14 +436,21 @@ object NeuralLanguageModel : LanguageModel {
             s = if (s.endsWith(prefix)) s.substring(0, s.length - prefix.length)
                 else s.trimEnd { it.isLetter() || it == '\'' || it == '’' }
         }
-        val tokens = TOKEN.findAll(s).map { m ->
-            val t = m.value
-            if (t[0].isDigit()) "<num>" else t.lowercase(Locale.ROOT).replace('’', '\'')
-        }.toList()
+        val cached = synchronized(tokenCache) { tokenCache[s] } ?: run {
+            val allTokens = TOKEN.findAll(s).map { m ->
+                val t = m.value
+                if (t[0].isDigit()) "<num>" else t.lowercase(Locale.ROOT).replace('’', '\'')
+            }.toList()
+            val overflowed = allTokens.size > MAX_TOKENS
+            val trimmed = if (overflowed) allTokens.takeLast(MAX_TOKENS) else allTokens
+            CachedTokens(trimmed, overflowed).also { entry ->
+                synchronized(tokenCache) { tokenCache[s] = entry }
+            }
+        }
         // the text is the whole field when fewer characters came back than were asked for
         val wholeField = text.length < TEXT_CHARS
-        val bos = wholeField && tokens.size <= MAX_TOKENS
-        return tokens.takeLast(MAX_TOKENS) to bos
+        val bos = wholeField && !cached.overflowed
+        return cached.tokens to bos
     }
 
     /** State of every condition a neural prediction depends on, for the saved log. No typed text. */

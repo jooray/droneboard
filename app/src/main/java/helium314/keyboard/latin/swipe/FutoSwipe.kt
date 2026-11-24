@@ -27,6 +27,8 @@ object FutoSwipe {
     /** A .kpd dictionary (tools/dicts/pack_swipe_dict.py).
      *  params: gamma, beta, lambda, capsPenalty, bigramWeight, languageBonus[, historyBonus] */
     @JvmStatic external fun nativeLoadDictionary(path: String, params: FloatArray): Long
+    /** Zero-copy mmap loader for an uncompressed .kpd dictionary inside an APK AssetFileDescriptor. */
+    @JvmStatic external fun nativeLoadDictionaryFd(fd: Int, off: Long, len: Long): Long
     @JvmStatic external fun nativeFreeDictionary(dict: Long)
     @JvmStatic external fun nativeSetDictionaryParams(dict: Long, params: FloatArray)
 
@@ -72,7 +74,15 @@ object FutoSwipe {
 
     /** Neural next-word model: <lang>.lmb + <lang>.lmv (tools/lm/export_keyboard_lm.py); 0 on failure. */
     @JvmStatic external fun nativeLoadNeural(lmbPath: String, lmvPath: String): Long
+    /** Zero-copy mmap loader for uncompressed <lang>.lmb + <lang>.lmv APK AssetFileDescriptors; 0 on failure. */
+    @JvmStatic external fun nativeLoadNeuralFd(
+        lmbFd: Int, lmbOff: Long, lmbLen: Long,
+        lmvFd: Int, lmvOff: Long, lmvLen: Long
+    ): Long
     @JvmStatic external fun nativeFreeNeural(model: Long)
+
+    /** Warms the neural models' KV cache / logit distribution for [context] (called on swipe finger-down). */
+    @JvmStatic external fun nativePrefetchNeural(models: LongArray, context: Array<String>, bos: Boolean)
 
     /**
      * Next-word prediction / completion of [prefix] with the neural models of the enabled languages, each with

@@ -135,6 +135,11 @@ android {
         }
     }
 
+    androidResources {
+        // Keep neural LM weights and swipe encoder uncompressed in the APK for zero-copy mmap
+        noCompress += listOf("lmb", "lmv", "pte")
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
