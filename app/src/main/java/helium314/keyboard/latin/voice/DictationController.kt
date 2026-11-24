@@ -15,12 +15,14 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -73,6 +75,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
     /** The text field dictation started in; text is only typed back into the same one. */
     private var field: Pair<String?, Int>? = null
     private var lastStatus: EngineStatus? = null
+    private var notifiedListening = false
+    private var listeningStartedAt = 0L
     private var errorShown = false
     /** this dictation typed something into the field; one action for the support ask, see [finished] */
     private var typedAny = false
@@ -150,6 +154,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         val editor = ime.currentInputEditorInfo
         field = editor?.packageName to (editor?.fieldId ?: 0)
         errorShown = false
+        notifiedListening = false
+        listeningStartedAt = 0L
         typedAny = false
         untyped.setLength(0)
         typedBlock.setLength(0)
@@ -223,6 +229,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         transcriber?.cancel()
         transcriber = null
         untyped.setLength(0)
+        notifiedListening = false
+        listeningStartedAt = 0L
         state = State.IDLE
         rotation.reset()
         main.removeCallbacks(rotationTimeout)
@@ -305,7 +313,12 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
                     t.cancel()
                     transcriber = null
                     state = State.IDLE
-                    showPanel(VoiceInputView.Mode.ERROR, ime.getString(R.string.voice_mic_failed), failure)
+                    showPanel(
+                        VoiceInputView.Mode.ERROR,
+                        ime.getString(R.string.voice_mic_failed),
+                        failure.takeIf { it.isNotBlank() },
+                        primary = VoiceInputView.Button.RETRY,
+                    )
                     return@post
                 }
                 if (state == State.RECORDING) {
@@ -341,9 +354,20 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             s.starting || s.switching -> p.show(VoiceInputView.Mode.STARTING, ime.getString(R.string.voice_starting), micLabel(s))
             s.waitingForBluetooth -> p.show(VoiceInputView.Mode.WAITING_BLUETOOTH, ime.getString(R.string.voice_waiting_bluetooth), micLabel(s))
             else -> {
-                if (wasWaiting && s.input.bluetooth) tone(ToneGenerator.TONE_PROP_BEEP, 120, AudioManager.STREAM_VOICE_CALL) // go ahead, into the headset
+                if (listeningStartedAt == 0L) {
+                    listeningStartedAt = SystemClock.elapsedRealtime()
+                }
+                p.setListeningStart(listeningStartedAt)
+                if (!notifiedListening) {
+                    notifiedListening = true
+                    if (wasWaiting && s.input.bluetooth) {
+                        tone(ToneGenerator.TONE_PROP_BEEP, 120, AudioManager.STREAM_VOICE_CALL) // go ahead, into the headset
+                    } else if (!s.input.bluetooth) {
+                        p.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                }
                 val title = if (s.silent) ime.getString(R.string.voice_silent) else ime.getString(R.string.voice_speak_now)
-                p.show(VoiceInputView.Mode.LISTENING, title, micLabel(s))
+                p.show(VoiceInputView.Mode.LISTENING, title, micLabel(s), urgent = s.silent)
                 p.setLevel(s.amplitude)
             }
         }
@@ -373,7 +397,12 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
         if (!errorShown) {
             errorShown = true
             if (problem == OsttTranscriber.Problem.OTHER)
-                showPanel(VoiceInputView.Mode.ERROR, ime.getString(R.string.voice_transcription_failed), message)
+                showPanel(
+                    VoiceInputView.Mode.ERROR,
+                    ime.getString(R.string.voice_transcription_failed),
+                    message.takeIf { it.isNotBlank() },
+                    primary = VoiceInputView.Button.RETRY,
+                )
             else showOsttProblem(problem)
         }
         if (last) {
@@ -472,7 +501,11 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
             ime.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("", text))
         }
         if (copied.isFailure) Log.w(TAG, "could not copy the dictated text", copied.exceptionOrNull())
-        else runCatching { Toast.makeText(ime, R.string.voice_text_in_clipboard, Toast.LENGTH_LONG).show() }
+        else {
+            val msg = ime.getString(R.string.voice_text_in_clipboard)
+            runCatching { KeyboardSwitcher.getInstance().showToast(msg, false) }
+            runCatching { Toast.makeText(ime, msg, Toast.LENGTH_LONG).show() }
+        }
     }
 
     // ---- panel ----
