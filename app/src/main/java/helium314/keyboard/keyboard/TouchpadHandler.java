@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.keyboard;
 
+import android.content.res.Resources;
 import android.os.SystemClock;
 
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
@@ -16,9 +17,15 @@ public class TouchpadHandler {
     private boolean mInTouchpadMode = false;
     private boolean mHasVibrated = false;
     private boolean mIsScrolling = false;
+    // Bottom-edge scroll stays suppressed until the finger first leaves the bottom 20% zone
+    // (where spacebar long-press starts), preventing immediate ARROW_DOWN hijack.
+    private boolean mHasLeftBottomZone = false;
 
-    private static final float EDGE_THRESHOLD_PERCENTAGE = 0.1f;        // Screen edge threshold percentage
-    private static final float TOUCHPAD_ACCELERATION_FACTOR = 50.0f;    // Lower = more acceleration
+    private static final float EDGE_THRESHOLD_PERCENTAGE = 0.1f;          // Screen edge threshold percentage
+    private static final float BOTTOM_ESCAPE_ZONE_PERCENTAGE = 0.2f;      // Bottom 20% zone to leave before bottom-edge scroll arms
+    private static final float TOUCHPAD_ACCELERATION_FACTOR_DP = 18.0f;   // Lower = more acceleration (density-independent)
+    private static final float MIN_MOVE_THRESHOLD_DP = 4.0f;              // Sensitivity 100 (Very Fast)
+    private static final float MAX_MOVE_THRESHOLD_DP = 24.0f;             // Sensitivity 0 (Very Slow)
     private static final float EDGE_ACCELERATION_FACTOR = 0.95f;
     private static final int MIN_EDGE_ACCELERATION_DELAY = 20;
 
@@ -45,8 +52,13 @@ public class TouchpadHandler {
         stopEdgeScrolling();
         stopHapticRunnable();
         mInTouchpadMode = false;
+        mHasLeftBottomZone = false;
+        mTouchpadAccX = 0;
+        mTouchpadAccY = 0;
         sTouchpadModeActive = false;
-        mListener.onCustomRequest(KeyboardActionListener.CustomAction.TOUCHPAD_OFF);
+        if (mListener != null) {
+            mListener.onCustomRequest(KeyboardActionListener.CustomAction.TOUCHPAD_OFF);
+        }
         mListener = null;
     }
 
@@ -58,6 +70,9 @@ public class TouchpadHandler {
             mListener = listener;
             mInTouchpadMode = true;
             mHasVibrated = false;
+            mHasLeftBottomZone = false;
+            mTouchpadAccX = 0;
+            mTouchpadAccY = 0;
             mTouchpadLastX = x;
             mTouchpadLastY = y;
             mTouchpadActivationTime = SystemClock.elapsedRealtime();
@@ -75,12 +90,23 @@ public class TouchpadHandler {
         mListener = listener;
         mInTouchpadMode = true;
         mHasVibrated = true;
+        mHasLeftBottomZone = false;
+        mTouchpadAccX = 0;
+        mTouchpadAccY = 0;
         mTouchpadLastX = x;
         mTouchpadLastY = y;
         // no debounce: the long press timeout has already passed
         mTouchpadActivationTime = SystemClock.elapsedRealtime() - Settings.getValues().mKeyLongpressTimeout;
         mListener.onCustomRequest(KeyboardActionListener.CustomAction.TOUCHPAD_ON);
         mListener.onCustomRequest(KeyboardActionListener.CustomAction.PERFORM_HAPTIC);
+    }
+
+    private float getDisplayDensity() {
+        final MainKeyboardView view = KeyboardSwitcher.getInstance().getMainKeyboardView();
+        if (view != null) {
+            return view.getResources().getDisplayMetrics().density;
+        }
+        return Resources.getSystem().getDisplayMetrics().density;
     }
 
     private void onMove(int x, int y) {
@@ -105,25 +131,26 @@ public class TouchpadHandler {
         mTouchpadLastX = x;
         mTouchpadLastY = y;
 
+        final float density = getDisplayDensity();
+        final float accelerationFactorPx = Math.max(1.0f, TOUCHPAD_ACCELERATION_FACTOR_DP * density);
+
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // Horizontal move, X only
-            float accFactorX = 1.0f + (Math.abs(deltaX) / TOUCHPAD_ACCELERATION_FACTOR);
+            float accFactorX = 1.0f + (Math.abs(deltaX) / accelerationFactorPx);
             mTouchpadAccX += (int) (deltaX * accFactorX);
             mTouchpadAccY = 0;
         } else {
             // Vertical move, Y only
-            float accFactorY = 1.0f + (Math.abs(deltaY) / TOUCHPAD_ACCELERATION_FACTOR);
+            float accFactorY = 1.0f + (Math.abs(deltaY) / accelerationFactorPx);
             mTouchpadAccY += (int) (deltaY * accFactorY);
             mTouchpadAccX = 0;
         }
 
-        // Calculate dynamic threshold based on sensitivity setting (0-100)
-        // Higher sensitivity = Lower threshold (faster cursor)
-        // 0 -> 70px (Very Slow)
-        // 50 -> 40px (Default)
-        // 100 -> 10px (Very Fast)
-        int sensitivity = Settings.getInstance().getCurrent().mTouchpadSensitivity;
-        int moveThreshold = 70 - (int) (sensitivity * 0.6f);
+        // Calculate density-independent dynamic threshold based on sensitivity setting (0-100):
+        // 0 -> 24dp (Very Slow), 50 -> 14dp (Default), 100 -> 4dp (Very Fast)
+        int sensitivity = Math.max(0, Math.min(100, Settings.getInstance().getCurrent().mTouchpadSensitivity));
+        float thresholdDp = MAX_MOVE_THRESHOLD_DP - (sensitivity / 100.0f) * (MAX_MOVE_THRESHOLD_DP - MIN_MOVE_THRESHOLD_DP);
+        int moveThreshold = Math.max(1, Math.round(thresholdDp * density));
 
         // Handle horizontal movement with accumulator
         while (Math.abs(mTouchpadAccX) >= moveThreshold) {
@@ -143,7 +170,7 @@ public class TouchpadHandler {
     }
 
     private final Runnable mHapticRunnable = () -> {
-        if (!mHasVibrated) {
+        if (!mHasVibrated && mListener != null) {
             mListener.onCustomRequest(KeyboardActionListener.CustomAction.PERFORM_HAPTIC);
             mHasVibrated = true;
         }
@@ -175,14 +202,20 @@ public class TouchpadHandler {
 
         int keyboardHeight = currentKeyboard.mBaseHeight;
         int keyboardWidth = currentKeyboard.mBaseWidth;
+        if (keyboardHeight <= 0 || keyboardWidth <= 0) return false;
+
         int thresholdX = (int) (keyboardWidth * EDGE_THRESHOLD_PERCENTAGE);
         int thresholdY = (int) (keyboardHeight * EDGE_THRESHOLD_PERCENTAGE);
+        int bottomEscapeY = (int) (keyboardHeight * (1.0f - BOTTOM_ESCAPE_ZONE_PERCENTAGE));
+        if (y < bottomEscapeY) {
+            mHasLeftBottomZone = true;
+        }
 
         if (y <= thresholdY) {
             mCurrentScrollDirection = DIRECTION_UP;
             startEdgeScrolling();
             return true;
-        } else if (y >= (keyboardHeight - thresholdY)) {
+        } else if (mHasLeftBottomZone && y >= (keyboardHeight - thresholdY)) {
             mCurrentScrollDirection = DIRECTION_DOWN;
             startEdgeScrolling();
             return true;
