@@ -7,21 +7,32 @@ import android.view.inputmethod.InputMethodSubtype
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,19 +48,23 @@ import helium314.keyboard.latin.dictionary.MissingDictionaryDialog
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.NextScreenIcon
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.settings.EngineBadges
+import helium314.keyboard.settings.PredictionEngines
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
-import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
-import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.PreferenceCategory
 import java.util.Locale
 
 @Composable
@@ -62,13 +77,18 @@ fun LanguageScreen(
     if ((b?.value ?: 0) < 0)
         Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
     val enabledSubtypes = SubtypeSettings.getEnabledSubtypes()
+    val (fullSupportSubtypes, otherSubtypes) = remember(sortedSubtypes) {
+        sortedSubtypes.partition { PredictionEngines.of(ctx, it.locale()).isFullSupport }
+    }
+    var showAllOther by rememberSaveable { mutableStateOf(false) }
+
     SearchScreen(
         onClickBack = onClickBack,
         title = {
             Column {
                 Text(stringResource(R.string.language_and_layouts_title))
-                Text(stringResource(
-                    R.string.text_tap_languages),
+                Text(
+                    stringResource(R.string.text_tap_languages),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -80,7 +100,60 @@ fun LanguageScreen(
                     .splitOnWhitespace().any { it.startsWith(term, true) }
             }
         },
-        itemContent = { SubtypeRow(it, it in enabledSubtypes) }
+        itemContent = { SubtypeRow(it, it in enabledSubtypes) },
+        content = {
+            val enabledOther = otherSubtypes.filter { it in enabledSubtypes }
+            val visibleOther = if (showAllOther) otherSubtypes else enabledOther
+            Scaffold(
+                contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+            ) { innerPadding ->
+                LazyColumn(contentPadding = innerPadding) {
+                    if (fullSupportSubtypes.isNotEmpty()) {
+                        item(key = "header_full_support") {
+                            PreferenceCategory(stringResource(R.string.languages_section_full_support))
+                        }
+                        items(fullSupportSubtypes, key = { "full_${it.hashCode()}_${it.extraValue}" }) { subtype ->
+                            SubtypeRow(subtype, subtype in enabledSubtypes)
+                        }
+                    }
+                    if (otherSubtypes.isNotEmpty()) {
+                        item(key = "header_other") {
+                            PreferenceCategory(stringResource(R.string.languages_section_other))
+                        }
+                        items(visibleOther, key = { "other_${it.hashCode()}_${it.extraValue}" }) { subtype ->
+                            SubtypeRow(subtype, subtype in enabledSubtypes)
+                        }
+                        if (otherSubtypes.size > enabledOther.size) {
+                            item(key = "toggle_other") {
+                                TextButton(
+                                    onClick = { showAllOther = !showAllOther },
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                        .heightIn(min = 48.dp)
+                                ) {
+                                    val remaining = otherSubtypes.size - enabledOther.size
+                                    Text(
+                                        if (showAllOther) stringResource(R.string.languages_hide_other)
+                                        else pluralStringResource(R.plurals.languages_show_all_other, remaining, remaining)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    item(key = "header_advanced") {
+                        PreferenceCategory(stringResource(R.string.settings_screen_advanced))
+                    }
+                    item(key = "secondary_layouts") {
+                        Preference(
+                            name = stringResource(R.string.settings_screen_secondary_layouts),
+                            description = stringResource(R.string.secondary_layouts_summary),
+                            icon = R.drawable.ic_settings_layout,
+                            onClick = { SettingsDestination.navigateTo(SettingsDestination.Layouts) }
+                        ) { NextScreenIcon() }
+                    }
+                }
+            }
+        }
     )
 }
 
@@ -94,10 +167,11 @@ private fun SubtypeRow(subtype: InputMethodSubtype, isEnabled: Boolean) {
             .clickable {
                 SettingsDestination.navigateTo(SettingsDestination.Subtype + subtype.toSettingsSubtype().toPref())
             }
-            .padding(vertical = 6.dp, horizontal = 16.dp)
+            .heightIn(min = 56.dp)
+            .padding(vertical = 8.dp, horizontal = 16.dp)
     ) {
         var showNoDictDialog by remember { mutableStateOf(false) }
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
             Text(subtype.displayName(), style = MaterialTheme.typography.bodyLarge)
             val description = if (SubtypeSettings.isAdditionalSubtype(subtype)) {
                 val secondaryLocales = subtype.getExtraValueOf(ExtraValue.SECONDARY_LOCALES)?.split(Separators.KV)
@@ -154,9 +228,10 @@ private fun getSortedSubtypes(context: Context): List<InputMethodSubtype> {
 
     val subtypeSortComparator = compareBy<InputMethodSubtype>(
         { it !in enabledSubtypes },
+        { !PredictionEngines.of(context, it.locale()).isFullSupport },
         { it.locale() !in localesWithDictionary },
         { it.locale() !in systemLocales },
-        { !(SubtypeSettings.isAdditionalSubtype(it) && !isDefaultSubtype(it) ) },
+        { !(SubtypeSettings.isAdditionalSubtype(it) && !isDefaultSubtype(it)) },
         {
             @Suppress("DEPRECATION")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) it.languageTag == SubtypeLocaleUtils.NO_LANGUAGE

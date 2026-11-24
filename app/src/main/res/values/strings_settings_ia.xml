@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">Match the system navigation bar to the keyboard background</string>
+    <string name="settings_screen_theme_and_layout">Theme &amp; layout</string>
+    <string name="settings_category_layout_and_fonts">Size, layout &amp; fonts</string>
+    <string name="toolbar_settings_summary">Mode: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · offline</string>
+    <string name="search_no_results">No matching settings</string>
+    <string name="more_options">More options</string>
+    <string name="settings_screen_correction_and_dictionaries">Text correction &amp; dictionaries</string>
+    <string name="settings_screen_glide_typing">Glide typing</string>
+    <string name="settings_category_space_and_delete_gestures">Spacebar &amp; delete gestures</string>
+    <string name="settings_category_swipe_improvement">Swipe improvement</string>
+    <string name="settings_screen_voice_dictation">Voice dictation</string>
+    <string name="settings_screen_clipboard">Clipboard</string>
+    <string name="settings_screen_backup_and_advanced">Backup &amp; advanced</string>
+    <string name="settings_category_developer_tuning">Developer &amp; tuning</string>
+    <string name="settings_screen_about_and_support">About &amp; support</string>
+    <string name="clipboard_screen_summary">History, Quick Clips, and retention</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Full support (swipe &amp; predictions)</string>
+    <string name="languages_section_other">Other languages (tap / layout only)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">Show %1$d other language</item>
+        <item quantity="other">Show all %1$d other languages</item>
+    </plurals>
+    <string name="languages_hide_other">Hide other languages</string>
+    <string name="secondary_layouts_summary">Symbols, numbers, numpad, emoji &amp; clipboard layouts</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Off by default so words aren\'t silently rewritten. When on, spacebar and punctuation auto-correct mistyped words.</string>
+    <string name="clear_learned_words_title">Clear learned words</string>
+    <string name="clear_learned_words_summary">Delete words learned from your typing without turning off suggestions</string>
+    <string name="clear_learned_words_confirm_message">Delete all words learned from your typing? Words in your personal dictionary will not be affected.</string>
+    <string name="clear_learned_words_confirm_action">Clear</string>
+    <string name="clear_learned_words_done">Learned words cleared</string>
+    <string name="smart_predictions_title">Smart on-device predictions</string>
+    <string name="smart_predictions_summary">Use Droneboard\'s offline language model for better word and swipe predictions in supported languages</string>
+    <string name="dictionaries_summary">Built-in and custom word lists</string>
+    <string name="personal_dictionary_weight_label">Weight %1$d</string>
+    <string name="personal_dictionary_empty_title">No words yet</string>
+    <string name="personal_dictionary_empty_summary">Add names, slang, or technical terms so Droneboard suggests them, or import a word list from a file.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">Record swipes locally?</string>
+    <string name="typing_swipes_privacy_message">Swiped words and touch paths will be saved only on this device so swipe accuracy can be inspected and improved. Passwords and incognito mode are never recorded, and nothing is ever uploaded.</string>
+    <string name="typing_swipes_privacy_confirm">Turn on</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Ready for offline dictation</string>
+    <string name="dictation_status_ready_summary">Offline Speech to Text is installed and active on this device.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text ready</string>
+    <string name="dictation_status_missing_short">Install Offline Speech to Text</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text needs attention</string>
+    <string name="dictation_status_unsupported_short">Requires Android 13 or newer</string>
+    <string name="dictation_status_unsupported_detail">Built-in offline dictation uses Android 13\'s caller-audio speech API and is not available on this Android version.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">Step %1$d of %2$d</string>
+    <string name="setup_welcome_subtitle">Offline swipe typing, smart predictions, and voice dictation — right on your phone.</string>
+    <string name="setup_step3_languages_title">Languages &amp; typing</string>
+    <string name="setup_step3_languages_subtitle">Check your typing languages and defaults. You can change everything later in Settings.</string>
+    <string name="setup_step3_languages_card_title">Typing languages</string>
+    <string name="setup_step3_languages_card_summary">Tap any language in Settings to switch between QWERTY and QWERTZ layouts and enable swipe languages.</string>
+    <string name="setup_step3_configure_languages">Choose languages &amp; layouts</string>
+    <string name="setup_step3_autocorrect_title">Auto-correction</string>
+    <string name="setup_step3_autocorrect_summary">Droneboard leaves auto-correction off by default so words aren\'t silently rewritten. Suggestions still appear above the keyboard.</string>
+    <string name="setup_step4_try_title">Try Droneboard</string>
+    <string name="setup_step4_try_subtitle">Tap or swipe below to try your new keyboard right away.</string>
+    <string name="setup_step4_try_placeholder">Type or swipe a few words here…</string>
+    <string name="setup_step4_tips_title">Handy shortcuts</string>
+    <string name="setup_tip_trackpad_title">Hold spacebar</string>
+    <string name="setup_tip_trackpad_detail">Move the cursor like a trackpad</string>
+    <string name="setup_tip_delete_title">Swipe backspace</string>
+    <string name="setup_tip_delete_detail">Delete whole words in one swipe</string>
+    <string name="setup_tip_edit_title">Hold A / X / C / V / Z / Y</string>
+    <string name="setup_tip_edit_detail">Select all, cut, copy, paste, undo &amp; redo</string>
+    <string name="setup_action_next">Next</string>
+    <string name="setup_action_skip">Skip</string>
+    <string name="setup_action_back">Back</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">FUTO Model Weights License</string>
+    <string name="about_futo_swipe_license_unavailable">License text could not be loaded.</string>
+    <string name="keyboard_tips_title">Keyboard tips</string>
+    <string name="keyboard_tips_summary">Gestures, editing shortcuts, and quick actions</string>
+    <string name="tip_trackpad_title">Spacebar trackpad &amp; cursor</string>
+    <string name="tip_trackpad_body">Hold the spacebar to turn the keyboard into a precision trackpad, or slide left and right on the spacebar to move the cursor.</string>
+    <string name="tip_edit_shortcuts_title">Editing shortcuts (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Long-press A to select all, X to cut, C to copy, V to paste, Z to undo, and Y to redo.</string>
+    <string name="tip_delete_swipe_title">Swipe backspace to delete words</string>
+    <string name="tip_delete_swipe_body">Drag left from the Delete key to highlight and remove whole words in one motion.</string>
+    <string name="tip_dictation_undo_title">Dictation block undo</string>
+    <string name="tip_dictation_undo_body">Right after voice dictation finishes, tap Backspace once to undo the entire dictated phrase.</string>
+    <string name="tip_quick_clips_title">Quick Clips &amp; pinned clipboard items</string>
+    <string name="tip_quick_clips_body">Recently copied links, codes, and text appear as one-tap pills above the keyboard. Long-press entries in Clipboard view to pin them, or swipe left to remove.</string>
+    <string name="tip_resize_title">Size &amp; position</string>
+    <string name="tip_resize_body">Open Resize from the toolbar to drag keyboard height, width, or one-handed position directly on screen.</string>
+    <string name="tip_shift_symbols_title">Quick uppercase &amp; symbols</string>
+    <string name="tip_shift_symbols_body">Swipe from Shift or ?123 to another key for a single capital letter or symbol. Select text and tap Shift to cycle letter case.</string>
+    <string name="tip_toolbar_incognito_title">Toolbar pinning &amp; Incognito</string>
+    <string name="tip_toolbar_incognito_body">Long-press toolbar icons to pin them to the suggestion strip. Enable Incognito mode to pause word learning and clipboard saving.</string>
+    <string name="save_log_success">Log saved</string>
+    <string name="save_log_failed">Could not save log</string>
+    <string name="crash_report_found">Crash report files found</string>
+    <string name="crash_report_ignore">Ignore</string>
+    <string name="crash_report_save">Save</string>
+</resources>

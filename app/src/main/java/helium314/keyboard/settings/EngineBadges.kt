@@ -4,7 +4,8 @@ package helium314.keyboard.settings
 import android.content.Context
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -27,11 +28,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Which prediction engines a language has, derived from the APK assets at runtime: "neural" when
- * swipe/<lang>.lmb + .lmv exist, "n-grams" when only the trigram LM (.kpd) or word dictionaries exist,
+ * swipe/<lang>.lmb + .lmv exist, "ngrams" when only word dictionaries exist without neural LM,
  * "swipe" when a .kpd swipe dictionary exists. New languages show up as soon as their assets are added.
  */
 data class PredictionEngines(val neural: Boolean, val ngrams: Boolean, val swipe: Boolean) {
     val isEmpty get() = !neural && !ngrams && !swipe
+    val isFullSupport get() = swipe && neural
 
     companion object {
         private val cache = ConcurrentHashMap<Locale, PredictionEngines>()
@@ -58,29 +60,71 @@ data class PredictionEngines(val neural: Boolean, val ngrams: Boolean, val swipe
     }
 }
 
-/** Small Gboard-like chips with the prediction engines of [locale]. */
+private enum class BadgeStyle { Highlight, Subtle, Muted }
+
+/** Plain-language capability pills describing what swipe and prediction support [locale] has. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EngineBadges(locale: Locale, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val engines = remember(locale) { PredictionEngines.of(ctx, locale) }
-    if (engines.isEmpty) return
-    Row(modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (engines.neural) Badge(stringResource(R.string.engine_neural), highlight = true)
-        if (engines.ngrams) Badge(stringResource(R.string.engine_ngrams), highlight = false)
-        if (engines.swipe) Badge(stringResource(R.string.engine_swipe), highlight = false)
+    FlowRow(
+        modifier = modifier.padding(top = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        when {
+            engines.swipe && engines.neural -> {
+                Badge(stringResource(R.string.engine_swipe), BadgeStyle.Highlight)
+                Badge(stringResource(R.string.engine_neural), BadgeStyle.Subtle)
+            }
+            engines.swipe -> {
+                Badge(stringResource(R.string.engine_swipe), BadgeStyle.Highlight)
+                if (engines.ngrams)
+                    Badge(stringResource(R.string.engine_ngrams), BadgeStyle.Subtle)
+            }
+            engines.neural -> {
+                Badge(stringResource(R.string.engine_neural), BadgeStyle.Subtle)
+            }
+            engines.ngrams -> {
+                Badge(stringResource(R.string.engine_ngrams), BadgeStyle.Subtle)
+            }
+            else -> {
+                Badge(stringResource(R.string.engine_layout_only), BadgeStyle.Muted)
+            }
+        }
     }
 }
 
 @Composable
-private fun Badge(text: String, highlight: Boolean) {
+private fun Badge(text: String, style: BadgeStyle) {
     val shape = RoundedCornerShape(6.dp)
     val colors = MaterialTheme.colorScheme
+    val containerColor = when (style) {
+        BadgeStyle.Highlight -> colors.secondaryContainer
+        BadgeStyle.Subtle -> colors.surface
+        BadgeStyle.Muted -> colors.surfaceContainerLow
+    }
+    val contentColor = when (style) {
+        BadgeStyle.Highlight -> colors.onSecondaryContainer
+        BadgeStyle.Subtle -> colors.onSurfaceVariant
+        BadgeStyle.Muted -> colors.onSurfaceVariant
+    }
+    val borderModifier = when (style) {
+        BadgeStyle.Highlight -> Modifier
+        BadgeStyle.Subtle -> Modifier.border(1.dp, colors.outlineVariant, shape)
+        BadgeStyle.Muted -> Modifier.border(1.dp, colors.outlineVariant, shape)
+    }
     Surface(
         shape = shape,
-        color = if (highlight) colors.secondaryContainer else colors.surface,
-        contentColor = if (highlight) colors.onSecondaryContainer else colors.onSurfaceVariant,
-        modifier = if (highlight) Modifier else Modifier.border(1.dp, colors.outlineVariant, shape)
+        color = containerColor,
+        contentColor = contentColor,
+        modifier = borderModifier
     ) {
-        Text(text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
     }
 }
