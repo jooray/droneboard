@@ -53,7 +53,7 @@ fun PreferenceCategory(
 @Composable
 fun Preference(
     name: String,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     description: String? = null,
     @DrawableRes icon: Int? = null,
@@ -62,14 +62,14 @@ fun Preference(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .heightIn(min = 44.dp)
-            .padding(vertical = 10.dp, horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .heightIn(min = 56.dp)
+            .padding(vertical = 10.dp, horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null)
-            IconOrImage(icon, name, 32)
+            IconOrImage(icon, null, 32)
         Column(modifier = Modifier.weight(1f)) {
             Text(text = name, style = MaterialTheme.typography.bodyLarge)
             if (description != null) {

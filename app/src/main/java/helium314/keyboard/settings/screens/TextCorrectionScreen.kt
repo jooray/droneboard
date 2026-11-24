@@ -4,8 +4,10 @@ package helium314.keyboard.settings.screens
 import android.Manifest
 import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,38 +15,44 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.edit
 import helium314.keyboard.keyboard.KeyboardSwitcher
+import helium314.keyboard.keyboard.internal.PopupKeySpec
+import helium314.keyboard.latin.DictionaryFacilitatorImpl
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.dictionary.history.UserHistoryDictUtils
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.ToolbarMode
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
-import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.SettingsWithoutKey
-import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
+import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarning
-import helium314.keyboard.latin.utils.previewDark
-import androidx.core.content.edit
-import helium314.keyboard.keyboard.internal.PopupKeySpec
-import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun TextCorrectionScreen(
@@ -58,18 +66,41 @@ fun TextCorrectionScreen(
     val suggestionsVisible = Settings.readToolbarMode(prefs).let { it == ToolbarMode.SUGGESTION_STRIP || it == ToolbarMode.EXPANDABLE }
     val suggestionsEnabled = suggestionsVisible && prefs.getBoolean(Settings.PREF_SHOW_SUGGESTIONS, Defaults.PREF_SHOW_SUGGESTIONS)
     val gestureEnabled = JniUtils.hasGestureTyping() && prefs.getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT)
+    val personalizedEnabled = prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS, Defaults.PREF_KEY_USE_PERSONALIZED_DICTS)
     val items = listOf(
-        SettingsWithoutKey.EDIT_PERSONAL_DICTIONARY,
         R.string.settings_category_correction,
-        Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
         Settings.PREF_AUTO_CORRECTION,
+        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_CONFIDENCE else null,
         if (autocorrectEnabled) Settings.PREF_MORE_AUTO_CORRECTION else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_SHORTCUTS else null,
         if (autocorrectEnabled) Settings.PREF_AUTOCORRECT_CAPITALIZED_SUGGESTION else null,
-        if (autocorrectEnabled) Settings.PREF_AUTO_CORRECT_CONFIDENCE else null,
         if (autocorrectEnabled) Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT else null,
         Settings.PREF_AUTO_CAP,
         Settings.PREF_CAPITALIZE_ENGLISH_I,
+        Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
+        R.string.settings_category_suggestions,
+        if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
+        if (suggestionsEnabled) Settings.PREF_ALWAYS_SHOW_SUGGESTIONS else null,
+        if (suggestionsEnabled && prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS, Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS))
+            Settings.PREF_ALWAYS_SHOW_SUGGESTIONS_EXCEPT_WEB_TEXT else null,
+        if (suggestionsEnabled) Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER else null,
+        Settings.PREF_BIGRAM_PREDICTIONS,
+        if (suggestionsEnabled) Settings.PREF_NEURAL_PREDICTIONS else null,
+        if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_SUGGEST_EMOJIS else null,
+        if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_INLINE_EMOJI_SEARCH else null,
+        Settings.PREF_SUGGEST_PUNCTUATION,
+        if (prefs.getBoolean(Settings.PREF_SUGGEST_PUNCTUATION, Defaults.PREF_SUGGEST_PUNCTUATION))
+            Settings.PREF_PUNCTUATION_SUGGESTIONS else null,
+        Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
+        SettingsWithoutKey.CLEAR_LEARNED_WORDS,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            Settings.PREF_SPELLCHECK_SUGGEST else null,
+        R.string.dictionary_settings_category,
+        SettingsWithoutKey.EDIT_PERSONAL_DICTIONARY,
+        SettingsWithoutKey.DICTIONARIES,
+        if (personalizedEnabled) Settings.PREF_ADD_TO_PERSONAL_DICTIONARY else null,
+        Settings.PREF_USE_CONTACTS,
+        Settings.PREF_USE_APPS,
         R.string.settings_category_space,
         Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD,
         Settings.PREF_AUTOSPACE_AFTER_PUNCTUATION,
@@ -77,41 +108,58 @@ fun TextCorrectionScreen(
         if (gestureEnabled) Settings.PREF_AUTOSPACE_BEFORE_GESTURE_TYPING else null,
         if (gestureEnabled) Settings.PREF_AUTOSPACE_AFTER_GESTURE_TYPING else null,
         Settings.PREF_SHIFT_REMOVES_AUTOSPACE,
-        R.string.settings_category_suggestions,
-        if (suggestionsVisible) Settings.PREF_SHOW_SUGGESTIONS else null,
-        if (suggestionsEnabled) Settings.PREF_ALWAYS_SHOW_SUGGESTIONS else null,
-        if (suggestionsEnabled && prefs.getBoolean(Settings.PREF_ALWAYS_SHOW_SUGGESTIONS, Defaults.PREF_ALWAYS_SHOW_SUGGESTIONS))
-            Settings.PREF_ALWAYS_SHOW_SUGGESTIONS_EXCEPT_WEB_TEXT else null,
-        if (suggestionsEnabled) Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER else null,
-        if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_SUGGEST_EMOJIS else null,
-        if (suggestionsEnabled || autocorrectEnabled) Settings.PREF_INLINE_EMOJI_SEARCH else null,
-        Settings.PREF_KEY_USE_PERSONALIZED_DICTS,
-        Settings.PREF_BIGRAM_PREDICTIONS,
-        if (suggestionsEnabled) Settings.PREF_NEURAL_PREDICTIONS else null,
-        Settings.PREF_SUGGEST_PUNCTUATION,
-        if (prefs.getBoolean(Settings.PREF_SUGGEST_PUNCTUATION, Defaults.PREF_SUGGEST_PUNCTUATION))
-            Settings.PREF_PUNCTUATION_SUGGESTIONS else null,
-        Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
-        Settings.PREF_USE_CONTACTS,
-        Settings.PREF_USE_APPS,
-        if (prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS, Defaults.PREF_KEY_USE_PERSONALIZED_DICTS))
-            Settings.PREF_ADD_TO_PERSONAL_DICTIONARY else null,
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            Settings.PREF_SPELLCHECK_SUGGEST else null,
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
-        title = stringResource(R.string.settings_screen_correction),
+        title = stringResource(R.string.settings_screen_correction_and_dictionaries),
         settings = items
     )
 }
 
 fun createCorrectionSettings(context: Context) = listOf(
-    Setting(context, SettingsWithoutKey.EDIT_PERSONAL_DICTIONARY, R.string.edit_personal_dictionary) {
+    Setting(context, SettingsWithoutKey.EDIT_PERSONAL_DICTIONARY, R.string.edit_personal_dictionary, R.string.personal_dictionary_main_summary) {
         Preference(
-            name = stringResource(R.string.edit_personal_dictionary),
+            name = it.title,
+            description = personalDictionarySummary(),
             onClick = { SettingsDestination.navigateTo(SettingsDestination.PersonalDictionaries) },
+            icon = R.drawable.ic_edit
         ) { NextScreenIcon() }
+    },
+    Setting(context, SettingsWithoutKey.DICTIONARIES, R.string.dictionary_settings_category, R.string.dictionaries_summary) {
+        Preference(
+            name = it.title,
+            description = it.description,
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.Dictionaries) },
+            icon = R.drawable.ic_dictionary
+        ) { NextScreenIcon() }
+    },
+    Setting(context, SettingsWithoutKey.CLEAR_LEARNED_WORDS, R.string.clear_learned_words_title, R.string.clear_learned_words_summary) { setting ->
+        val ctx = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var showConfirm by rememberSaveable { mutableStateOf(false) }
+        Preference(
+            name = setting.title,
+            description = setting.description,
+            onClick = { showConfirm = true }
+        )
+        if (showConfirm) {
+            ConfirmationDialog(
+                onDismissRequest = { showConfirm = false },
+                title = { Text(setting.title) },
+                content = { Text(stringResource(R.string.clear_learned_words_confirm_message)) },
+                confirmButtonText = stringResource(R.string.clear_learned_words_confirm_action),
+                confirmButtonColor = MaterialTheme.colorScheme.error,
+                onConfirmed = {
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            UserHistoryDictUtils.removeAllUserHistoryDictionaries(ctx)
+                            DictionaryFacilitatorImpl.keyboardInstance?.get()?.clearUserHistoryDictionary(ctx)
+                        }
+                        Toast.makeText(ctx, R.string.clear_learned_words_done, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+        }
     },
     Setting(context, Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE,
         R.string.prefs_block_potentially_offensive_title, R.string.prefs_block_potentially_offensive_summary
@@ -119,7 +167,7 @@ fun createCorrectionSettings(context: Context) = listOf(
         SwitchPreference(it, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE)
     },
     Setting(context, Settings.PREF_AUTO_CORRECTION,
-        R.string.autocorrect, R.string.auto_correction_summary
+        R.string.autocorrect, R.string.auto_correction_default_off_summary
     ) {
         SwitchPreference(it, Defaults.PREF_AUTO_CORRECTION)
     },
@@ -139,20 +187,38 @@ fun createCorrectionSettings(context: Context) = listOf(
         SwitchPreference(it, Defaults.PREF_AUTOCORRECT_CAPITALIZED_SUGGESTION)
     },
     Setting(context, Settings.PREF_AUTO_CORRECT_CONFIDENCE, R.string.auto_correction_confidence) { setting ->
-        SliderPreference(
-            name = setting.title,
-            key = setting.key,
-            default = Defaults.PREF_AUTO_CORRECT_CONFIDENCE,
-            range = 0f..1f,
-            description = {
-                val text = when (it) {
-                    in 0f..0.40f -> stringResource(R.string.auto_correction_threshold_mode_modest)
-                    in 0f..0.80f -> stringResource(R.string.auto_correction_threshold_mode_aggressive)
-                    else -> stringResource(R.string.auto_correction_threshold_mode_very_aggressive)
-                }
-                "${(it * 1000).toInt().toFloat() / 1000} ($text)"
-            }
+        val ctx = LocalContext.current
+        val prefs = ctx.prefs()
+        val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
+        if ((b?.value ?: 0) < 0)
+            Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+        val items = listOf(
+            stringResource(R.string.auto_correction_threshold_mode_modest) to CONFIDENCE_MODEST,
+            stringResource(R.string.auto_correction_threshold_mode_aggressive) to CONFIDENCE_AGGRESSIVE,
+            stringResource(R.string.auto_correction_threshold_mode_very_aggressive) to CONFIDENCE_VERY_AGGRESSIVE,
         )
+        val raw = prefs.getFloat(setting.key, Defaults.PREF_AUTO_CORRECT_CONFIDENCE)
+        val selected = when {
+            raw <= 0.40f -> items[0]
+            raw <= 0.80f -> items[1]
+            else -> items[2]
+        }
+        var showDialog by rememberSaveable { mutableStateOf(false) }
+        Preference(
+            name = setting.title,
+            description = selected.first,
+            onClick = { showDialog = true }
+        )
+        if (showDialog) {
+            ListPickerDialog(
+                onDismissRequest = { showDialog = false },
+                items = items,
+                selectedItem = selected,
+                title = { Text(setting.title) },
+                getItemName = { it.first },
+                onItemSelected = { prefs.edit { putFloat(setting.key, it.second) } }
+            )
+        }
     },
     Setting(context, Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, R.string.backspace_reverts_autocorrect) {
         SwitchPreference(it, Defaults.PREF_BACKSPACE_REVERTS_AUTOCORRECT)
@@ -224,7 +290,6 @@ fun createCorrectionSettings(context: Context) = listOf(
                 content = { Text(stringResource(R.string.disable_personalized_dicts_message)) }
             )
         }
-
     },
     Setting(context, Settings.PREF_BIGRAM_PREDICTIONS,
         R.string.bigram_prediction, R.string.bigram_prediction_summary
@@ -232,7 +297,7 @@ fun createCorrectionSettings(context: Context) = listOf(
         SwitchPreference(it, Defaults.PREF_BIGRAM_PREDICTIONS) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
     Setting(context, Settings.PREF_NEURAL_PREDICTIONS,
-        R.string.neural_predictions, R.string.neural_predictions_summary
+        R.string.smart_predictions_title, R.string.smart_predictions_summary
     ) {
         SwitchPreference(it, Defaults.PREF_NEURAL_PREDICTIONS)
     },
@@ -249,11 +314,6 @@ fun createCorrectionSettings(context: Context) = listOf(
         R.string.center_suggestion_text_to_enter, R.string.center_suggestion_text_to_enter_summary
     ) {
         SwitchPreference(it, Defaults.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER)
-    },
-    Setting(context, Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
-        R.string.suggest_clipboard_content, R.string.suggest_clipboard_content_summary
-    ) {
-        SwitchPreference(it, Defaults.PREF_SUGGEST_CLIPBOARD_CONTENT)
     },
     Setting(context, Settings.PREF_USE_CONTACTS,
         R.string.use_contacts_dict, R.string.use_contacts_dict_summary
@@ -300,13 +360,17 @@ fun createCorrectionSettings(context: Context) = listOf(
     },
 )
 
+private const val CONFIDENCE_MODEST = Defaults.PREF_AUTO_CORRECT_CONFIDENCE
+private const val CONFIDENCE_AGGRESSIVE = 0.60f
+private const val CONFIDENCE_VERY_AGGRESSIVE = 0.90f
+
 @Preview
 @Composable
 private fun PreferencePreview() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            TextCorrectionScreen {  }
+            TextCorrectionScreen { }
         }
     }
 }

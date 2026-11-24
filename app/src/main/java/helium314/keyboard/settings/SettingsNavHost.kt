@@ -19,6 +19,7 @@ import helium314.keyboard.latin.settings.getTransitionAnimationScale
 import helium314.keyboard.settings.screens.AboutScreen
 import helium314.keyboard.settings.screens.AdvancedSettingsScreen
 import helium314.keyboard.settings.screens.AppearanceScreen
+import helium314.keyboard.settings.screens.ClipboardScreen
 import helium314.keyboard.settings.screens.ColorsScreen
 import helium314.keyboard.settings.screens.DebugScreen
 import helium314.keyboard.settings.screens.DictionaryScreen
@@ -31,9 +32,10 @@ import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.SwipeRecorderScreen
-import helium314.keyboard.settings.screens.TypingSwipesScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
+import helium314.keyboard.settings.screens.TypingSwipesScreen
+import helium314.keyboard.settings.screens.VoiceDictationScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -67,17 +69,15 @@ fun SettingsNavHost(
     ) {
         composable(SettingsDestination.Settings) {
             MainSettingsScreen(
-                onClickAbout = { navController.navigate(SettingsDestination.About) },
-                onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
-                onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
-                onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
-                onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
-                onClickAdvanced = { navController.navigate(SettingsDestination.Advanced) },
-                onClickAppearance = { navController.navigate(SettingsDestination.Appearance) },
                 onClickLanguage = { navController.navigate(SettingsDestination.Languages) },
-                onClickLayouts = { navController.navigate(SettingsDestination.Layouts) },
-                onClickDictionaries = { navController.navigate(SettingsDestination.Dictionaries) },
-                onClickPersonalDictionary = { navController.navigate(SettingsDestination.PersonalDictionaries) },
+                onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
+                onClickAppearance = { navController.navigate(SettingsDestination.Appearance) },
+                onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
+                onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
+                onClickVoiceDictation = { navController.navigate(SettingsDestination.VoiceDictation) },
+                onClickClipboard = { navController.navigate(SettingsDestination.Clipboard) },
+                onClickAdvanced = { navController.navigate(SettingsDestination.Advanced) },
+                onClickAbout = { navController.navigate(SettingsDestination.About) },
                 onClickBack = ::goBack,
             )
         }
@@ -95,6 +95,12 @@ fun SettingsNavHost(
         }
         composable(SettingsDestination.GestureTyping) {
             GestureTypingScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.VoiceDictation) {
+            VoiceDictationScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.Clipboard) {
+            ClipboardScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.SwipeRecorder) {
             SwipeRecorderScreen(onClickBack = ::goBack)
@@ -151,6 +157,8 @@ object SettingsDestination {
     const val Preferences = "preferences"
     const val Toolbar = "toolbar"
     const val GestureTyping = "gesture_typing"
+    const val VoiceDictation = "voice_dictation"
+    const val Clipboard = "clipboard"
     const val SwipeRecorder = "swipe_recorder"
     const val TypingSwipes = "typing_swipes"
     const val Advanced = "advanced"

@@ -39,14 +39,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.BackButton
@@ -86,22 +90,6 @@ fun SearchSettingsScreen(
                             }
                         }
                     }
-                    // lazyColumn has janky scroll for a while (not sure why compose gets smoother after a while)
-                    // maybe related to unnecessary recompositions? but even for just displaying text it's there
-                    // didn't manage to improve things with @Immutable list wrapper and other lazy list hints
-                    // so for now: just use "normal" Column
-                    //  even though it takes up to ~50% longer to load it's much better UX
-                    //  and the missing appear animations could be added
-    //                LazyColumn {
-    //                    items(prefs.filterNotNull(), key = { it }) {
-    //                        Box(Modifier.animateItem()) {
-    //                            if (it is Int)
-    //                                PreferenceCategory(stringResource(it))
-    //                            else
-    //                                SettingsActivity.settingsContainer[it]!!.Preference()
-    //                        }
-    //                    }
-    //                }
                 }
             }
         },
@@ -134,9 +122,9 @@ fun <T: Any?> SearchScreen(
                 showSearch = value
                 if (!value) searchText = TextFieldValue()
             }
-            BackHandler {
-                if (showSearch || searchText.text.isNotEmpty()) setShowSearch(false)
-                else onClickBack()
+            // Only intercept Back while search is open or has a query so Android 14+ Predictive Back works natively.
+            BackHandler(enabled = showSearch || searchText.text.isNotEmpty()) {
+                setShowSearch(false)
             }
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
@@ -161,7 +149,12 @@ fun <T: Any?> SearchScreen(
                                     var showMenu by remember { mutableStateOf(false) }
                                     IconButton(
                                         onClick = { showMenu = true }
-                                    ) { Icon(painterResource(R.drawable.ic_arrow_left), "menu", Modifier.rotate(-90f)) }
+                                    ) {
+                                        Icon(
+                                            imageVector = MoreVertVector,
+                                            contentDescription = stringResource(R.string.more_options)
+                                        )
+                                    }
                                     DropdownMenu(
                                         expanded = showMenu,
                                         onDismissRequest = { showMenu = false }
@@ -200,9 +193,26 @@ fun <T: Any?> SearchScreen(
                     Scaffold(
                         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                     ) { innerPadding ->
-                        LazyColumn(contentPadding = innerPadding) {
-                            items(items) {
-                                itemContent(it)
+                        if (items.isEmpty() && searchText.text.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.search_no_results),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            LazyColumn(contentPadding = innerPadding) {
+                                items(items) {
+                                    itemContent(it)
+                                }
                             }
                         }
                     }
@@ -210,6 +220,38 @@ fun <T: Any?> SearchScreen(
             }
         }
     }
+}
+
+/** Standard Material 3 vertical overflow icon (24dp). */
+private val MoreVertVector: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "MoreVert",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(12f, 8f)
+            curveTo(13.1f, 8f, 14f, 7.1f, 14f, 6f)
+            reflectiveCurveTo(13.1f, 4f, 12f, 4f)
+            reflectiveCurveTo(10f, 4.9f, 10f, 6f)
+            reflectiveCurveTo(10.9f, 8f, 12f, 8f)
+            close()
+            moveTo(12f, 10f)
+            curveTo(10.9f, 10f, 10f, 10.9f, 10f, 12f)
+            reflectiveCurveTo(10.9f, 14f, 12f, 14f)
+            reflectiveCurveTo(14f, 13.1f, 14f, 12f)
+            reflectiveCurveTo(13.1f, 10f, 12f, 10f)
+            close()
+            moveTo(12f, 16f)
+            curveTo(10.9f, 16f, 10f, 16.9f, 10f, 18f)
+            reflectiveCurveTo(10.9f, 20f, 12f, 20f)
+            reflectiveCurveTo(14f, 19.1f, 14f, 18f)
+            reflectiveCurveTo(13.1f, 16f, 12f, 16f)
+            close()
+        }
+    }.build()
 }
 
 // from StreetComplete

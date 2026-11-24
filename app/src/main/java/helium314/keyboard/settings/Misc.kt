@@ -67,7 +67,7 @@ fun ActionRow(
         modifier = modifier
             .then(clickableModifier)
             .fillMaxWidth()
-            .heightIn(min = 44.dp),
+            .heightIn(min = 48.dp),
         verticalAlignment = verticalAlignment,
         content = content
     )

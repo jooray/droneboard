@@ -76,8 +76,8 @@ fun PersonalDictionariesScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { item.onClick() }
-                        .heightIn(min = 44.dp)
-                        .padding(12.dp),
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(item.label, style = MaterialTheme.typography.bodyLarge,
@@ -92,8 +92,8 @@ fun PersonalDictionariesScreen(
                     .clickable {
                         SettingsDestination.navigateTo(SettingsDestination.PersonalDictionary + (it?.toLanguageTag() ?: ""))
                     }
-                    .heightIn(min = 44.dp)
-                    .padding(12.dp),
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.wrapContentSize
@@ -39,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -55,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
@@ -86,7 +89,7 @@ fun PersonalDictionaryScreen(
         }
     }
     var selectedWord: Word? by remember { mutableStateOf(null) }
-    val fileActions = personalDictionaryFileActions()
+    val fileActions = personalDictionaryFileActions(onImported = { reload++ })
     // deletes only the words of this list
     val deleteAll = personalDictionaryDeleteAll(everything = false, locale = locale, export = fileActions.export) { reload++ }
     SearchScreen(
@@ -101,12 +104,24 @@ fun PersonalDictionaryScreen(
                 )
             }
         },
-        menu = listOf(stringResource(R.string.personal_dictionary_delete_all) to deleteAll),
+        menu = listOf(
+            stringResource(R.string.personal_dictionary_import) to fileActions.import,
+            stringResource(R.string.personal_dictionary_export) to fileActions.export,
+            stringResource(R.string.personal_dictionary_delete_all) to deleteAll,
+        ),
         filteredItems = { term ->
             list?.items.orEmpty().filter { it.word.startsWith(term, true) || it.shortcut?.startsWith(term, true) == true }
         },
         itemContent = { word -> WordRow(word) { selectedWord = word } },
-        content = { list?.let { WordList(it) { word -> selectedWord = word } } }
+        content = {
+            list?.let {
+                if (it.items.isEmpty()) {
+                    EmptyPersonalDictionary(onImport = fileActions.import)
+                } else {
+                    WordList(it) { word -> selectedWord = word }
+                }
+            }
+        }
     )
     if (selectedWord != null) {
         EditWordDialog(selectedWord!!, locale, onChanged = { reload++ }) { selectedWord = null }
@@ -114,28 +129,74 @@ fun PersonalDictionaryScreen(
     ExtendedFloatingActionButton(
         onClick = { selectedWord = Word("", null, null) },
         text = { Text(stringResource(R.string.user_dict_add_word_button)) },
-        icon = { Icon(painter = painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_add_word_button)) },
+        icon = { Icon(painter = painterResource(R.drawable.ic_edit), contentDescription = null) },
         modifier = Modifier.wrapContentSize(Alignment.BottomEnd).padding(all = 12.dp)
             .then(Modifier.safeDrawingPadding())
     )
 }
 
 @Composable
+private fun EmptyPersonalDictionary(onImport: () -> Unit) {
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 32.dp, vertical = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.personal_dictionary_empty_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(R.string.personal_dictionary_empty_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                OutlinedButton(
+                    onClick = onImport,
+                    modifier = Modifier.padding(top = 4.dp).heightIn(min = 48.dp)
+                ) {
+                    Text(stringResource(R.string.personal_dictionary_import))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun WordRow(word: Word, onClick: () -> Unit) {
+    val weight = word.weight
+    val weightText = if (weight != null && weight != WEIGHT_FOR_USER_DICTIONARY_ADDS) {
+        stringResource(R.string.personal_dictionary_weight_label, weight)
+    } else null
+    val details = listOfNotNull(
+        word.shortcut?.takeIf { it.isNotBlank() },
+        weightText
+    ).joinToString("  ·  ").ifEmpty { null }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 16.dp)
+            .heightIn(min = 56.dp)
+            .padding(vertical = 8.dp, horizontal = 16.dp)
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(word.word, style = MaterialTheme.typography.bodyLarge)
-            val details = if (word.shortcut == null) word.weight.toString() else "${word.weight}  |  ${word.shortcut}"
-            Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (details != null) {
+                Text(details, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.user_dict_settings_edit_dialog_title))
+        Icon(painterResource(R.drawable.ic_edit), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

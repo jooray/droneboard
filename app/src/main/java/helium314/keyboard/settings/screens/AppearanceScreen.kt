@@ -44,6 +44,8 @@ import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.FoldableUtils
+import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.settings.SettingsDestination
 import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
 
 @Composable
@@ -70,7 +72,9 @@ fun AppearanceScreen(
         Settings.PREF_NAVBAR_COLOR,
         SettingsWithoutKey.BACKGROUND_IMAGE,
         SettingsWithoutKey.BACKGROUND_IMAGE_LANDSCAPE,
-        R.string.settings_category_miscellaneous,
+        R.string.settings_screen_toolbar,
+        SettingsWithoutKey.TOOLBAR_SETTINGS,
+        R.string.settings_category_layout_and_fonts,
         Settings.PREF_COMPACT_LARGE_SCREENS,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
         if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD)
@@ -98,7 +102,7 @@ fun AppearanceScreen(
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
-        title = stringResource(R.string.settings_screen_appearance),
+        title = stringResource(R.string.settings_screen_theme_and_layout),
         settings = items
     )
 }
@@ -201,8 +205,22 @@ fun createAppearanceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_THEME_DAY_NIGHT, R.string.day_night_mode, R.string.day_night_mode_summary) {
         SwitchPreference(it, Defaults.PREF_THEME_DAY_NIGHT) { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     },
-    Setting(context, Settings.PREF_NAVBAR_COLOR, R.string.theme_navbar, R.string.day_night_mode_summary) {
+    Setting(context, Settings.PREF_NAVBAR_COLOR, R.string.theme_navbar, R.string.theme_navbar_summary) {
         SwitchPreference(it, Defaults.PREF_NAVBAR_COLOR)
+    },
+    Setting(context, SettingsWithoutKey.TOOLBAR_SETTINGS, R.string.settings_screen_toolbar) {
+        val ctx = LocalContext.current
+        val prefs = ctx.prefs()
+        val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
+        if ((b?.value ?: 0) < 0)
+            Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+        val modeName = Settings.readToolbarMode(prefs).name.lowercase().getStringResourceOrName("toolbar_mode_", ctx)
+        Preference(
+            name = it.title,
+            description = stringResource(R.string.toolbar_settings_summary, modeName),
+            onClick = { SettingsDestination.navigateTo(SettingsDestination.Toolbar) },
+            icon = R.drawable.ic_settings_toolbar
+        ) { NextScreenIcon() }
     },
     Setting(context, SettingsWithoutKey.BACKGROUND_IMAGE, R.string.customize_background_image) {
         BackgroundImagePref(it, false)

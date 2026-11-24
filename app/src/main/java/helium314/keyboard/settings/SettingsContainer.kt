@@ -5,15 +5,16 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.settings.screens.createAboutSettings
 import helium314.keyboard.settings.screens.createAdvancedSettings
 import helium314.keyboard.settings.screens.createAppearanceSettings
+import helium314.keyboard.settings.screens.createClipboardSettings
 import helium314.keyboard.settings.screens.createCorrectionSettings
 import helium314.keyboard.settings.screens.createGestureTypingSettings
 import helium314.keyboard.settings.screens.createLayoutSettings
 import helium314.keyboard.settings.screens.createPreferencesSettings
 import helium314.keyboard.settings.screens.createToolbarSettings
+import helium314.keyboard.settings.screens.createVoiceDictationSettings
 
 class SettingsContainer(context: Context) {
     private val list = createSettings(context)
@@ -64,11 +65,14 @@ class Setting(
 // intentionally not putting individual debug settings in here so user knows the context
 private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
         createCorrectionSettings(context) + createPreferencesSettings(context) + createToolbarSettings(context) +
-        createLayoutSettings(context) + createAdvancedSettings(context) +
-        if (JniUtils.hasGestureTyping()) createGestureTypingSettings(context) else emptyList()
+        createLayoutSettings(context) + createVoiceDictationSettings(context) + createClipboardSettings(context) +
+        createAdvancedSettings(context) + createGestureTypingSettings(context)
 
 object SettingsWithoutKey {
     const val EDIT_PERSONAL_DICTIONARY = "edit_personal_dictionary"
+    const val DICTIONARIES = "screen_dictionaries"
+    const val CLEAR_LEARNED_WORDS = "clear_learned_words"
+    const val TOOLBAR_SETTINGS = "screen_toolbar"
     const val APP = "app"
     const val VERSION = "version"
     const val LICENSE = "license"

@@ -57,7 +57,7 @@ private const val TAG = "PersonalDictionaryImport"
  * The file is read and the words are written off the main thread; nothing is written before the user confirms.
  */
 @Composable
-fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
+fun personalDictionaryFileActions(onImported: () -> Unit = { }): PersonalDictionaryFileActions {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var working by remember { mutableStateOf(false) }
@@ -132,6 +132,7 @@ fun personalDictionaryFileActions(): PersonalDictionaryFileActions {
                     }
                     working = false
                     importResultShown = added != null && added > 0
+                    if (importResultShown) onImported()
                     message = if (added == null || added == 0) ctx.getString(R.string.personal_dictionary_unavailable)
                         else ctx.getString(R.string.personal_dictionary_import_done, added)
                 }

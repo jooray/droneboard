@@ -7,66 +7,72 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import helium314.keyboard.latin.BuildConfig
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import helium314.keyboard.settings.preferences.PersonalDictionaryBackup
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
-import helium314.keyboard.latin.utils.JniUtils
+import helium314.keyboard.latin.support.SupportCheckout
+import helium314.keyboard.latin.utils.NextScreenIcon
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
 import helium314.keyboard.latin.utils.SubtypeSettings
-import helium314.keyboard.latin.utils.NextScreenIcon
+import helium314.keyboard.latin.utils.Theme
+import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SupportAskStrip
-import helium314.keyboard.settings.SupportMenuPreference
-import helium314.keyboard.latin.support.SupportCheckout
-import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
+import helium314.keyboard.settings.preferences.PersonalDictionaryBackup
 import helium314.keyboard.settings.preferences.Preference
-import helium314.keyboard.latin.utils.previewDark
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MainSettingsScreen(
-    onClickAbout: () -> Unit,
-    onClickTextCorrection: () -> Unit,
-    onClickPreferences: () -> Unit,
-    onClickToolbar: () -> Unit,
-    onClickGestureTyping: () -> Unit,
-    onClickAdvanced: () -> Unit,
-    onClickAppearance: () -> Unit,
     onClickLanguage: () -> Unit,
-    onClickLayouts: () -> Unit,
-    onClickDictionaries: () -> Unit,
-    onClickPersonalDictionary: () -> Unit,
+    onClickPreferences: () -> Unit,
+    onClickAppearance: () -> Unit,
+    onClickTextCorrection: () -> Unit,
+    onClickGestureTyping: () -> Unit,
+    onClickVoiceDictation: () -> Unit,
+    onClickClipboard: () -> Unit,
+    onClickAdvanced: () -> Unit,
+    onClickAbout: () -> Unit,
     onClickBack: () -> Unit,
 ) {
+    val ctx = LocalContext.current
+    var osttStatus by remember { mutableStateOf(checkOsttStatus(ctx)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        osttStatus = checkOsttStatus(ctx)
+    }
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.ime_settings),
@@ -91,54 +97,42 @@ fun MainSettingsScreen(
                     icon = R.drawable.ic_settings_preferences
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.settings_screen_appearance),
+                    name = stringResource(R.string.settings_screen_theme_and_layout),
                     onClick = onClickAppearance,
                     icon = R.drawable.ic_settings_appearance
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.settings_screen_toolbar),
-                    onClick = onClickToolbar,
-                    icon = R.drawable.ic_settings_toolbar
-                ) { NextScreenIcon() }
-                if (JniUtils.hasGestureTyping())
-                    Preference(
-                        name = stringResource(R.string.settings_screen_gesture),
-                        onClick = onClickGestureTyping,
-                        icon = R.drawable.ic_settings_gesture
-                    ) { NextScreenIcon() }
-                Preference(
-                    name = stringResource(R.string.settings_screen_correction),
+                    name = stringResource(R.string.settings_screen_correction_and_dictionaries),
                     onClick = onClickTextCorrection,
                     icon = R.drawable.ic_settings_correction
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.settings_screen_secondary_layouts),
-                    onClick = onClickLayouts,
-                    icon = R.drawable.ic_settings_layout
+                    name = stringResource(R.string.settings_screen_glide_typing),
+                    onClick = onClickGestureTyping,
+                    icon = R.drawable.ic_settings_gesture
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.dictionary_settings_category),
-                    onClick = onClickDictionaries,
-                    icon = R.drawable.ic_dictionary
-                ) { NextScreenIcon() }
-                // Droneboard: the personal dictionary is also under Text correction, where few people look for it
-                Preference(
-                    name = stringResource(R.string.edit_personal_dictionary),
-                    description = personalDictionarySummary(),
-                    onClick = onClickPersonalDictionary,
-                    icon = R.drawable.ic_edit
+                    name = stringResource(R.string.settings_screen_voice_dictation),
+                    description = osttShortSummary(osttStatus),
+                    onClick = onClickVoiceDictation,
+                    icon = R.drawable.sym_keyboard_voice_rounded
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.settings_screen_advanced),
+                    name = stringResource(R.string.settings_screen_clipboard),
+                    description = stringResource(R.string.clipboard_screen_summary),
+                    onClick = onClickClipboard,
+                    icon = R.drawable.sym_keyboard_clipboard_rounded
+                ) { NextScreenIcon() }
+                Preference(
+                    name = stringResource(R.string.settings_screen_backup_and_advanced),
                     onClick = onClickAdvanced,
                     icon = R.drawable.ic_settings_advanced
                 ) { NextScreenIcon() }
                 Preference(
-                    name = stringResource(R.string.settings_screen_about),
+                    name = stringResource(R.string.settings_screen_about_and_support),
                     onClick = onClickAbout,
                     icon = R.drawable.ic_settings_about
                 ) { NextScreenIcon() }
-                SupportMenuPreference()
             }
         }
     }
@@ -146,7 +140,7 @@ fun MainSettingsScreen(
 
 /** the number of words, read off the main thread; the plain description until it is known or when there are none */
 @Composable
-private fun personalDictionarySummary(): String {
+fun personalDictionarySummary(): String {
     val ctx = LocalContext.current
     val count by produceState<Int?>(null) {
         value = withContext(Dispatchers.IO) {
@@ -192,9 +186,9 @@ private fun BrandHeader() {
                     .background(red)
             )
             Text(
-                "${BuildConfig.VERSION_NAME} · offline",
+                stringResource(R.string.brand_version_offline, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = 0.78f),
                 modifier = Modifier.padding(top = 6.dp)
             )
         }
@@ -207,7 +201,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

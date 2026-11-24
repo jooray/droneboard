@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -79,19 +80,21 @@ fun DictionaryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
                         .clickable { showAddDictDialog = true }
-                        .padding(vertical = 4.dp, horizontal = 16.dp)
+                        .heightIn(min = 56.dp)
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
                         .fillMaxWidth()
                 ) {
                     Text(
                         stringResource(R.string.add_new_dictionary_title),
                     )
-                    Icon(painterResource(R.drawable.ic_plus), stringResource(R.string.add_new_dictionary_title))
+                    Icon(painterResource(R.drawable.ic_plus), contentDescription = null)
                 }
             } else {
                 Column(
                     Modifier
                         .clickable { selectedLocale = locale }
-                        .padding(vertical = 6.dp, horizontal = 16.dp)
+                        .heightIn(min = 56.dp)
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
                         .fillMaxWidth()
                 ) {
                     val (dicts, hasInternal) = getUserAndInternalDictionaries(ctx, locale)
