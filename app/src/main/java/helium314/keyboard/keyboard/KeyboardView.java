@@ -16,16 +16,20 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.PorterDuff;
+import android.graphics.RecordingCanvas;
 import android.graphics.Rect;
+import android.graphics.RenderNode;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import helium314.keyboard.keyboard.emoji.EmojiPageKeyboardView;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
@@ -84,6 +88,18 @@ public class KeyboardView extends View {
     private boolean mInvalidateAllKeys;
     /** The keys that should be drawn */
     private final HashSet<Key> mInvalidatedKeys = new HashSet<>();
+    /** Keys currently in pressed state (drawn live over the cached static layer on API 29+) */
+    private final HashSet<Key> mPressedKeys = new HashSet<>();
+    /** Keys whose state diverged from the cached static RenderNode */
+    private final HashSet<Key> mOverriddenKeys = new HashSet<>();
+    /** Reusable scratch set of keys to draw live over the cached static RenderNode */
+    private final HashSet<Key> mLiveDrawKeys = new HashSet<>();
+    /** Cached GPU RenderNode holding all static unpressed keys (API 29+) */
+    @Nullable
+    private RenderNode mStaticKeyboardNode;
+    private int mStaticNodeWidth;
+    private int mStaticNodeHeight;
+    private boolean mStaticNodeDirty = true;
     /** The working rectangle for clipping */
     private final Rect mClipRect = new Rect();
     /** The keyboard bitmap buffer for faster updates */
@@ -189,6 +205,8 @@ public class KeyboardView extends View {
         int scaledKeySize = (int) (scale * mKeyScaleForText);
         mKeyDrawParams.updateParams(scaledKeySize, mKeyVisualAttributes);
         mKeyDrawParams.updateParams(scaledKeySize, keyboard.mKeyVisualAttributes);
+        mPressedKeys.clear();
+        mOverriddenKeys.clear();
         invalidateAllKeys();
         requestLayout();
         mFontSizeMultiplier = mKeyboard.mId.getElement().isEmojiLayout()
@@ -235,10 +253,22 @@ public class KeyboardView extends View {
     }
 
     @Override
+    protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        if (w != oldw || h != oldh) {
+            discardStaticRenderNode();
+        }
+    }
+
+    @Override
     protected void onDraw(@NonNull final Canvas canvas) {
         super.onDraw(canvas);
         if (canvas.isHardwareAccelerated()) {
-            onDrawKeyboard(canvas);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                onDrawKeyboardHardwareCached(canvas);
+            } else {
+                onDrawKeyboard(canvas);
+            }
             return;
         }
 
@@ -252,6 +282,99 @@ public class KeyboardView extends View {
             onDrawKeyboard(mOffscreenCanvas);
         }
         canvas.drawBitmap(mOffscreenBuffer, 0.0f, 0.0f, null);
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private void onDrawKeyboardHardwareCached(@NonNull final Canvas canvas) {
+        final Keyboard keyboard = getKeyboard();
+        if (keyboard == null) {
+            return;
+        }
+        final int width = getWidth();
+        final int height = getHeight();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        mShowsHints = Settings.getValues().mShowsHints;
+        final float scale = Settings.getValues().mKeyboardHeightScale;
+        mIconScaleFactor = scale < 0.8f ? scale + 0.2f : 1f;
+
+        final boolean needsRebuild = mInvalidateAllKeys
+                || mStaticNodeDirty
+                || mStaticKeyboardNode == null
+                || !mStaticKeyboardNode.hasDisplayList()
+                || mStaticNodeWidth != width
+                || mStaticNodeHeight != height
+                || mOverriddenKeys.size() > 6;
+
+        if (needsRebuild) {
+            if (mStaticKeyboardNode == null) {
+                mStaticKeyboardNode = new RenderNode("KeyboardStaticLayer");
+            }
+            mStaticKeyboardNode.setPosition(0, 0, width, height);
+            final RecordingCanvas rc = mStaticKeyboardNode.beginRecording(width, height);
+            try {
+                for (final Key key : keyboard.getSortedKeys()) {
+                    onDrawKey(key, rc, mPaint);
+                }
+            } finally {
+                mStaticKeyboardNode.endRecording();
+            }
+            mStaticNodeWidth = width;
+            mStaticNodeHeight = height;
+            mStaticNodeDirty = false;
+            mInvalidateAllKeys = false;
+            mInvalidatedKeys.clear();
+            mOverriddenKeys.clear();
+            // Any key already pressed during rebuild was baked in pressed state; keep it in
+            // mOverriddenKeys so releasing it clips out the baked state and draws it unpressed.
+            if (!mPressedKeys.isEmpty()) {
+                mOverriddenKeys.addAll(mPressedKeys);
+            }
+            canvas.drawRenderNode(mStaticKeyboardNode);
+            return;
+        }
+
+        mLiveDrawKeys.clear();
+        mLiveDrawKeys.addAll(mPressedKeys);
+        mLiveDrawKeys.addAll(mOverriddenKeys);
+        if (mLiveDrawKeys.isEmpty()) {
+            canvas.drawRenderNode(mStaticKeyboardNode);
+        } else {
+            final int padLeft = getPaddingLeft();
+            final int padTop = getPaddingTop();
+            canvas.save();
+            for (final Key key : mLiveDrawKeys) {
+                if (!keyboard.hasKey(key)) {
+                    continue;
+                }
+                final int left = Math.min(key.getX(), key.getDrawX() - mKeyBackgroundPadding.left) + padLeft - 1;
+                final int top = key.getY() - mKeyBackgroundPadding.top + padTop - 1;
+                final int right = Math.max(key.getX() + key.getWidth(),
+                        key.getDrawX() + key.getDrawWidth() + mKeyBackgroundPadding.right) + padLeft + 1;
+                final int bottom = key.getY() + key.getHeight() + mKeyBackgroundPadding.bottom + padTop + 1;
+                canvas.clipOutRect(left, top, right, bottom);
+            }
+            canvas.drawRenderNode(mStaticKeyboardNode);
+            canvas.restore();
+            for (final Key key : mLiveDrawKeys) {
+                if (keyboard.hasKey(key)) {
+                    onDrawKey(key, canvas, mPaint);
+                }
+            }
+        }
+        mInvalidatedKeys.clear();
+    }
+
+    private void discardStaticRenderNode() {
+        mStaticNodeDirty = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && mStaticKeyboardNode != null) {
+            mStaticKeyboardNode.discardDisplayList();
+            mStaticKeyboardNode = null;
+        }
+        mStaticNodeWidth = 0;
+        mStaticNodeHeight = 0;
     }
 
     private boolean maybeAllocateOffscreenBuffer() {
@@ -270,6 +393,7 @@ public class KeyboardView extends View {
     }
 
     private void freeOffscreenBuffer() {
+        discardStaticRenderNode();
         mOffscreenCanvas.setBitmap(null);
         mOffscreenCanvas.setMatrix(null);
         if (mOffscreenBuffer != null) {
@@ -604,8 +728,32 @@ public class KeyboardView extends View {
      */
     public void invalidateAllKeys() {
         mInvalidatedKeys.clear();
+        mOverriddenKeys.clear();
         mInvalidateAllKeys = true;
+        mStaticNodeDirty = true;
         invalidate();
+    }
+
+    /**
+     * Invalidates a key whose pressed/released state changed, allowing the cached static keyboard
+     * RenderNode to be reused without redrawing unaffected keys.
+     */
+    protected void invalidatePressedKey(@Nullable final Key key, final boolean pressed) {
+        if (key == null) {
+            return;
+        }
+        if (pressed) {
+            mPressedKeys.add(key);
+        } else {
+            mPressedKeys.remove(key);
+        }
+        if (mInvalidateAllKeys) {
+            return;
+        }
+        mInvalidatedKeys.add(key);
+        final int x = key.getX() + getPaddingLeft();
+        final int y = key.getY() + getPaddingTop();
+        invalidate(x, y, x + key.getWidth(), y + key.getHeight());
     }
 
     /**
@@ -620,6 +768,7 @@ public class KeyboardView extends View {
             return;
         }
         mInvalidatedKeys.add(key);
+        mOverriddenKeys.add(key);
         final int x = key.getX() + getPaddingLeft();
         final int y = key.getY() + getPaddingTop();
         invalidate(x, y, x + key.getWidth(), y + key.getHeight());

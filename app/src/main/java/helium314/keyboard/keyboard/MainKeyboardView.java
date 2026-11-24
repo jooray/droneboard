@@ -8,6 +8,7 @@ package helium314.keyboard.keyboard;
 
 import android.animation.AnimatorInflater;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -17,9 +18,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
+import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.os.Build;
+import android.text.TextPaint;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.ContextThemeWrapper;
+import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -27,10 +33,12 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.accessibility.MainKeyboardAccessibilityDelegate;
 import helium314.keyboard.compat.ConfigurationCompatKt;
+import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.DrawingPreviewPlacerView;
 import helium314.keyboard.keyboard.internal.DrawingProxy;
 import helium314.keyboard.keyboard.internal.GestureFloatingTextDrawingPreview;
@@ -44,6 +52,7 @@ import helium314.keyboard.keyboard.internal.NonDistinctMultitouchHelper;
 import helium314.keyboard.keyboard.internal.SlidingKeyInputDrawingPreview;
 import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
+import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.swipe.SwipeRecorder;
 import helium314.keyboard.latin.swipe.TypingSwipeRecorder;
@@ -90,7 +99,10 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private final int mLanguageOnSpacebarTextShadowColor;
     private static final float LANGUAGE_ON_SPACEBAR_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
     // The minimum x-scale to fit the language name on spacebar.
-    private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.8f;
+    private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.75f;
+    private static final int GESTURE_FLOATING_PREVIEW_TEXT_LINGER_TIMEOUT_MS = 120;
+    private static final long TOUCHPAD_FADE_DURATION_MS = 140L;
+    private static final float TOUCHPAD_DIM_ALPHA = 0.28f;
 
     // Stuff to draw altCodeWhileTyping keys.
     private final ObjectAnimator mAltCodeKeyWhileTypingFadeoutAnimator;
@@ -99,9 +111,17 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     // Drawing preview placer view
     private final DrawingPreviewPlacerView mDrawingPreviewPlacerView;
     private final int[] mOriginCoords = CoordinateUtils.newInstance();
+    private boolean mPreviewPlacerLocated;
     private final GestureFloatingTextDrawingPreview mGestureFloatingTextDrawingPreview;
     private final GestureTrailsDrawingPreview mGestureTrailsDrawingPreview;
     private final SlidingKeyInputDrawingPreview mSlidingKeyInputDrawingPreview;
+
+    // EnterKeyGuard armed highlight
+    @Nullable
+    private Key mArmedEnterKey;
+    private final Paint mArmedEnterRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF mArmedEnterRingRect = new RectF();
+    private final TextPaint mSpacebarEllipsizePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
     // Key preview
     private final KeyPreviewDrawParams mKeyPreviewDrawParams;
@@ -195,8 +215,11 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mConfigShowPopupKeysKeyboardAtTouchedPoint = mainKeyboardViewAttr.getBoolean(
                 R.styleable.MainKeyboardView_showPopupKeysKeyboardAtTouchedPoint, false);
 
-        final int gestureTrailFadeoutDuration = Settings.getValues().mGestureTrailFadeoutDuration;
-        mGestureFloatingPreviewTextLingerTimeout = gestureTrailFadeoutDuration / 4;
+        mGestureFloatingPreviewTextLingerTimeout = GESTURE_FLOATING_PREVIEW_TEXT_LINGER_TIMEOUT_MS;
+
+        mArmedEnterRingPaint.setStyle(Paint.Style.STROKE);
+        mArmedEnterRingPaint.setStrokeWidth(2.5f * getResources().getDisplayMetrics().density);
+        mArmedEnterRingPaint.setColor(ColorUtils.setAlphaComponent(colors.get(ColorType.ACTION_KEY_ICON), 210));
 
         mGestureFloatingTextDrawingPreview = new GestureFloatingTextDrawingPreview(mainKeyboardViewAttr);
         mGestureFloatingTextDrawingPreview.setDrawingView(drawingPreviewPlacerView);
@@ -312,6 +335,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 keyboard, -getPaddingLeft(), -getPaddingTop() + getVerticalCorrection());
         PointerTracker.setKeyDetector(mKeyDetector);
         mPopupKeysKeyboardCache.clear();
+        mArmedEnterKey = null;
+        mPreviewPlacerLocated = false;
 
         mSpaceKey = keyboard.getKey(Constants.CODE_SPACE);
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;
@@ -336,9 +361,71 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mKeyPreviewDrawParams.setPopupEnabled(previewEnabled);
     }
 
-    private void locatePreviewPlacerView() {
+    private void updatePreviewPlacerGeometry() {
         getLocationInWindow(mOriginCoords);
-        mDrawingPreviewPlacerView.setKeyboardViewGeometry(mOriginCoords, getWidth(), getHeight());
+        final int width = getWidth();
+        final int height = getHeight();
+        mDrawingPreviewPlacerView.setKeyboardViewGeometry(mOriginCoords, width, height);
+        mPreviewPlacerLocated = (width > 0 && height > 0);
+    }
+
+    private void locatePreviewPlacerView() {
+        if (!mPreviewPlacerLocated) {
+            updatePreviewPlacerGeometry();
+        }
+    }
+
+    @Override
+    protected void onLayout(final boolean changed, final int left, final int top, final int right,
+            final int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        mPreviewPlacerLocated = false;
+        if (getWidth() > 0 && getHeight() > 0) {
+            updatePreviewPlacerGeometry();
+        }
+    }
+
+    @Override
+    protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mPreviewPlacerLocated = false;
+    }
+
+    public void setTouchpadModeVisuals(final boolean active, final boolean dim) {
+        final float targetAlpha = (active && dim) ? TOUCHPAD_DIM_ALPHA : 1.0f;
+        animate().cancel();
+        final boolean animatorsEnabled = Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                || ValueAnimator.areAnimatorsEnabled();
+        if (animatorsEnabled) {
+            animate().alpha(targetAlpha).setDuration(TOUCHPAD_FADE_DURATION_MS).start();
+        } else {
+            setAlpha(targetAlpha);
+        }
+        if (active) {
+            updatePreviewPlacerGeometry();
+        }
+        final Colors colors = Settings.getValues().mColors;
+        mDrawingPreviewPlacerView.setTouchpadWatermarkVisible(
+                active, colors.get(ColorType.KEY_TEXT), colors.get(ColorType.GESTURE_PREVIEW));
+    }
+
+    public void onEnterKeyGuardArmed(@NonNull final Key key) {
+        mArmedEnterKey = key;
+        invalidateKey(key);
+        final int feedback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                ? HapticFeedbackConstants.CONFIRM
+                : HapticFeedbackConstants.CLOCK_TICK;
+        performHapticFeedback(feedback);
+        AudioAndHapticFeedbackManager.getInstance().performAudioFeedback(
+                key.getCode(), HapticEvent.KEY_PRESS);
+    }
+
+    public void clearEnterKeyGuardArmed() {
+        if (mArmedEnterKey != null) {
+            final Key prev = mArmedEnterKey;
+            mArmedEnterKey = null;
+            invalidateKey(prev);
+        }
     }
 
     private void installPreviewPlacerView() {
@@ -356,13 +443,14 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             return;
         }
         windowContentView.addView(mDrawingPreviewPlacerView);
+        mPreviewPlacerLocated = false;
     }
 
     // Implements {@link DrawingProxy#onKeyPressed(Key,boolean)}.
     @Override
     public void onKeyPressed(@NonNull final Key key, final boolean withPreview) {
         key.onPressed();
-        invalidateKey(key);
+        invalidatePressedKey(key, true);
 
         final Keyboard keyboard = getKeyboard();
         if (keyboard == null) {
@@ -376,21 +464,20 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     private void showKeyPreview(@NonNull final Key key) {
         locatePreviewPlacerView();
-        getLocationInWindow(mOriginCoords);
         mKeyPreviewChoreographer.placeAndShowKeyPreview(key, getKeyboard().mIconsSet, getKeyDrawParams(),
                 KeyboardSwitcher.getInstance().getWrapperView().getWidth(), mOriginCoords, mDrawingPreviewPlacerView);
     }
 
     private void dismissKeyPreviewWithoutDelay(@NonNull final Key key) {
-        mKeyPreviewChoreographer.dismissKeyPreview(key);
-        invalidateKey(key);
+        mKeyPreviewChoreographer.dismissKeyPreview(key, false);
+        invalidatePressedKey(key, false);
     }
 
     // Implements {@link DrawingProxy#onKeyReleased(Key,boolean)}.
     @Override
     public void onKeyReleased(@NonNull final Key key, final boolean withAnimation) {
         key.onReleased();
-        invalidateKey(key);
+        invalidatePressedKey(key, false);
         if (key.hasPreview()) {
             if (withAnimation) {
                 dismissKeyPreview(key);
@@ -402,7 +489,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     private void dismissKeyPreview(@NonNull final Key key) {
         if (isHardwareAccelerated()) {
-            mKeyPreviewChoreographer.dismissKeyPreview(key);
+            mKeyPreviewChoreographer.dismissKeyPreview(key, true);
+        } else {
+            mKeyPreviewChoreographer.dismissKeyPreview(key, false);
         }
     }
 
@@ -447,7 +536,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             final boolean showsFloatingPreviewText) {
         locatePreviewPlacerView();
         if (showsFloatingPreviewText) {
-            mGestureFloatingTextDrawingPreview.setPreviewPosition(tracker);
+            // Update floating pill coordinates without duplicating invalidateDrawingView();
+            // the trail call below invalidates DrawingPreviewPlacerView once for this event.
+            mGestureFloatingTextDrawingPreview.setPreviewPositionNoInvalidate(tracker);
         }
         mGestureTrailsDrawingPreview.setPreviewPosition(tracker);
     }
@@ -599,6 +690,11 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     public boolean processMotionEvent(final MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            // Refresh cached placer window coordinates once at gesture start (covers floating drags)
+            // without incurring getLocationInWindow() IPC on every ACTION_MOVE.
+            updatePreviewPlacerGeometry();
+        }
         // raw touch points for the swipe recorder screen; only its own text field is ever recorded
         if (SwipeRecorder.isActive()) {
             final Keyboard keyboard = getKeyboard();
@@ -624,6 +720,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     public void cancelAllOngoingEvents() {
         mTimerHandler.cancelAllMessages();
+        clearEnterKeyGuardArmed();
+        setTouchpadModeVisuals(false, false);
         PointerTracker.setReleasedKeyGraphicsToAllKeys();
         mGestureFloatingTextDrawingPreview.dismissGestureFloatingPreviewText();
         mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview();
@@ -637,6 +735,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     public void onHideWindow() {
+        clearEnterKeyGuardArmed();
+        setTouchpadModeVisuals(false, false);
         onDismissPopupKeysPanel();
         final MainKeyboardAccessibilityDelegate accessibilityDelegate = mAccessibilityDelegate;
         if (accessibilityDelegate != null
@@ -733,13 +833,24 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         } else if (code == KeyCode.LANGUAGE_SWITCH) {
             drawKeyPopupHint(key, canvas, paint, params);
         }
+        if (key == mArmedEnterKey) {
+            final float inset = 2.0f * getResources().getDisplayMetrics().density;
+            final float w = key.getDrawWidth();
+            final float h = key.getHeight();
+            mArmedEnterRingRect.set(inset, inset, w - inset, h - inset);
+            final float radius = Math.min(w, h) * 0.5f;
+            canvas.drawRoundRect(mArmedEnterRingRect, radius, radius, mArmedEnterRingPaint);
+        }
     }
 
     private boolean fitsTextIntoWidth(final int width, final String text, final Paint paint) {
         final int maxTextWidth = width - mLanguageOnSpacebarHorizontalMargin * 2;
+        if (maxTextWidth <= 0) {
+            return false;
+        }
         paint.setTextScaleX(1.0f);
         final float textWidth = TypefaceUtils.getStringWidth(text, paint);
-        if (textWidth < width) {
+        if (textWidth <= maxTextWidth) {
             return true;
         }
 
@@ -749,7 +860,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         }
 
         paint.setTextScaleX(scaleX);
-        return TypefaceUtils.getStringWidth(text, paint) < maxTextWidth;
+        return TypefaceUtils.getStringWidth(text, paint) <= maxTextWidth;
     }
 
     // Layout language name on spacebar.
@@ -763,8 +874,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (!secondaryLocalesToUse.isEmpty()) {
             StringBuilder sb = new StringBuilder(subtype.getMiddleDisplayName());
             final Locale displayLocale = ConfigurationCompatKt.locale(getResources().getConfiguration());
-            for (Locale locale : secondaryLocales) {
-                sb.append(" - ");
+            for (Locale locale : secondaryLocalesToUse) {
+                sb.append(" · ");
                 sb.append(locale.getDisplayLanguage(displayLocale));
             }
             final String full = sb.toString();
@@ -772,14 +883,19 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 return full;
             }
             sb.setLength(0);
-            sb.append(subtype.getLocale().getLanguage().toUpperCase(displayLocale));
-            for (Locale locale : secondaryLocales) {
-                sb.append(" - ");
+            final String primaryCode = subtype.getLocale().getLanguage().toUpperCase(displayLocale);
+            sb.append(primaryCode);
+            for (Locale locale : secondaryLocalesToUse) {
+                sb.append(" · ");
                 sb.append(locale.getLanguage().toUpperCase(displayLocale));
             }
             final String middle = sb.toString();
             if (fitsTextIntoWidth(width, middle, paint)) {
                 return middle;
+            }
+            final String compact = primaryCode + " · +" + secondaryLocalesToUse.size();
+            if (fitsTextIntoWidth(width, compact, paint)) {
+                return compact;
             }
         }
 
@@ -793,6 +909,12 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final String middleText = subtype.getMiddleDisplayName();
         if (fitsTextIntoWidth(width, middleText, paint)) {
             return middleText;
+        }
+
+        final Locale displayLocale = ConfigurationCompatKt.locale(getResources().getConfiguration());
+        final String shortCode = subtype.getLocale().getLanguage().toUpperCase(displayLocale);
+        if (fitsTextIntoWidth(width, shortCode, paint)) {
+            return shortCode;
         }
 
         return "";
@@ -847,11 +969,21 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         }
         paint.setColor(mLanguageOnSpacebarTextColor);
         paint.setAlpha(mLanguageOnSpacebarAnimAlpha);
+        String textToDraw = spaceText;
         if (!fitsTextIntoWidth(width, spaceText, paint)) {
+            final int maxTextWidth = width - mLanguageOnSpacebarHorizontalMargin * 2;
             final float textWidth = TypefaceUtils.getStringWidth(spaceText, paint);
-            paint.setTextScaleX((width - mLanguageOnSpacebarHorizontalMargin * 2) / textWidth);
+            if (maxTextWidth > 0 && textWidth > 0) {
+                final float scaleX = Math.max(MINIMUM_XSCALE_OF_LANGUAGE_NAME, maxTextWidth / textWidth);
+                paint.setTextScaleX(scaleX);
+                if (TypefaceUtils.getStringWidth(spaceText, paint) > maxTextWidth) {
+                    mSpacebarEllipsizePaint.set(paint);
+                    textToDraw = TextUtils.ellipsize(
+                            spaceText, mSpacebarEllipsizePaint, maxTextWidth, TextUtils.TruncateAt.END).toString();
+                }
+            }
         }
-        canvas.drawText(spaceText, width / 2f, baseline - descent, paint);
+        canvas.drawText(textToDraw, width / 2f, baseline - descent, paint);
         paint.clearShadowLayer();
         paint.setTextScaleX(1.0f);
     }
