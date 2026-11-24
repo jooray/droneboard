@@ -101,15 +101,22 @@ def neural_scorer(ckdir):
     from models import build
     cfg = json.loads((ckdir / "config.json").read_text())
     tokens = (ckdir / "tokens.txt").read_text(encoding="utf-8").split("\n")[:-1]
-    model = build(cfg["model"], len(tokens))
-    model.load_weights(str(ckdir / "best.safetensors"))
     ctx = cfg["ctx"]
+    model = build(cfg["model"], len(tokens), tokens=tokens, ctx=ctx)
+    model.load_weights(str(ckdir / "best.safetensors"))
+    # Pre-fold morphology embeddings once if present
+    W = model.effective_emb_weight() if hasattr(model, "effective_emb_weight") else None
+    if W is not None:
+        mx.eval(W)
 
     def score(hist):
         x = mx.array(hist[:, -ctx:].astype(np.int32))
-        lg = model(x)[:, -1, :]
+        if W is not None:
+            lg = (model.hidden(x, W)[:, -1, :] @ W.T) + model.out_bias
+        else:
+            lg = model(x)[:, -1, :]
         lp = lg - mx.logsumexp(lg, axis=-1, keepdims=True)
-        return np.array(lp)
+        return np.array(lp, dtype=np.float32)
 
     return tokens, score, ctx
 
@@ -155,11 +162,12 @@ def main():
     m = Metrics(tokens)
     if allowed is not None:
         m.is_word &= allowed
-    pos = positions(stream, m.is_word | (np.arange(len(tokens)) == 1), a.n, 32)
-    B = 256
+    win = max(ctx, 32)
+    pos = positions(stream, m.is_word | (np.arange(len(tokens)) == 1), a.n, win)
+    B = 128
     for i in range(0, len(pos), B):
         p = pos[i:i + B]
-        hist = np.stack([stream[q - 32:q] for q in p])
+        hist = np.stack([stream[q - win:q] for q in p])
         lp = score(hist)
         for row, q in zip(lp, p):
             m.add(row, int(stream[q]))
