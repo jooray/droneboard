@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +111,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         !UncachedInputMethodManagerUtils.isThisImeCurrent(this, imm)
                                 || !UncachedInputMethodManagerUtils.isThisImeEnabled(this, imm)
                     ) }
+                    var pendingDestination by rememberSaveable { mutableStateOf<String?>(null) }
                     if (spellchecker)
                         Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
                             Column(Modifier.padding(innerPadding)) {
@@ -127,24 +129,37 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         }
                     else if (showWelcomeWizard) {
-                        WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
+                        WelcomeWizard(
+                            close = { showWelcomeWizard = false },
+                            finish = this::finish,
+                            openLanguages = {
+                                pendingDestination = SettingsDestination.Languages
+                                showWelcomeWizard = false
+                            }
+                        )
                     } else {
+                        LaunchedEffect(pendingDestination) {
+                            pendingDestination?.let { dest ->
+                                SettingsDestination.navigateTo(dest)
+                                pendingDestination = null
+                            }
+                        }
                         SettingsNavHost(onClickBack = { this.finish() })
                         if (crashReports.isNotEmpty()) {
                             val ctx = LocalContext.current
                             ConfirmationDialog(
-                                cancelButtonText = "ignore",
+                                cancelButtonText = stringResource(R.string.crash_report_ignore),
                                 onDismissRequest = { crashReportFiles.value = emptyList() },
-                                neutralButtonText = "delete",
+                                neutralButtonText = stringResource(R.string.delete),
                                 onNeutral = { crashReports.forEach { it.delete() }; crashReportFiles.value = emptyList() },
-                                confirmButtonText = "get",
+                                confirmButtonText = stringResource(R.string.crash_report_save),
                                 onConfirmed = {
                                     val intent = IntentUtils.getResolvableTypeIntent(ctx, "application/zip")
                                         .setAction(Intent.ACTION_CREATE_DOCUMENT)
                                         .putExtra(Intent.EXTRA_TITLE, "crash_reports.zip")
                                     crashFilePicker.launch(intent)
                                 },
-                                content = { Text("Crash report files found") },
+                                content = { Text(stringResource(R.string.crash_report_found)) },
                             )
                         }
                     }
