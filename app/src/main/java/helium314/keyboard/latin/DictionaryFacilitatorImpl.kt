@@ -546,6 +546,12 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         job.cancel()
     }
 
+    private class LmAsyncTask(
+        val latch: CountDownLatch = CountDownLatch(1),
+        @Volatile var predictions: List<WordPrediction> = emptyList(),
+        @Volatile var temporary: Boolean = false
+    )
+
     // TODO: Revise the way to fusion suggestion results.
     override fun getSuggestionResults(
         composedData: ComposedData, ngramContext: NgramContext, keyboard: Keyboard,
@@ -553,18 +559,25 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     ): SuggestionResults {
         val proximityInfoHandle = keyboard.proximityInfo.nativeProximityInfo
         val weightOfLangModelVsSpatialModel = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
+        val groups = dictionaryGroups
 
-        val waitForOtherDicts = if (dictionaryGroups.size == 1) null else CountDownLatch(dictionaryGroups.size - 1)
-        val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroups.size) { null }
-        for (i in 1..dictionaryGroups.lastIndex) {
+        // Droneboard: launch language model prediction concurrently with AOSP dictionaries
+        // instead of waiting for all dictionaries first.
+        val lmTask = if (useLanguageModel && !composedData.mIsBatchMode) {
+            startLanguageModelSuggestions(composedData, ngramContext, groups)
+        } else null
+
+        val waitForOtherDicts = if (groups.size == 1) null else CountDownLatch(groups.size - 1)
+        val suggestionsArray = Array<List<SuggestedWordInfo>?>(groups.size) { null }
+        for (i in 1..groups.lastIndex) {
             scope.launch {
                 suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-                    proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[i])
+                    proximityInfoHandle, weightOfLangModelVsSpatialModel, groups[i])
                 waitForOtherDicts?.countDown()
             }
         }
         suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-            proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[0])
+            proximityInfoHandle, weightOfLangModelVsSpatialModel, groups[0])
         val suggestionResults = SuggestionResults(
             SuggestedWords.MAX_SUGGESTIONS, ngramContext, false
         )
@@ -576,42 +589,77 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
         dropNonKeywordEmoji(suggestionResults, composedData.mTypedWord)
 
-        if (useLanguageModel && !composedData.mIsBatchMode) addLanguageModelSuggestions(suggestionResults, composedData, ngramContext)
+        if (lmTask != null) {
+            try {
+                lmTask.latch.await()
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                lmTask.temporary = true
+            }
+            mergeLanguageModelSuggestions(suggestionResults, composedData.mTypedWord, groups, lmTask)
+        }
         includeAtLeastTwoWordSuggestions(suggestionResults, suggestionsArray, composedData.mTypedWord)
         keepBestEmoji(suggestionResults, suggestionsArray, composedData.mTypedWord)
 
         return suggestionResults
     }
 
-    /** Next-word predictions and completions of the language model, restricted to this keyboard's languages. */
-    private fun addLanguageModelSuggestions(results: SuggestionResults, composedData: ComposedData, ngramContext: NgramContext) {
-        if (!DirectBoot.isUnlocked()) return // direct boot: plain keyboard until the first unlock
-        val model = LanguageModels.current ?: return
+    /** Starts next-word prediction / completion concurrently with AOSP dictionary lookups. */
+    private fun startLanguageModelSuggestions(
+        composedData: ComposedData,
+        ngramContext: NgramContext,
+        groups: List<DictionaryGroup>
+    ): LmAsyncTask? {
+        if (!DirectBoot.isUnlocked()) return null // direct boot: plain keyboard until the first unlock
+        val model = LanguageModels.current ?: return null
         val typed = composedData.mTypedWord
-        if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return
-        val locales = dictionaryGroups.map { it.locale }.filter { it.language.isNotEmpty() }
+        if (typed.any { !Character.isLetter(it) && it != '\'' && it != '-' }) return null
+        val locales = groups.map { it.locale }.filter { it.language.isNotEmpty() }
         if (locales.isEmpty()) {
-            if (!loggedNoLocales) { loggedNoLocales = true; Log.w(TAG, "no language model suggestions: no language in ${dictionaryGroups.map { it.locale }}") }
-            return
+            if (!loggedNoLocales) { loggedNoLocales = true; Log.w(TAG, "no language model suggestions: no language in ${groups.map { it.locale }}") }
+            return null
         }
         loggedNoLocales = false
-        NeuralLanguageModel.lastAnswerTemporary.set(false)
-        val predictions = try {
-            model.predict(LanguageModelSuggestions.contextWords(ngramContext), typed, locales, 8)
-        } catch (e: Throwable) {
-            Log.w(TAG, "language model failed", e)
-            results.cacheable = false
-            return
+        val capturedTextBeforeCursor = NeuralLanguageModel.textBeforeCursor.get()
+        val contextWords = LanguageModelSuggestions.contextWords(ngramContext)
+        val task = LmAsyncTask()
+        scope.launch {
+            val prevText = NeuralLanguageModel.textBeforeCursor.get()
+            NeuralLanguageModel.textBeforeCursor.set(capturedTextBeforeCursor)
+            NeuralLanguageModel.lastAnswerTemporary.set(false)
+            try {
+                task.predictions = model.predict(contextWords, typed, locales, 8)
+                task.temporary = NeuralLanguageModel.lastAnswerTemporary.get() == true
+            } catch (e: Throwable) {
+                Log.w(TAG, "language model failed", e)
+                task.temporary = true
+            } finally {
+                if (prevText == null) NeuralLanguageModel.textBeforeCursor.remove()
+                else NeuralLanguageModel.textBeforeCursor.set(prevText)
+                NeuralLanguageModel.lastAnswerTemporary.remove()
+                task.latch.countDown()
+            }
         }
-        if (NeuralLanguageModel.lastAnswerTemporary.get() == true) results.cacheable = false
+        return task
+    }
+
+    /** Merges completed language model predictions into AOSP suggestion results. */
+    private fun mergeLanguageModelSuggestions(
+        results: SuggestionResults,
+        typed: String,
+        groups: List<DictionaryGroup>,
+        task: LmAsyncTask
+    ) {
+        if (task.temporary) results.cacheable = false
+        val predictions = task.predictions
         if (predictions.isEmpty()) return
         val native = results.toList()
         val makeInfo = { p: WordPrediction, score: Int ->
             SuggestedWordInfo(
                 p.word, "", score,
                 if (typed.isEmpty()) SuggestedWordInfo.KIND_PREDICTION else SuggestedWordInfo.KIND_COMPLETION,
-                (dictionaryGroups.firstOrNull { it.locale == p.locale }
-                    ?: dictionaryGroups.firstOrNull { it.locale.language == p.locale.language })?.getDict(Dictionary.TYPE_MAIN)
+                (groups.firstOrNull { it.locale == p.locale }
+                    ?: groups.firstOrNull { it.locale.language == p.locale.language })?.getDict(Dictionary.TYPE_MAIN)
                     ?: Dictionary.DICTIONARY_USER_TYPED,
                 SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE
             )

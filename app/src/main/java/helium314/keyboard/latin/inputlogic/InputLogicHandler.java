@@ -12,6 +12,7 @@ import android.os.Message;
 
 import helium314.keyboard.latin.InputStyle;
 import helium314.keyboard.latin.LatinIME;
+import helium314.keyboard.latin.WordComposer;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.suggestions.SuggestedWords;
 
@@ -30,6 +31,8 @@ class InputLogicHandler implements Handler.Callback {
     private SuggestedWords mGesturePreview;
 
     private static final int MSG_GET_SUGGESTED_WORDS = 1;
+    private static final int MSG_UPDATE_BATCH = 2;
+    private static final int MSG_TAIL_BATCH = 3;
 
     public InputLogicHandler(final LatinIME.UIHandler latinIMEHandler, final InputLogic inputLogic) {
         final HandlerThread handlerThread = new HandlerThread(
@@ -51,8 +54,11 @@ class InputLogicHandler implements Handler.Callback {
     // Called on the Non-UI handler thread by the Handler code.
     @Override
     public boolean handleMessage(final Message msg) {
-        if (msg.what == MSG_GET_SUGGESTED_WORDS)
-            ((Runnable)msg.obj).run();
+        if (msg.what == MSG_GET_SUGGESTED_WORDS
+                || msg.what == MSG_UPDATE_BATCH
+                || msg.what == MSG_TAIL_BATCH) {
+            ((Runnable) msg.obj).run();
+        }
         return true;
     }
 
@@ -62,6 +68,10 @@ class InputLogicHandler implements Handler.Callback {
             mInBatchInput = true;
             ++mGestureId;
             mGesturePreview = null;
+        }
+        mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
+        if (mInputLogic != null) {
+            mInputLogic.prefetchNeuralForBatchInput();
         }
     }
 
@@ -83,18 +93,38 @@ class InputLogicHandler implements Handler.Callback {
     // the UI thread.
     private void updateBatchInput(final InputPointers batchPointers,
             final int sequenceNumber, final boolean isTailBatchInput) {
+        final int gestureId;
+        final InputPointers pointersSnapshot;
+        final WordComposer batchComposerSnapshot;
         synchronized (mLock) {
             if (!mInBatchInput) {
                 // Batch input has ended or canceled while the message was being delivered.
                 return;
             }
-            mInputLogic.mWordComposer.setBatchInputPointers(batchPointers);
-            final int gestureId = mGestureId;
-            getSuggestedWords(() -> mInputLogic.getSuggestedWords(
-                isTailBatchInput ? InputStyle.TAIL_BATCH : InputStyle.UPDATE_BATCH, sequenceNumber,
-                suggestedWords -> showGestureSuggestionsWithPreviewVisuals(suggestedWords, isTailBatchInput, gestureId))
-            );
+            // Purge any queued beam=32 preview so a stale preview never delays a newer preview
+            // or the final finger-up TAIL_BATCH commit.
+            mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
+            gestureId = mGestureId;
+            pointersSnapshot = new InputPointers(Math.max(1, batchPointers.getPointerSize()));
+            pointersSnapshot.copy(batchPointers);
+            if (isTailBatchInput && mInputLogic != null && mInputLogic.mWordComposer != null) {
+                mInputLogic.mWordComposer.setBatchInputPointers(pointersSnapshot);
+            }
+            batchComposerSnapshot = mInputLogic != null
+                    ? mInputLogic.snapshotWordComposerForBatch(pointersSnapshot)
+                    : null;
         }
+        final int what = isTailBatchInput ? MSG_TAIL_BATCH : MSG_UPDATE_BATCH;
+        final Runnable task = () -> {
+            if (mInputLogic == null) return;
+            mInputLogic.getSuggestedWordsForBatchInput(
+                    batchComposerSnapshot,
+                    isTailBatchInput ? InputStyle.TAIL_BATCH : InputStyle.UPDATE_BATCH,
+                    sequenceNumber,
+                    suggestedWords -> showGestureSuggestionsWithPreviewVisuals(
+                            suggestedWords, isTailBatchInput, gestureId));
+        };
+        mNonUIThreadHandler.obtainMessage(what, task).sendToTarget();
     }
 
     /**
@@ -159,6 +189,7 @@ class InputLogicHandler implements Handler.Callback {
         synchronized (mLock) {
             mInBatchInput = false;
         }
+        mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
     }
 
     /**

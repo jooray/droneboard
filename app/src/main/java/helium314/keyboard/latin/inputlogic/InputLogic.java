@@ -36,10 +36,12 @@ import helium314.keyboard.keyboard.emoji.EmojiSearchActivity;
 import helium314.keyboard.keyboard.emoji.RecentEmojis;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.lm.NeuralLanguageModel;
+import helium314.keyboard.latin.swipe.SwipeGestureDecoder;
 import helium314.keyboard.latin.swipe.TypingSwipePolicy;
 import helium314.keyboard.latin.swipe.TypingSwipeRecorder;
 import helium314.keyboard.latin.CapsMode;
 import helium314.keyboard.latin.InputStyle;
+import helium314.keyboard.latin.common.ComposedData;
 import helium314.keyboard.latin.common.CoordinateUtils;
 import helium314.keyboard.latin.dictionary.Dictionary;
 import helium314.keyboard.latin.DictionaryFacilitator;
@@ -56,6 +58,7 @@ import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
 import helium314.keyboard.latin.common.SuggestionSpanUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
+import helium314.keyboard.latin.define.DecoderSpecificConstants;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.settings.SpacingAndPunctuations;
@@ -82,6 +85,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class manages the input logic.
@@ -131,6 +135,9 @@ public final class InputLogic {
 
     private long mCursorMoveExpectedUntil = 0L;
 
+    // Monotonic sequence number guarding async tap suggestion strip updates so stale replies are dropped.
+    private final AtomicInteger mSuggestionStripSeq = new AtomicInteger();
+
     /**
      * Create a new instance of the input logic.
      * @param latinIME the instance of the parent LatinIME. We should remove this when we can.
@@ -159,6 +166,7 @@ public final class InputLogic {
      * @param settingsValues the current settings values
      */
     public void startInput(String combiningSpec, SettingsValues settingsValues) {
+        mSuggestionStripSeq.incrementAndGet();
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         mConnection.onStartInput();
         if (!mWordComposer.getTypedWord().isEmpty()) {
@@ -233,6 +241,7 @@ public final class InputLogic {
     }
 
     public void finishInput() {
+        mSuggestionStripSeq.incrementAndGet();
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText();
@@ -254,6 +263,7 @@ public final class InputLogic {
      * @return the complete transaction object
      */
     public InputTransaction onTextInput(SettingsValues settingsValues, Event event, CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
+        mSuggestionStripSeq.incrementAndGet();
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.TEXT, null);
         String rawText = event.getTextToCommit().toString();
         InputTransaction inputTransaction = new InputTransaction(settingsValues, event,
@@ -299,6 +309,7 @@ public final class InputLogic {
     // interface
     public InputTransaction onPickSuggestionManually(SettingsValues settingsValues, SuggestedWordInfo suggestionInfo,
             CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
+        mSuggestionStripSeq.incrementAndGet();
         if (isInlineEmojiSearchAction()) {
             deleteTextReplacedByEmoji();
         }
@@ -414,6 +425,7 @@ public final class InputLogic {
             // note that arrow keys are not considered, because for them isBelatedExpectedUpdate returns false
             return expectCursorMove;
         }
+        mSuggestionStripSeq.incrementAndGet();
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.onSelection(newSelStart, newSelEnd);
 
         // TODO: the following is probably better done in resetEntireInputState().
@@ -492,6 +504,7 @@ public final class InputLogic {
      */
     public InputTransaction onCodeInput(SettingsValues settingsValues, @NonNull Event event,
             CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
+        mSuggestionStripSeq.incrementAndGet();
         mJustRevertedACommit = false;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.onKey(event.getKeyCode());
 
@@ -538,7 +551,7 @@ public final class InputLogic {
     }
 
     public void onStartBatchInput(SettingsValues settingsValues, KeyboardSwitcher keyboardSwitcher, LatinIME.UIHandler handler) {
-        mInputLogicHandler.onStartBatchInput();
+        mSuggestionStripSeq.incrementAndGet();
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.SWIPE, null);
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         handler.cancelUpdateSuggestionStrip();
@@ -597,6 +610,9 @@ public final class InputLogic {
         mSuggestedWords = SuggestedWords.getEmptyBatchInstance();
         mWordComposer.setCapitalizedModeAtStartComposingTime(
                 getActualCapsMode(settingsValues, keyboardSwitcher.getKeyboardCapsMode()));
+        // Start batch state after committing any previous composing word so finger-down neural
+        // LM prefetch sees the exact context that TAIL_BATCH will fuse against.
+        mInputLogicHandler.onStartBatchInput();
     }
 
     /* The sequence number member is only used in onUpdateBatchInput. It is increased each time
@@ -1714,6 +1730,7 @@ public final class InputLogic {
             startTimeMillis = SystemClock.elapsedRealtime();
             Log.d(TAG, "performUpdateSuggestionStripSync()");
         }
+        final int seq = mSuggestionStripSeq.incrementAndGet();
         // Check if we have a suggestion engine attached.
         if (!settingsValues.needsToLookupSuggestions()) {
             if (mWordComposer.isComposingWord()) {
@@ -1730,29 +1747,72 @@ public final class InputLogic {
             return;
         }
 
+        final TextAtCursor textAtCursor = mConnection.getTextAtCursor(); // get it now, because in callback we time out (thread issue with InputConnection?)
+        final String typedWordString = mWordComposer.getTypedWord(); // get it now, because in edge cases it might have changed by the time we execute the callback
+        if (!settingsValues.mAutoCorrectEnabled && !mWordComposer.isBatchMode()) {
+            // Droneboard: when autocorrection is off, run suggestion lookup asynchronously so the
+            // main UI thread never blocks on dictionaries or neural LM. Stale replies are dropped via seq.
+            mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
+                    getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
+            final WordComposer composerSnapshot = mWordComposer.copy();
+            final InputPointers srcPointers = mWordComposer.getInputPointers();
+            final InputPointers pointersSnapshot = new InputPointers(
+                    Math.max(DecoderSpecificConstants.DICTIONARY_MAX_WORD_LENGTH, srcPointers.getPointerSize()));
+            pointersSnapshot.copy(srcPointers);
+            final ComposedData composedDataSnapshot = new ComposedData(
+                    pointersSnapshot, false, composerSnapshot.getTypedWord());
+            final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                    settingsValues.mSpacingAndPunctuations, composerSnapshot.isComposingWord() ? 2 : 1);
+            final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
+                    NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
+            mInputLogicHandler.getSuggestedWords(() -> {
+                if (mSuggestionStripSeq.get() != seq) return;
+                getSuggestedWords(
+                        composerSnapshot, composedDataSnapshot, inputStyle, textAtCursor,
+                        true, ngramContext, textBeforeCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
+                        suggestedWords -> {
+                            if (mSuggestionStripSeq.get() != seq) return;
+                            final SuggestedWords toShow = resolveSuggestionsToShow(typedWordString, suggestedWords);
+                            mLatinIME.mHandler.post(() -> {
+                                if (mSuggestionStripSeq.get() != seq || mInputLogicHandler.isInBatchInput()) return;
+                                applySuggestionStripUpdate(settingsValues, toShow);
+                            });
+                        });
+            });
+            return;
+        }
+
         AsyncResultHolder<SuggestedWords> holder = new AsyncResultHolder<>("Suggest");
-        TextAtCursor textAtCursor = mConnection.getTextAtCursor(); // get it now, because in callback we time out (thread issue with InputConnection?)
-        String typedWordString = mWordComposer.getTypedWord(); // get it now, because in edge cases it might have changed by the time we execute the callback
         mInputLogicHandler.getSuggestedWords(() -> getSuggestedWords(
             inputStyle, textAtCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
-            suggestedWords -> {
-                SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(
-                    typedWordString, "", SuggestedWordInfo.MAX_SCORE, SuggestedWordInfo.KIND_TYPED,
-                    Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE, null
-                );
-                // Show new suggestions if we have at least one. Otherwise keep the old
-                // suggestions with the new typed word. Exception: if the length of the
-                // typed word is <= 1 (after a deletion typically) we clear old suggestions.
-                if (suggestedWords.size() > 1 || typedWordString.length() <= 1) {
-                    holder.set(suggestedWords);
-                } else {
-                    holder.set(retrieveOlderSuggestions(typedWordInfo, mSuggestedWords));
-                }
-            }
+            suggestedWords -> holder.set(resolveSuggestionsToShow(typedWordString, suggestedWords))
         ));
         // This line may cause the current thread to wait.
         final SuggestedWords suggestedWords = holder.get(null,
                 Constants.GET_SUGGESTED_WORDS_TIMEOUT);
+        applySuggestionStripUpdate(settingsValues, suggestedWords);
+        if (DebugFlags.DEBUG_ENABLED) {
+            long runTimeMillis = SystemClock.elapsedRealtime() - startTimeMillis;
+            Log.d(TAG, "performUpdateSuggestionStripSync() : " + runTimeMillis + " ms to finish");
+        }
+    }
+
+    private SuggestedWords resolveSuggestionsToShow(final String typedWordString, final SuggestedWords suggestedWords) {
+        // Show new suggestions if we have at least one. Otherwise keep the old
+        // suggestions with the new typed word. Exception: if the length of the
+        // typed word is <= 1 (after a deletion typically) we clear old suggestions.
+        if (suggestedWords.size() > 1 || typedWordString.length() <= 1) {
+            return suggestedWords;
+        }
+        final SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(
+                typedWordString, "", SuggestedWordInfo.MAX_SCORE, SuggestedWordInfo.KIND_TYPED,
+                Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX, SuggestedWordInfo.NOT_A_CONFIDENCE, null
+        );
+        return retrieveOlderSuggestions(typedWordInfo, mSuggestedWords);
+    }
+
+    private void applySuggestionStripUpdate(final SettingsValues settingsValues,
+            @Nullable final SuggestedWords suggestedWords) {
         if (suggestedWords != null) {
             // Prefer clipboard suggestions (if available and setting is enabled) over beginning of sentence predictions.
             if (!(suggestedWords.getInputStyle() == InputStyle.BEGINNING_OF_SENTENCE_PREDICTION
@@ -1763,10 +1823,6 @@ public final class InputLogic {
                 mSuggestionStripViewAccessor.showSuggestionStrip();
             }
         }
-        if (DebugFlags.DEBUG_ENABLED) {
-            long runTimeMillis = SystemClock.elapsedRealtime() - startTimeMillis;
-            Log.d(TAG, "performUpdateSuggestionStripSync() : " + runTimeMillis + " ms to finish");
-        }
     }
 
     /**
@@ -1776,6 +1832,7 @@ public final class InputLogic {
      * @param settingsValues the current values of the settings.
      */
     public void restartSuggestionsOnWordTouchedByCursor(SettingsValues settingsValues) {
+        mSuggestionStripSeq.incrementAndGet();
         // HACK: We may want to special-case some apps that exhibit bad behavior in case of
         // recorrection. This is a temporary, stopgap measure that will be removed later.
         // TODO: remove this.
@@ -2116,6 +2173,7 @@ public final class InputLogic {
     // TODO: how is this different from startInput ?!
     private void resetEntireInputState(final int newSelStart, final int newSelEnd,
             final boolean clearSuggestionStrip) {
+        mSuggestionStripSeq.incrementAndGet();
         final boolean shouldFinishComposition = mWordComposer.isComposingWord();
         resetComposingState(true /* alsoResetLastComposedWord */);
         if (clearSuggestionStrip) {
@@ -2269,6 +2327,7 @@ public final class InputLogic {
      */
     public void onUpdateTailBatchInputCompleted(final SettingsValues settingsValues,
             final SuggestedWords suggestedWords, final KeyboardSwitcher keyboardSwitcher) {
+        mSuggestionStripSeq.incrementAndGet();
         final String batchInputText = suggestedWords.isEmpty() ? null : suggestedWords.getWord(0);
         if (TextUtils.isEmpty(batchInputText)) {
             return;
@@ -2529,11 +2588,66 @@ public final class InputLogic {
         return true;
     }
 
+    /**
+     * Triggers a non-blocking neural LM prefetch on swipe finger-down so the KV cache is warm
+     * by the time finger-up fusion runs.
+     */
+    void prefetchNeuralForBatchInput() {
+        if (mConnection == null) return;
+        final SettingsValues settingsValues = Settings.getValues();
+        if (settingsValues == null || !settingsValues.mNeuralPredictions
+                || settingsValues.mInputAttributes.mIsPasswordField
+                || !settingsValues.mInputAttributes.mIsGeneralTextInput) {
+            return;
+        }
+        final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, mWordComposer.isComposingWord() ? 2 : 1);
+        final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
+                NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
+        SwipeGestureDecoder.prefetchNeuralForCurrentContext(ngramContext, textBeforeCursor);
+    }
+
+    /**
+     * Builds an isolated WordComposer snapshot carrying an immutable copy of batch pointers so
+     * concurrent or consecutive swipes cannot clobber queued UPDATE_BATCH / TAIL_BATCH decodes.
+     */
+    WordComposer snapshotWordComposerForBatch(final InputPointers pointersSnapshot) {
+        final WordComposer wc = new WordComposer();
+        wc.setBatchInputPointers(pointersSnapshot);
+        if (mWordComposer != null) {
+            wc.setRejectedBatchModeSuggestion(mWordComposer.getRejectedBatchModeSuggestion());
+            if (mWordComposer.isAllUpperCase()) {
+                wc.setCapitalizedModeAtStartComposingTime(
+                        mWordComposer.wasAutoCapitalized() ? CapsMode.AUTO_LOCKED : CapsMode.MANUAL_LOCKED);
+            } else if (mWordComposer.wasShiftedNoLock()) {
+                wc.setCapitalizedModeAtStartComposingTime(
+                        mWordComposer.wasAutoCapitalized() ? CapsMode.AUTO : CapsMode.MANUAL);
+            } else {
+                wc.setCapitalizedModeAtStartComposingTime(CapsMode.OFF);
+            }
+        }
+        return wc;
+    }
+
+    void getSuggestedWordsForBatchInput(final WordComposer batchComposer, final InputStyle inputStyle,
+            final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
+        getSuggestedWords(batchComposer, null, inputStyle, null, false, null, null, sequenceNumber, callback);
+    }
+
     void getSuggestedWords(InputStyle inputStyle, int sequenceNumber, OnGetSuggestedWordsCallback callback) {
-        getSuggestedWords(inputStyle, null, sequenceNumber, callback);
+        getSuggestedWords(null, null, inputStyle, null, false, null, null, sequenceNumber, callback);
     }
 
     void getSuggestedWords(InputStyle inputStyle, @Nullable TextAtCursor textAtCursor, int sequenceNumber, OnGetSuggestedWordsCallback callback) {
+        getSuggestedWords(null, null, inputStyle, textAtCursor, false, null, null, sequenceNumber, callback);
+    }
+
+    private void getSuggestedWords(@Nullable WordComposer composerSnapshot,
+            @Nullable ComposedData composedDataSnapshot,
+            InputStyle inputStyle, @Nullable TextAtCursor textAtCursor,
+            boolean hasPrecomputedContext, @Nullable NgramContext precomputedNgramContext,
+            @Nullable CharSequence precomputedTextBeforeCursor,
+            int sequenceNumber, OnGetSuggestedWordsCallback callback) {
         Keyboard keyboard = KeyboardSwitcher.getInstance().getKeyboard();
         if (keyboard == null) {
             callback.onGetSuggestedWords(SuggestedWords.getEmptyInstance());
@@ -2545,26 +2659,39 @@ public final class InputLogic {
             return;
         }
         final SettingsValues settingsValues = Settings.getValues();
-        mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
-                getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
+        final WordComposer wordComposer;
+        if (composerSnapshot != null) {
+            wordComposer = composerSnapshot;
+        } else {
+            mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
+                    getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
+            wordComposer = mWordComposer.copy();
+        }
         // Droneboard: the neural language model reads the text before the cursor (cached, no IPC in most cases);
         // also for the final swipe decode, which reranks with it (not for the previews while the finger moves)
-        NeuralLanguageModel.textBeforeCursor.set(inputStyle == InputStyle.UPDATE_BATCH
-                ? null : mConnection.getTextBeforeCursor(NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0));
-        try {
-            SuggestedWords suggestedWords = mSuggest.getSuggestedWords(
-                    mWordComposer.copy(),
-                    textAtCursor,
-                    getNgramContextFromNthPreviousWordForSuggestion(
+        final CharSequence textBeforeCursor = inputStyle == InputStyle.UPDATE_BATCH
+                ? null
+                : (hasPrecomputedContext
+                        ? precomputedTextBeforeCursor
+                        : mConnection.getTextBeforeCursor(NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0));
+        final NgramContext ngramContext = hasPrecomputedContext && precomputedNgramContext != null
+                ? precomputedNgramContext
+                : getNgramContextFromNthPreviousWordForSuggestion(
                         settingsValues.mSpacingAndPunctuations,
                         // Get the word on which we should search the bigrams. If we are composing
                         // a word, it's whatever is *before* the half-committed word in the buffer,
                         // hence 2; if we aren't, we should just skip whitespace if any, so 1.
-                        mWordComposer.isComposingWord() ? 2 : 1),
+                        wordComposer.isComposingWord() ? 2 : 1);
+        NeuralLanguageModel.textBeforeCursor.set(textBeforeCursor);
+        try {
+            SuggestedWords suggestedWords = mSuggest.getSuggestedWords(
+                    wordComposer,
+                    textAtCursor,
+                    ngramContext,
                     keyboard,
                     settingsValues.mSettingsValuesForSuggestion,
                     settingsValues.mAutoCorrectEnabled,
-                    inputStyle, sequenceNumber);
+                    inputStyle, sequenceNumber, composedDataSnapshot);
             callback.onGetSuggestedWords(suggestedWords);
         } catch (Exception e) {
             // better go without suggestions than have the keyboard crash
