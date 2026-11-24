@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Small neural next-word language model for tap typing (one per language), trained with
 // tools/lm and exported by tools/lm/export_keyboard_lm.py:
-//   <lang>.lmb  the transformer body (int8 weights with a scale per output row): embedding [E] ->
-//               up (E->d) + learned positions -> pre-LN blocks -> LayerNorm -> down (d->E)
-//   <lang>.lmv  the word list and the tied int8 embedding table, used to embed the context and to
-//               score every word of the vocabulary (dot product, softmax)
+//   <lang>.lmb  the model body (v1 TinyGPT or v2 StripedLM: 2x GatedCausalConv1D + 2x RoPE-GQA + SwiGLU)
+//   <lang>.lmv  the word list and tied embedding table (v1 INT8, or v2 mixed INT8 + INT4-g32 +
+//               optional vocab bias + optional self-normalization)
 // Plain C++ without ExecuTorch/XNNPACK (their KleidiAI int8 packing crashed under hardened_malloc).
-// A key/value cache keeps the last window, so typing one more word computes one new position.
-// Several languages are combined with a language posterior over the words before the cursor
-// (predict_neural): after an English word the next one is probably English, and a word both
-// languages share leaves the decision to the words before it.
+// A key/value cache (v1 window, v2 RoPE ring buffer with zero restarts) keeps context history, so
+// typing one more word computes one new position.
 #pragma once
 
 #include <cstdint>
@@ -17,6 +14,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace droneswipe {
@@ -29,10 +27,20 @@ public:
     ~NeuralLm();
     // nullptr on failure (the reason goes to *error)
     static std::unique_ptr<NeuralLm> load(const std::string& lmb_path, const std::string& lmv_path, std::string* error);
+    // Load from open file descriptors at [off, off + len) using page-aligned mmap. Does not close fds.
+    static std::unique_ptr<NeuralLm> load_fd(int lmb_fd, int64_t lmb_off, int64_t lmb_len,
+                                             int lmv_fd, int64_t lmv_off, int64_t lmv_len,
+                                             std::string* error);
 
     int vocab() const { return V_; }
     int dim() const { return E_; }
     int ctx() const { return ctx_; }
+    int version() const { return lmv_version_; }
+    bool is_self_norm() const { return self_norm_; }
+    float logz_mean() const { return logz_mean_; }
+    int shortlist_k() const { return shortlist_k_; }
+    int int8_rows() const { return n_int8_; }
+
     // id of a normalized token (lowercase word, "<num>", punctuation), 1 (<unk>) when unknown
     int32_t id_of(const std::string& token) const;
     const std::string& token(int32_t id) const { return tokens_[id]; }
@@ -42,16 +50,29 @@ public:
     const std::string& key_path(int32_t id) const { return key_paths_[id]; }
 
     // The hidden state (dim() floats) that predicts the token after ids, oldest first (the caller adds
-    // <bos> at the start of a text). Reuses the key/value cache from the longest part of the cached
-    // window that ids continue (cutting it back if they diverge); when nothing fits, the window restarts
-    // with the last ids (all of them if they fit and start with <bos>, otherwise the last kRestart).
-    // Caller holds mutex().
+    // <bos> at the start of a text). Reuses the KV cache (v1: longest prefix match; v2: shift-invariant
+    // RoPE ring buffer with zero restarts on streaming text). Caller holds mutex().
     const float* hidden(const std::vector<int32_t>& ids);
-    // logits[V] for hidden z (unnormalized; log P = logit - logsumexp)
+    // logits[V] for hidden z (unnormalized; log P = logit - logsumexp; full vocab for v1 and v2)
     void logits(const float* z, float* out) const;
-    // logits of the token after ids and their logsumexp; the last result is cached, so typing the
-    // letters of one word runs the model once. Caller holds mutex().
+    // logits of the token after ids and their logsumexp; the last result is cached. Caller holds mutex().
     const float* distribution(const std::vector<int32_t>& ids, float* lse);
+    // Warm KV cache (and cached logits/lse for non-self-norm models) for upcoming inference.
+    // Caller holds mutex().
+    void prefetch(const std::vector<int32_t>& ids);
+
+    // Score only the requested token ids using hidden state z (O(ids.size()) instead of O(V)).
+    // Output values are raw logits (for self-norm models, log P ~= logit - logz_mean()).
+    void score_subset(const float* z, const int32_t* ids, size_t n, float* out_logits) const;
+    // Top-k word ids matching prefix_lower (using sorted prefix index; or empty-prefix shortlist for
+    // self-norm models). Returns pairs (log_prob, word_id) sorted descending by log_prob.
+    // Caller holds mutex().
+    std::vector<std::pair<float, int32_t>> top_words(const std::vector<int32_t>& ids,
+                                                     const std::string& prefix_lower,
+                                                     const std::string& prefix_kp,
+                                                     bool fold,
+                                                     size_t keep);
+
     // ids currently in the key/value cache (for tests)
     const std::vector<int32_t>& window() const { return window_; }
 
@@ -66,22 +87,46 @@ private:
     struct Body;
     std::unique_ptr<Body> body_;
     int V_ = 0, E_ = 0, ctx_ = 0;
+    int lmv_version_ = 1;
+    int n_int8_ = 0, n_int4_ = 0, group_size_ = 32;
+    bool has_bias_ = false;
+    bool self_norm_ = false;
+    float logz_mean_ = 0.0f;
+    int shortlist_k_ = 0;
+
     std::vector<std::string> tokens_;
     std::vector<std::string> key_paths_;
     std::vector<uint8_t> word_;
     std::unordered_map<std::string, int32_t> index_;
-    const float* scale_ = nullptr;
-    const int8_t* table_ = nullptr;
+    // Sorted word-id indices for O(log V + M) prefix completions (key_path folded + exact token)
+    std::vector<int32_t> kp_sorted_;
+    std::vector<int32_t> tok_sorted_;
+
+    const float* out_bias_ = nullptr;
+    const float* scale_i8_ = nullptr;
+    const int8_t* table_i8_ = nullptr;
+    const uint16_t* scale_i4_ = nullptr;
+    const uint8_t* table_i4_ = nullptr;
     void* map_ = nullptr;
     size_t map_size_ = 0;
-    std::vector<int32_t> window_;       // ids in the key/value cache
+
+    std::vector<int32_t> window_;       // ids currently in the KV/conv cache
+    int64_t start_pos_ = 0;             // absolute position of window_[0] (always 0 for v1; slides in v2)
     std::vector<float> z_;              // hidden state after window_
-    std::vector<float> zs_;             // hidden state after each position of window_ [ctx][E]
+    std::vector<float> zs_;             // ring of hidden states [ctx][E] indexed by (abs_pos % ctx)
     std::vector<int32_t> cached_ids_;   // ids of cached_logits_
     std::vector<float> cached_logits_;
     float cached_lse_ = 0;
+    std::vector<float> shortlist_buf_;  // scratch for self-norm empty-prefix shortlist
     std::mutex mutex_;
-    void step(int32_t id);              // appends one token at position window_.size()
+
+    void step_v1(int32_t id);
+    void step_v2(int32_t id);
+    void step(int32_t id);
+    void dequantize_emb(int32_t id, float* out) const;
+    void build_prefix_indices();
+    void prefix_range(const std::string& prefix_lower, const std::string& prefix_kp, bool fold,
+                      const int32_t*& out_begin, const int32_t*& out_end) const;
 };
 
 // "sdot", "neon" or "scalar": the int8 dot product kernel picked for this CPU
@@ -98,9 +143,13 @@ struct NeuralLanguageInput {
     const KpDictionary* dict;  // optional: only words it knows are suggested, with its capitalization
 };
 
+// Warm KV cache (and logits for non-self-norm models) across all models in parallel.
+void prefetch_neural(const std::vector<NeuralLm*>& models,
+                     const std::vector<std::string>& context, bool bos);
+
 // Language posterior over the context tokens (normalized, oldest first; may include punctuation):
 // a sticky HMM (switch probability `switch_p` per word) whose emission is each language's unigram
-// probability of the word, estimated from the vocabulary rank (Zipf). Returns log posteriors.
+// probability of the word, falling back to KpDictionary when OOV in the 50k LM. Returns log posteriors.
 std::vector<float> neural_language_posterior(const std::vector<NeuralLanguageInput>& langs,
                                              const std::vector<std::string>& context, float switch_p);
 
@@ -115,21 +164,11 @@ std::vector<NeuralPrediction> predict_neural(const std::vector<NeuralLanguageInp
 // log P(w | context) of each lowercase word under the languages' models mixed by the language
 // posterior (the probability predict_neural ranks by); -INFINITY when no model has the word.
 // unk_logp (optional): log P(<unk> | context), the mass of all words outside the vocabularies.
-// Runs each model once per context: the distribution is cached, so after the next-word prediction
-// for the same text it costs only the lookups.
 std::vector<float> neural_word_logp(const std::vector<NeuralLanguageInput>& langs,
                                     const std::vector<std::string>& context, bool bos,
                                     const std::vector<std::string>& words_lower, float switch_p = 0.05f,
                                     float* unk_logp = nullptr);
 
-// Log-linear fusion of the neural model into the swipe ranking (tuned with tools/swipe-replay on
-// synthetic swipes with held-out sentence context, precise and sloppy; see its README):
-//   score + w * log P_nn(word | tokens) + lambda_delta * freq + nu_delta * context term
-// The weight grows from `weight` to `weight_max` as the gesture gets ambiguous: w = weight +
-// (weight_max - weight) * exp(-margin / margin_scale), margin = the score gap of the two best
-// candidates before fusion. Without context (no tokens) only `weight_no_context` applies and the
-// n-gram weights stay. A word no model knows gets log P(<unk> | tokens) + its unigram log
-// probability in the dictionary + oov.
 struct NeuralFusion {
     float weight = 0.2f;
     float weight_max = 0.4f;
@@ -140,8 +179,7 @@ struct NeuralFusion {
     float nu_delta = -0.05f;
 };
 
-// Rescores and re-sorts candidates of rank_candidates (with their score parts). langs: the models
-// of the dictionaries' languages; user: the user dictionary among dicts, or nullptr.
+// Rescores and re-sorts candidates of rank_candidates (with their score parts).
 void fuse_neural(std::vector<Ranked>& ranked, const std::vector<KpDictionary*>& dicts, const KpDictionary* user,
                  const std::vector<NeuralLanguageInput>& langs, const std::vector<std::string>& tokens, bool bos,
                  const NeuralFusion& f);

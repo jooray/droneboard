@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <exception>
 #include <memory>
 #include <string>
@@ -111,13 +112,14 @@ JNIEXPORT jlong JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionary(JNIEnv* env, jclass, jstring path, jfloatArray params) try {
     auto t0 = std::chrono::steady_clock::now();
     auto* d = new KpDictionary();
-    if (!d->load_kpd(jstr(env, path))) {
-        LOGE("could not load dictionary %s", jstr(env, path).c_str());
+    const std::string p = jstr(env, path);
+    if (!d->load_kpd(p)) {
+        LOGE("could not load dictionary %s", p.c_str());
         delete d;
         return 0;
     }
     set_params(env, d, params);
-    LOGI("dictionary %s: %zu words in %.0f ms", jstr(env, path).c_str(), d->word_count(),
+    LOGI("dictionary %s (v%d): %zu words in %.1f ms", p.c_str(), d->format_version(), d->word_count(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)d;
 } catch (const std::exception& e) {
@@ -125,6 +127,75 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionary(JNIEnv* env, 
     return 0;
 } catch (...) {
     LOGE("nativeLoadDictionary: unknown exception");
+    return 0;
+}
+
+JNIEXPORT jlong JNICALL
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionaryFd(JNIEnv*, jclass, jint fd, jlong off, jlong len) try {
+    auto t0 = std::chrono::steady_clock::now();
+    if (fd < 0 || off < 0 || len <= 0) return 0;
+    auto* d = new KpDictionary();
+    if (!d->load_kpd_fd((int)fd, (off_t)off, (size_t)len)) {
+        LOGE("could not load dictionary from fd=%d off=%lld len=%lld", (int)fd, (long long)off, (long long)len);
+        delete d;
+        return 0;
+    }
+    LOGI("dictionary fd (v%d): %zu words in %.1f ms", d->format_version(), d->word_count(),
+         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+    return (jlong)(uintptr_t)d;
+} catch (const std::exception& e) {
+    LOGE("nativeLoadDictionaryFd: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeLoadDictionaryFd: unknown exception");
+    return 0;
+}
+
+// Loads a .kpd dictionary using a compiled flat mmap v2 cache at cachePath. On cache hit, mmaps
+// cachePath in ~1-2 ms. On first run after install, parses v1Path, atomically compiles cachePath,
+// and reloads via mmap so v1 heap vectors are freed immediately.
+JNIEXPORT jlong JNICALL
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionaryCached(JNIEnv* env, jclass,
+                                                                         jstring v1Path, jstring cachePath,
+                                                                         jfloatArray params) try {
+    auto t0 = std::chrono::steady_clock::now();
+    const std::string cp = jstr(env, cachePath);
+    auto* d = new KpDictionary();
+    if (!cp.empty() && d->load_kpd(cp)) {
+        set_params(env, d, params);
+        LOGI("dictionary cache %s (v%d): %zu words in %.1f ms", cp.c_str(), d->format_version(), d->word_count(),
+             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+        return (jlong)(uintptr_t)d;
+    }
+    const std::string vp = jstr(env, v1Path);
+    if (!d->load_kpd(vp)) {
+        LOGE("could not load dictionary %s", vp.c_str());
+        delete d;
+        return 0;
+    }
+    if (!cp.empty() && d->format_version() == 1) {
+        const std::string tmp = cp + ".tmp";
+        if (d->save_v2(tmp) && std::rename(tmp.c_str(), cp.c_str()) == 0) {
+            auto* mapped = new KpDictionary();
+            if (mapped->load_kpd(cp)) {
+                delete d;
+                d = mapped;
+            } else {
+                delete mapped;
+            }
+        } else {
+            std::remove(tmp.c_str());
+        }
+    }
+    set_params(env, d, params);
+    LOGI("dictionary %s -> cache (v%d): %zu words in %.1f ms", vp.c_str(), d->format_version(), d->word_count(),
+         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+    return (jlong)(uintptr_t)d;
+} catch (const std::exception& e) {
+    LOGE("nativeLoadDictionaryCached: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeLoadDictionaryCached: unknown exception");
     return 0;
 }
 
@@ -459,7 +530,8 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jcla
         LOGE("neural LM: %s", err.c_str());
         return 0;
     }
-    LOGI("neural LM loaded: %d words, %s kernel, %.0f ms", lm->vocab(), droneswipe::neural_kernel_name(),
+    LOGI("neural LM v%d loaded: %d words, ctx=%d, self_norm=%d, %s kernel, %.1f ms",
+         lm->version(), lm->vocab(), lm->ctx(), lm->is_self_norm() ? 1 : 0, droneswipe::neural_kernel_name(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)lm.release();
 } catch (const std::exception& e) {
@@ -468,6 +540,66 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jcla
 } catch (...) {
     LOGE("nativeLoadNeural: unknown exception");
     return 0;
+}
+
+// Zero-copy APK mmap loader for <lang>.lmb + <lang>.lmv via AssetFileDescriptor (page-aligned mmap).
+JNIEXPORT jlong JNICALL
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeuralFd(JNIEnv*, jclass,
+                                                                 jint lmbFd, jlong lmbOff, jlong lmbLen,
+                                                                 jint lmvFd, jlong lmvOff, jlong lmvLen) try {
+    std::string err;
+    auto t0 = std::chrono::steady_clock::now();
+    auto lm = droneswipe::NeuralLm::load_fd((int)lmbFd, (int64_t)lmbOff, (int64_t)lmbLen,
+                                            (int)lmvFd, (int64_t)lmvOff, (int64_t)lmvLen, &err);
+    if (!lm) {
+        LOGE("neural LM fd: %s", err.c_str());
+        return 0;
+    }
+    LOGI("neural LM v%d fd loaded: %d words, ctx=%d, self_norm=%d, %s kernel, %.1f ms",
+         lm->version(), lm->vocab(), lm->ctx(), lm->is_self_norm() ? 1 : 0, droneswipe::neural_kernel_name(),
+         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+    return (jlong)(uintptr_t)lm.release();
+} catch (const std::exception& e) {
+    LOGE("nativeLoadNeuralFd: %s", e.what());
+    return 0;
+} catch (...) {
+    LOGE("nativeLoadNeuralFd: unknown exception");
+    return 0;
+}
+
+// Finger-down prefetch: warms each model's KV cache (and logits for non-self-norm models) in parallel.
+JNIEXPORT void JNICALL
+Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePrefetchNeural(JNIEnv* env, jclass,
+                                                                   jlongArray models, jobjectArray jcontext,
+                                                                   jboolean bos) try {
+    if (!models) return;
+    jsize n = env->GetArrayLength(models);
+    if (n <= 0) return;
+    std::vector<jlong> mh(n);
+    env->GetLongArrayRegion(models, 0, n, mh.data());
+    std::vector<droneswipe::NeuralLm*> ms;
+    ms.reserve(n);
+    for (jlong h : mh) {
+        if (h != 0) ms.push_back((droneswipe::NeuralLm*)(uintptr_t)h);
+    }
+    if (ms.empty()) return;
+    std::vector<std::string> context;
+    if (jcontext) {
+        jsize nc = env->GetArrayLength(jcontext);
+        context.reserve(nc);
+        for (jsize i = 0; i < nc; ++i) {
+            auto js = (jstring)env->GetObjectArrayElement(jcontext, i);
+            context.push_back(jstr(env, js));
+            if (js) env->DeleteLocalRef(js);
+        }
+    }
+    droneswipe::prefetch_neural(ms, context, bos == JNI_TRUE);
+} catch (const std::exception& e) {
+    LOGE("nativePrefetchNeural: %s", e.what());
+    return;
+} catch (...) {
+    LOGE("nativePrefetchNeural: unknown exception");
+    return;
 }
 
 JNIEXPORT void JNICALL

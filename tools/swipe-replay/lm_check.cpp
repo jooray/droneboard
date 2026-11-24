@@ -3,8 +3,11 @@
 //
 // usage: lm-check model.lmb model.lmv contexts.jsonl [app] > out.jsonl
 //
-// With "app", each call gets what the keyboard passes for a long text: the last 31 ids before the
-// cursor without <bos> (timings only).
+// Supports both v1 (gpt256, ctx=32) and v2 (striped256/modern256, ctx=64, mixed INT8/INT4-g32,
+// optional self-normalization).
+//
+// With "app", each call gets what the keyboard passes for a long text: the last (ctx - 1) ids
+// before the cursor without <bos> (timings only, including predict_neural and 40-cand fuse_neural).
 //
 // Each input line is {"ids": [...]} (token ids, oldest first). The ids are fed one at a time, as when
 // typing word by word (key/value cache), and the hidden state after the last one plus the top 10
@@ -26,21 +29,30 @@ using json = nlohmann::json;
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::fprintf(stderr, "usage: lm-check model.lmb model.lmv contexts.jsonl\n");
+        std::fprintf(stderr, "usage: lm-check model.lmb model.lmv contexts.jsonl [app]\n");
         return 2;
     }
     std::string err;
     auto t0 = std::chrono::steady_clock::now();
     auto lm = droneswipe::NeuralLm::load(argv[1], argv[2], &err);
     if (!lm) { std::fprintf(stderr, "%s\n", err.c_str()); return 1; }
-    std::fprintf(stderr, "loaded in %.1f ms, kernel %s\n",
+    std::fprintf(stderr, "loaded v%d in %.1f ms (V=%d E=%d ctx=%d int8=%d self_norm=%d logz=%.3f shortlist=%d), kernel %s\n",
+                 lm->version(),
                  std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
+                 lm->vocab(), lm->dim(), lm->ctx(), lm->int8_rows(),
+                 lm->is_self_norm() ? 1 : 0, lm->logz_mean(), lm->shortlist_k(),
                  droneswipe::neural_kernel_name());
     const bool app = argc > 4 && std::string(argv[4]) == "app";
+    const size_t max_window = (size_t)std::max(1, lm->ctx() - 1);
     std::ifstream in(argv[3]);
     std::string line;
-    std::vector<double> step_ms, restart_ms, predict_ms;
+    std::vector<double> step_ms, restart_ms, predict_ms, score40_ms;
     std::vector<float> lg(lm->vocab());
+    std::vector<std::string> sample40;
+    for (int32_t id = 3; id < lm->vocab() && sample40.size() < 40; ++id) {
+        if (lm->is_word(id)) sample40.push_back(lm->token(id));
+    }
+
     while (std::getline(in, line)) {
         if (line.empty()) continue;
         auto ids = json::parse(line)["ids"].get<std::vector<int32_t>>();
@@ -50,23 +62,32 @@ int main(int argc, char** argv) {
         const float* z = nullptr;
         for (size_t k = 0; k < ids.size(); ++k) {
             prefix.push_back(ids[k]);
-            if (app && prefix.size() > 31) prefix.erase(prefix.begin());
+            if (app && prefix.size() > max_window) prefix.erase(prefix.begin());
             auto s = std::chrono::steady_clock::now();
-            float lse;
-            lm->distribution(prefix, &lse);
+            if (app && lm->is_self_norm()) {
+                z = lm->hidden(prefix);
+            } else {
+                float lse = 0.0f;
+                lm->distribution(prefix, &lse);
+                z = lm->hidden(prefix);
+            }
             const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - s).count();
             (k == 0 ? restart_ms : step_ms).push_back(ms);
             if (app) {
-                // the whole next-word prediction as the keyboard runs it (one language, no dictionary)
                 std::vector<std::string> toks;
+                toks.reserve(prefix.size());
                 for (int32_t id : prefix) toks.push_back(lm->token(id));
                 lm->mutex().unlock();
                 auto s2 = std::chrono::steady_clock::now();
                 droneswipe::predict_neural({{lm.get(), nullptr}}, toks, false, "", 20);
                 predict_ms.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - s2).count());
+
+                auto s3 = std::chrono::steady_clock::now();
+                float unk = 0.0f;
+                droneswipe::neural_word_logp({{lm.get(), nullptr}}, toks, false, sample40, 0.05f, &unk);
+                score40_ms.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - s3).count());
                 lm->mutex().lock();
             }
-            z = lm->hidden(prefix);
         }
         if (!z || app) continue;
         lm->logits(z, lg.data());
@@ -79,13 +100,16 @@ int main(int argc, char** argv) {
         std::printf("%s\n", out.dump().c_str());
     }
     std::fprintf(stderr, "steps %ld, window restarts %ld, cached %ld\n", lm->steps, lm->restarts, lm->cached);
-    for (auto* v : {&step_ms, &restart_ms, &predict_ms}) {
+    for (auto* v : {&step_ms, &restart_ms, &predict_ms, &score40_ms}) {
         if (v->empty()) continue;
         std::sort(v->begin(), v->end());
+        const char* label =
+            v == &step_ms ? "one more token (model step + scoring)"
+            : v == &restart_ms ? "first token (model step + scoring)"
+            : v == &predict_ms ? "predict_neural, cached context"
+                               : "neural_word_logp (40 cands), cached context";
         std::fprintf(stderr, "%s: median %.3f ms, p95 %.3f ms\n",
-                     v == &step_ms ? "one more token (model step + vocabulary scoring)"
-                     : v == &restart_ms ? "first token (model step + vocabulary scoring)" : "predict_neural, cached context",
-                     (*v)[v->size() / 2], (*v)[v->size() * 95 / 100]);
+                     label, (*v)[v->size() / 2], (*v)[v->size() * 95 / 100]);
     }
     return 0;
 }

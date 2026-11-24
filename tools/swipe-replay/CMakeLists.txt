@@ -23,11 +23,12 @@ foreach(v ET_INCLUDE_DIRS ET_WHOLE_ARCHIVE_LIBS ET_REGULAR_LIBS)
     get_directory_property(${v} DIRECTORY ${SWIPE_LIBRARY_DIR} DEFINITION ${v})
 endforeach()
 
+find_package(Threads REQUIRED)
 set(DRONESWIPE ${CMAKE_CURRENT_SOURCE_DIR}/../../native/droneswipe)
 add_executable(swipe-replay swipe_replay.cpp ${DRONESWIPE}/kp_dictionary.cpp ${DRONESWIPE}/ranker.cpp ${DRONESWIPE}/neural_lm.cpp)
 target_include_directories(swipe-replay PRIVATE ${DRONESWIPE}
     ${SWIPE_LIBRARY_DIR}/third_party/executorch/third-party/json/include)
-target_link_libraries(swipe-replay PRIVATE swipe_decoder)
+target_link_libraries(swipe-replay PRIVATE swipe_decoder Threads::Threads)
 target_link_executorch(swipe-replay)
 target_compile_options(swipe-replay PRIVATE -fno-rtti)
 
@@ -35,7 +36,7 @@ target_compile_options(swipe-replay PRIVATE -fno-rtti)
 add_executable(lm-eval lm_eval.cpp ${DRONESWIPE}/kp_dictionary.cpp ${DRONESWIPE}/ranker.cpp ${DRONESWIPE}/neural_lm.cpp)
 target_include_directories(lm-eval PRIVATE ${DRONESWIPE}
     ${SWIPE_LIBRARY_DIR}/third_party/executorch/third-party/json/include)
-target_link_libraries(lm-eval PRIVATE swipe_decoder)
+target_link_libraries(lm-eval PRIVATE swipe_decoder Threads::Threads)
 target_link_executorch(lm-eval)
 target_compile_options(lm-eval PRIVATE -fno-rtti)
 
@@ -43,5 +44,5 @@ target_compile_options(lm-eval PRIVATE -fno-rtti)
 add_executable(lm-check lm_check.cpp ${DRONESWIPE}/kp_dictionary.cpp ${DRONESWIPE}/neural_lm.cpp)
 target_include_directories(lm-check PRIVATE ${DRONESWIPE}
     ${SWIPE_LIBRARY_DIR}/third_party/executorch/third-party/json/include)
-target_link_libraries(lm-check PRIVATE swipe_decoder)
+target_link_libraries(lm-check PRIVATE swipe_decoder Threads::Threads)
 target_compile_options(lm-check PRIVATE -fno-rtti)
