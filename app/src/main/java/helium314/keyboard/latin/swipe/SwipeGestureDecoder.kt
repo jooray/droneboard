@@ -148,7 +148,15 @@ object SwipeGestureDecoder {
     private val extractLocks = ConcurrentHashMap<String, Any>()
     private var assetDir: File? = null
 
+    /** Soft tie-breaker for the first word in an app (zero context only; never applied mid-sentence). */
+    private const val APP_FIRST_WORD_PRIOR = 0.3f
+    /** Minimum margin over the best competing other-language candidate to remember an app's language. */
+    private const val APP_LANGUAGE_RECORD_MARGIN = 0.5f
+    private const val MAX_APP_LANGUAGES = 64
+    private val appLanguages = ConcurrentHashMap<String, String>()
+
     private var layoutSignature: String? = null
+    @Volatile
     private var activeLanguages: List<String> = emptyList()
     private var activeLocales: List<Locale> = emptyList()
     private var keyboardWidth = 1f
@@ -499,11 +507,42 @@ object SwipeGestureDecoder {
             )
         }
         lastMillis = FutoSwipe.nativeLastMillis(session)
+        val packageName = runCatching { keyboard.mId.editorInfo.packageName }.getOrNull()?.takeIf { it.isNotEmpty() }
+        var finalWords = words
+        var finalScores = scores
+        var finalDicts = dicts
+        if (isFinal && words.isNotEmpty()) {
+            // Apply soft +0.3f tie-breaker ONLY on zero-context first words using the app's
+            // previously remembered language, so in-sentence bilingual code-switching is unaffected.
+            if (activeLanguages.size > 1 && contextWords.isEmpty() && tokens.isEmpty() && packageName != null) {
+                val preferredLang = appLanguages[packageName]
+                val preferredDictIdx = if (preferredLang != null) activeLanguages.indexOf(preferredLang) else -1
+                if (preferredDictIdx >= 0) {
+                    val boostedScores = scores.copyOf(words.size)
+                    var changed = false
+                    for (i in words.indices) {
+                        if (dicts[i] == preferredDictIdx) {
+                            boostedScores[i] += APP_FIRST_WORD_PRIOR
+                            changed = true
+                        }
+                    }
+                    if (changed) {
+                        val order = words.indices.sortedByDescending { boostedScores[it] }
+                        finalWords = Array(words.size) { words[order[it]] }
+                        finalScores = FloatArray(words.size) { boostedScores[order[it]] }
+                        finalDicts = IntArray(words.size) { dicts[order[it]] }
+                    }
+                }
+            }
+            // Record the app's language from raw (pre-prior) scores when top candidate clearly
+            // belongs to a single language with margin > APP_LANGUAGE_RECORD_MARGIN.
+            recordAppLanguage(packageName, words, scores, dicts)
+        }
         val results = SuggestionResults(MAX_RESULTS, ngramContext, false)
-        words.forEachIndexed { i, word ->
-            val locale = activeLocales.getOrNull(dicts[i]) ?: activeLocales.first()
+        finalWords.forEachIndexed { i, word ->
+            val locale = activeLocales.getOrNull(finalDicts[i]) ?: activeLocales.first()
             // scores are roughly -30..+30; keep their order in the integer score space
-            val score = (scores[i] * 10_000f).roundToInt() + 1_000_000
+            val score = (finalScores[i] * 10_000f).roundToInt() + 1_000_000
             results.add(
                 SuggestedWordInfo(
                     word, "", score, SuggestedWordInfo.KIND_CORRECTION, sourceDictionary(locale),
@@ -513,21 +552,58 @@ object SwipeGestureDecoder {
         }
         if (isFinal && SwipeRecorder.isRecording(runCatching { keyboard.mId.editorInfo }.getOrNull())) {
             SwipeRecorder.onFinalDecode(
-                keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, words, activeLanguages,
-                words.indices.map { activeLanguages.getOrElse(dicts[it]) { "" } }, lastMillis
+                keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, finalWords, activeLanguages,
+                finalWords.indices.map { activeLanguages.getOrElse(finalDicts[it]) { "" } }, lastMillis
             )
         } else if (isFinal && TypingSwipeRecorder.armed) {
             TypingSwipeRecorder.onFinalDecode(
-                keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, words, activeLanguages,
-                words.indices.map { activeLanguages.getOrElse(dicts[it]) { "" } }, lastMillis
+                keyboard, pointers, LastInput(x, y, t, contextWords), layoutKeys, finalWords, activeLanguages,
+                finalWords.indices.map { activeLanguages.getOrElse(finalDicts[it]) { "" } }, lastMillis
             )
         }
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "swipe ${if (isFinal) "final" else "preview"} ${lastMillis}ms (neural ${FutoSwipe.nativeLastNeuralMillis(session)}ms," +
-                " ${tokens.size} tokens${if (bos) " +bos" else ""}) prev=$previous -> ${words.take(4)}")
+                " ${tokens.size} tokens${if (bos) " +bos" else ""}) prev=$previous -> ${finalWords.take(4)}")
             if (isFinal) Log.d(TAG, "points n=$n first=(${x[0]},${y[0]}) last=(${x[n - 1]},${y[n - 1]}) dur=${t[n - 1]}ms")
         }
         return results
+    }
+
+    private fun recordAppLanguage(packageName: String?, words: Array<String>, scores: FloatArray, dicts: IntArray) {
+        if (packageName == null || words.isEmpty() || activeLanguages.size < 2) return
+        if (Settings.getValues()?.mIncognitoModeEnabled == true) return
+        if (words[0].length < 3) return
+        val topDict = dicts[0]
+        val topLang = activeLanguages.getOrNull(topDict) ?: return
+        var bestOtherScore = Float.NEGATIVE_INFINITY
+        for (i in 1 until words.size) {
+            val d = dicts[i]
+            if (d in activeLanguages.indices && d != topDict && scores[i] > bestOtherScore) {
+                bestOtherScore = scores[i]
+            }
+        }
+        if (scores[0] - bestOtherScore <= APP_LANGUAGE_RECORD_MARGIN) return
+        if (appLanguages.size >= MAX_APP_LANGUAGES && !appLanguages.containsKey(packageName)) {
+            appLanguages.keys.firstOrNull()?.let { appLanguages.remove(it) }
+        }
+        appLanguages[packageName] = topLang
+    }
+
+    /**
+     * Triggered on swipe finger-down (InputLogicHandler.onStartBatchInput) to warm the neural LMs'
+     * KV cache while the user glides across the keyboard. Non-blocking.
+     */
+    @JvmOverloads
+    @JvmStatic
+    fun prefetchNeuralForCurrentContext(ngramContext: NgramContext, textBeforeCursor: CharSequence? = null) {
+        val context = appContext ?: return
+        if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return
+        val langs = activeLanguages.ifEmpty {
+            val available = languagesWithDictionary(context)
+            enabledLocales().map { it.engineKey }.distinct().filter { it in available }.take(3)
+        }
+        if (langs.isEmpty()) return
+        NeuralLanguageModel.prefetchForSwipe(context, langs, contextWords(ngramContext), textBeforeCursor)
     }
 
     fun filesMissingFromListing(context: Context): List<String> = EngineAssets.missingFromListing(context)
