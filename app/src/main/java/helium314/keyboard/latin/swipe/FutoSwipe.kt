@@ -27,6 +27,9 @@ object FutoSwipe {
     /** A .kpd dictionary (tools/dicts/pack_swipe_dict.py).
      *  params: gamma, beta, lambda, capsPenalty, bigramWeight, languageBonus[, historyBonus] */
     @JvmStatic external fun nativeLoadDictionary(path: String, params: FloatArray): Long
+    /** Loads [cachePath] via zero-copy mmap when present; otherwise parses [v1Path], compiles a flat
+     *  .kpd v2 cache at [cachePath], and switches immediately to mmap. */
+    @JvmStatic external fun nativeLoadDictionaryCached(v1Path: String, cachePath: String, params: FloatArray): Long
     /** Zero-copy mmap loader for an uncompressed .kpd dictionary inside an APK AssetFileDescriptor. */
     @JvmStatic external fun nativeLoadDictionaryFd(fd: Int, off: Long, len: Long): Long
     @JvmStatic external fun nativeFreeDictionary(dict: Long)

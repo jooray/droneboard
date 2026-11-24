@@ -224,10 +224,9 @@ object SwipeGestureDecoder {
      * Different files are copied in parallel: after an update the swipe dictionaries and the neural models are
      * requested at the same time by two loader threads, and one lock for all files made each wait for the other.
      */
-    internal fun extract(context: Context, name: String): File {
-        // fail closed before touching storage: no_backup is credential-encrypted
-        if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked, not extracting $name")
-        val dir = synchronized(extractLock) {
+    private fun swipeAssetDir(context: Context): File {
+        if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked")
+        return synchronized(extractLock) {
             assetDir ?: run {
                 // keyed by install time, so that every update (also with the same version code) re-extracts
                 val installed = runCatching {
@@ -241,6 +240,12 @@ object SwipeGestureDecoder {
                 }
             }
         }
+    }
+
+    internal fun extract(context: Context, name: String): File {
+        // fail closed before touching storage: no_backup is credential-encrypted
+        if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked, not extracting $name")
+        val dir = swipeAssetDir(context)
         val file = File(dir, name)
         if (file.isFile) return file
         synchronized(extractLocks.computeIfAbsent(name) { Any() }) {
@@ -302,9 +307,18 @@ object SwipeGestureDecoder {
             val latch = CountDownLatch(1)
             loader.execute {
                 try {
-                    val file = extract(context, "$language.kpd")
+                    val dir = swipeAssetDir(context)
+                    dir.mkdirs()
+                    val v2Cache = File(dir, "$language.kpd2")
                     val params = params(language) + 0f
-                    val handle = FutoSwipe.nativeLoadDictionary(file.absolutePath, params)
+                    val handle = if (v2Cache.isFile) {
+                        FutoSwipe.nativeLoadDictionary(v2Cache.absolutePath, params)
+                    } else {
+                        val v1File = extract(context, "$language.kpd")
+                        FutoSwipe.nativeLoadDictionaryCached(v1File.absolutePath, v2Cache.absolutePath, params).also { h ->
+                            if (h != 0L && v2Cache.isFile) v1File.delete()
+                        }
+                    }
                     if (handle != 0L) dictionaries[language] = handle
                     else Log.w(TAG, "could not load swipe dictionary $language")
                 } catch (e: Throwable) {

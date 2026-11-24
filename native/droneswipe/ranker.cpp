@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string_view>
 #include <unordered_map>
 
 namespace droneswipe {
@@ -36,21 +37,30 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
                                     const std::vector<float>& lang_bonus,
                                     const std::vector<std::string>& context_lower, int max_results,
                                     const KpDictionary* user, float tie_margin) {
-    std::unordered_map<std::string, Ranked> best;
+    std::unordered_map<std::string_view, Ranked> best;
     const size_t nc = context_lower.size();
     const std::string prev_lower = nc ? context_lower[nc - 1] : std::string();
     const std::string prev2_lower = nc > 1 ? context_lower[nc - 2] : std::string();
     std::vector<int32_t> prev_id(dicts.size(), -1), prev2_id(dicts.size(), -1);
+    size_t lang_dicts = 0;
+    bool any_prev_unknown = false;
     for (size_t di = 0; di < dicts.size(); ++di) {
         if (!prev_lower.empty()) prev_id[di] = dicts[di]->lower_id(prev_lower);
         if (!prev2_lower.empty() && prev_id[di] >= 0) prev2_id[di] = dicts[di]->lower_id(prev2_lower);
+        if (dicts[di] != user) {
+            ++lang_dicts;
+            if (prev_id[di] < 0) any_prev_unknown = true;
+        }
     }
+    // When multiple languages are active and another language does not know the previous word (so its
+    // context score is 0.0), clamp negative PMI to 0.0 to eliminate cross-language asymmetry.
+    const bool clamp_neg_pmi = lang_dicts > 1 && any_prev_unknown;
     std::vector<float> scores, lps, ctxs;
     for (const auto& r : beam) {
         const float L = std::max(1.0f, r.word_length);
         for (int di = 0; di < (int)dicts.size(); ++di) {
             auto* d = dicts[di];
-            const auto* vs = d->variants_of(r.word);
+            const auto vs = d->variants_of(r.word);
             if (!vs) continue;
             const auto& p = d->params;
             const float lb = di < (int)lang_bonus.size() ? lang_bonus[di] : 0.0f;
@@ -59,11 +69,12 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
             lps.clear();
             ctxs.clear();
             float top = -1e30f, top_lp = -1e30f;
-            const bool by_context = p.same_path > 0.0f && vs->size() > 1 && d != user;
-            for (uint32_t vi : *vs) {
-                const auto& v = d->variant(vi);
+            const bool by_context = p.same_path > 0.0f && vs.size() > 1 && d != user;
+            for (uint32_t vi : vs) {
+                const auto v = d->variant(vi);
                 float sc = base + p.lambda * v.freq + (v.capitalized ? p.caps : 0.0f);
-                const float c = prev_id[di] >= 0 && p.nu != 0.0f ? d->pmi3(prev2_id[di], prev_id[di], v.lower) : 0.0f;
+                float c = prev_id[di] >= 0 && p.nu != 0.0f ? d->pmi3(prev2_id[di], prev_id[di], v.lower) : 0.0f;
+                if (clamp_neg_pmi && c < 0.0f) c = 0.0f;
                 sc += p.nu * c;
                 ctxs.push_back(c);
                 scores.push_back(sc);
@@ -73,14 +84,15 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
                     top_lp = std::max(top_lp, lps.back());
                 }
             }
-            for (size_t k = 0; k < vs->size(); ++k) {
-                const auto& v = d->variant((*vs)[k]);
+            for (size_t k = 0; k < vs.size(); ++k) {
+                const auto v = d->variant(vs[k]);
                 // same gesture: the context decides ("we'll" after "so", "well" after "as"); the
                 // general score only breaks ties (capitalization of the same word)
                 float sc = by_context ? top - p.same_path * (top_lp - lps[k]) + 1e-3f * (scores[k] - top) : scores[k];
                 auto it = best.find(v.surface);
-                if (it == best.end() || sc > it->second.score)
-                    best[v.surface] = {v.surface, sc, di, r.ctc_score, L, v.freq, ctxs[k]};
+                if (it == best.end() || sc > it->second.score) {
+                    best[v.surface] = {std::string(v.surface), sc, di, r.ctc_score, L, v.freq, ctxs[k]};
+                }
             }
         }
     }
@@ -88,9 +100,9 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
     // user (capitalization follows the shift state), and duplicates waste suggestion slots
     std::unordered_map<std::string, Ranked> by_lower;
     for (auto& kv : best) {
-        std::string lower = to_lower_utf8(kv.first);
+        std::string lower = to_lower_utf8(kv.second.word);
         auto it = by_lower.find(lower);
-        if (it == by_lower.end() || kv.second.score > it->second.score) by_lower[lower] = kv.second;
+        if (it == by_lower.end() || kv.second.score > it->second.score) by_lower[lower] = std::move(kv.second);
     }
     std::vector<Ranked> out;
     out.reserve(by_lower.size());
@@ -100,7 +112,7 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
             int w = user->user_weight(kv.first);
             if (w > 0) kv.second.score += user->params.history * (float)w / 255.0f;
         }
-        out.push_back(kv.second);
+        out.push_back(std::move(kv.second));
     }
     std::sort(out.begin(), out.end(), [](const Ranked& a, const Ranked& b) {
         return a.score != b.score ? a.score > b.score : a.word < b.word;
@@ -144,20 +156,22 @@ std::vector<Prediction> predict_words(const std::vector<KpDictionary*>& dicts,
     // language posterior from the context (uniform prior; the same unigram evidence as language_bonus)
     auto lb = language_bonus(dicts, context_lower, {}, 1.0f, 30.0f);
     const size_t nc = context_lower.size();
-    std::unordered_map<std::string, Prediction> best;
+    std::unordered_map<std::string_view, Prediction> best;
     for (int d = 0; d < (int)dicts.size(); ++d) {
         auto* dict = dicts[d];
         const int32_t prev = nc ? dict->lower_id(context_lower[nc - 1]) : -1;
         const int32_t prev2 = nc > 1 && prev >= 0 ? dict->lower_id(context_lower[nc - 2]) : -1;
         for (auto& [id, lp] : dict->predict(prev2, prev, prefix_lower, max_results * 2)) {
             const float sc = lp + (d < (int)lb.size() ? lb[d] : 0.0f);
-            const std::string& low = dict->lower_word(id);
+            const std::string_view low = dict->lower_word(id);
             auto it = best.find(low);
-            if (it == best.end() || sc > it->second.score) best[low] = {dict->surface_of(id), sc, d};
+            if (it == best.end() || sc > it->second.score) {
+                best[low] = {std::string(dict->surface_of(id)), sc, d};
+            }
         }
     }
     out.reserve(best.size());
-    for (auto& kv : best) out.push_back(kv.second);
+    for (auto& kv : best) out.push_back(std::move(kv.second));
     std::sort(out.begin(), out.end(), [](const Prediction& a, const Prediction& b) {
         return a.score != b.score ? a.score > b.score : a.word < b.word;
     });

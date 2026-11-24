@@ -1,96 +1,117 @@
 # Swipe dictionary format (`.kpd`)
 
 One `.kpd` file per language holds the swipe word list, word frequencies and the previous-word
-statistics. `tools/dicts/pack_swipe_dict.py` writes it from the TSVs of `tools/dicts/build_dicts.py`.
-`KpDictionary::load_kpd` (`kp_dictionary.cpp`) reads it through `mmap`, builds the key-path trie in
-memory and keeps the n-gram data as compact arrays.
+statistics. `tools/dicts/pack_swipe_dict.py` writes it from the TSVs of `tools/dicts/build_dicts.py`
+or repacks v1 into v2 (`--repack-v2` / `--repack-all`).
+`KpDictionary::load_kpd` and `KpDictionary::load_kpd_fd` (`kp_dictionary.cpp`) transparently support
+both **v1** (`KPD1`, compact varint-packed, unpacked into RAM on load) and **v2** (`DKPD`, flat
+zero-copy `mmap`, loads in `<2 ms` with zero `unordered_map` allocations).
 
-All integers are little endian. A *varint* is unsigned LEB128. A *front-coded string* is
-`varint shared, varint suffix_len, suffix bytes`: the first `shared` bytes are copied from the
-previous string of the same list, and a UTF-8 sequence is never split.
+All integers are little endian.
 
-## Header (version 2)
+---
+
+## Format v2 (`DKPD`) — Flat Zero-Copy `mmap`
+
+All sections start on an 8-byte boundary so `u32`, `f32`, `u64` and `FlatVariant` arrays are
+dereferenced directly out of the read-only `mmap` mapping. The mapping stays open for the lifetime
+of `KpDictionary` and is cleanly `munmap`ped in `~KpDictionary()`.
+
+### Header (56 bytes)
+
+| Offset | Field | Type | Meaning |
+|---:|---|---|---|
+| 0 | magic | 4 bytes | `DKPD` |
+| 4 | version | u32 | `2` |
+| 8 | flags | u32 | bit 0: BFS-ordered trie (implicit contiguous children `[child_start[n], child_start[n+1])`, no `TCHL` section); bit 1: trie contains non-`a..z` byte |
+| 12 | n_lower | u32 | lowercase words (ids `0 … n_lower-1`, sorted by unsigned UTF-8 bytes) |
+| 16 | n_variants | u32 | surface variants (`ľahko`, `Ľahko`, `I'll`, …) |
+| 20 | n_kps | u32 | unique key paths (sorted by unsigned UTF-8/ASCII bytes) |
+| 24 | n_nodes | u32 | trie nodes (root = `0`) |
+| 28 | n_big | u32 | bigram entries |
+| 32 | n_tri_ctx | u32 | trigram contexts |
+| 36 | n_tri | u32 | trigram entries |
+| 40 | total | f64 | sum of lowercase word counts (unigram denominator) |
+| 48 | n_sections | u32 | entries in the section directory |
+| 52 | reserved | u32 | `0` |
+| 56 | directory | `n_sections × (char[4] tag, u32 offset, u32 length)` | 8-byte aligned offsets from file start |
+
+### Sections (v2)
+
+| Tag | Required | Layout | Meaning |
+|---|---|---|---|
+| `TCHS` | yes | `u32[n_nodes + 1]` | Trie child CSR offsets (`TCHS[n_nodes] == n_nodes` when `flags & 1`) |
+| `TCHL` | if `!(flags & 1)` | `u32[TCHS[n_nodes]]` | Explicit child node ids (omitted for BFS-ordered tries) |
+| `TNCH` | yes | `u8[n_nodes]` | Base key-path byte per node (`0` for root) |
+| `TNTM` | yes | `i32[n_nodes]` | Terminal key-path id (`0 … n_kps-1`), or `-1` |
+| `TNFQ` | yes | `u8[n_nodes]` | Maximum variant frequency (`0–255`) at terminal nodes |
+| `TNDP` | yes | `u16[n_nodes]` | Trie node depth (`0` for root) |
+| `LWPL` | yes | `char[]` | NUL-terminated UTF-8 lowercase string pool, sorted by unsigned bytes |
+| `LWOF` | yes | `u32[n_lower + 1]` | Start byte offset of each lowercase word (`len = LWOF[i+1] - LWOF[i] - 1`) |
+| `LOGC` | yes | `u16[n_lower]` | `round(ln(count) × 2048)` |
+| `BEST` | yes | `u32[n_lower]` | Variant id of the most frequent surface form (`UINT32_MAX` if none) |
+| `KPPL` | yes | `char[]` | NUL-terminated sorted key-path string pool |
+| `KPOF` | yes | `u32[n_kps + 1]` | Start byte offset of each key path |
+| `KPVS` | yes | `u32[n_kps + 1]` | CSR start into `KPVI` per key path |
+| `KPVI` | yes | `u32[KPVS[n_kps]]` | Variant ids for each key path (allows collapsed-double aliases like `il → I'll` to share variants) |
+| `VARS` | yes | `FlatVariant[n_variants]` | Packed 12-byte structs: `u32 lower, u32 surf_off, u16 surf_len, u8 freq, u8 flags` (`surf_off == UINT32_MAX` means surface equals `lowers[lower]`; `flags & 1` = capitalized) |
+| `VRPL` | optional | `char[]` | NUL-terminated surface strings that differ from their lowercase form |
+| `BGST` | yes | `u32[n_lower + 1]` | Bigram CSR offsets by `prev` id |
+| `BGWD` | if `n_big > 0` | `u32[n_big]` | Sorted target `lower` ids per `prev` |
+| `BGLC` | if `n_big > 0` | `u8[n_big]` | `round(ln(count) × 16)` |
+| `BGRM` | yes | `f32[n_lower]` | Precomputed unallocated-mass backoff weight `max(50, max(0.15 × C(prev), C(prev) − Σ stored_bigrams))` |
+| `TGCT` | if `n_tri_ctx > 0` | `u64[n_tri_ctx]` | Sorted trigram contexts `((u64)prev2 << 32) | prev` |
+| `TGCL` | if `n_tri_ctx > 0` | `u8[n_tri_ctx]` | `round(ln(count(prev2 prev)) × 16)` |
+| `TGRM` | if `n_tri_ctx > 0` | `f32[n_tri_ctx]` | Precomputed unallocated-mass backoff `max(0.15 × C(prev2 prev), C(prev2 prev) − Σ stored_trigrams)` |
+| `TGST` | if `n_tri_ctx > 0` | `u32[n_tri_ctx + 1]` | Trigram CSR offsets |
+| `TGWD` | if `n_tri > 0` | `u32[n_tri]` | Sorted target `lower` ids per context |
+| `TGLC` | if `n_tri > 0` | `u8[n_tri]` | `round(ln(count) × 16)` |
+| `TOPW` | yes | `u32[<=128]` | Top 128 most frequent `lower` ids for O(1) empty-prefix `predict()` |
+| `TPBS` | yes | `u32[257]` | CSR offsets into `TPBI` per leading UTF-8 byte `0..255` |
+| `TPBI` | yes | `u32[TPBS[256]]` | Top 64 most frequent `lower` ids per leading byte for O(1) 1-char `predict()` |
+| `BYRG` | yes | `u32[257]` | Contiguous `[BYRG[b], BYRG[b+1])` range in `LOWR` for leading byte `b` |
+
+### Scoring & Unallocated-Mass Backoff
+
+Because `.kpd` prunes low-count bigrams and trigrams, fixed Dirichlet `K = 50` caused unseen
+continuations after high-frequency words (`"v"`, `"a"`, `"na"`) to receive extreme negative PMI
+(`-11.5` to `-15.9`). Both v1 and v2 loaders now use unallocated-mass backoff:
+
+- Bigram: `rem = max(0.15 × C(prev), C(prev) − Σ stored_bigrams(prev))`, `K_eff = max(50, rem)`,
+  `P2(w | prev) = min(1, (c(prev, w) + K_eff × P(w)) / (C(prev) + 50))`
+- Trigram: `rem3 = max(0.15 × C(prev2, prev), C(prev2, prev) − Σ stored_trigrams)`,
+  `K3_eff = max(k3, rem3)`,
+  `P3(w | prev2, prev) = min(1, (c(prev2, prev, w) + K3_eff × P2) / (C(prev2, prev) + k3))`
+
+---
+
+## Format v1 (`KPD1`) — Legacy Varint-Packed (Backward Compatible)
+
+A *varint* is unsigned LEB128. A *front-coded string* is `varint shared, varint suffix_len, suffix bytes`:
+the first `shared` bytes are copied from the previous string of the same list, and a UTF-8 sequence is never split.
+
+### Header (KPD1, version 2)
 
 | Field | Type | Meaning |
 |---|---|---|
 | magic | 4 bytes | `KPD1` |
-| version | u32 | `2`. A reader rejects versions it does not know |
+| version | u32 | `2` |
 | n_lower | u32 | lowercase words (ids `0 … n_lower-1`, in `LOWR` order) |
-| n_variants | u32 | surface variants (`ľahko`, `Ľahko`, …) |
+| n_variants | u32 | surface variants |
 | n_bigram_prevs | u32 | previous words that have bigrams |
 | n_bigrams | u32 | bigram pairs |
-| total | f64 | sum of the lowercase word counts (the unigram denominator) |
+| total | f64 | sum of lowercase word counts |
 | n_sections | u32 | entries in the section directory |
-| directory | n_sections × (4-byte tag, u32 offset, u32 length) | offsets from the start of the file |
+| directory | n_sections × (4-byte tag, u32 offset, u32 length) | offsets from file start |
 
-Readers skip sections whose tag they do not know. New optional data is added as a new section
-with the same version. Only an incompatible change to an existing section bumps the version.
-
-## Sections
+### Sections (KPD1)
 
 | Tag | Required | Content |
 |---|---|---|
-| `CMAP` | yes | `u32 n`, then `n × (u32 code point, u8 base letter)`: letters other than a–z that map to a–z in key paths (`ľ` → `l`) |
-| `LOWR` | yes | `n_lower` front-coded lowercase words, sorted by UTF-8 bytes. The position is the word id |
+| `CMAP` | yes | `u32 n`, then `n × (u32 code point, u8 base letter)` |
+| `LOWR` | yes | `n_lower` front-coded lowercase words, sorted by UTF-8 bytes |
 | `LOGC` | yes | `n_lower × u16`: `round(ln(count) × 2048)` |
-| `WREC` | yes | one record per lowercase word, in id order (below) |
-| `FREQ` | yes | `n_variants × u8`: frequency on the 0–255 log scale, in record order |
-| `BIGR` | no | previous-word statistics (below) |
-| `TRIG` | no | trigrams (below) |
-
-### Word record (`WREC`)
-
-`varint spec`, then the optional parts in this order:
-
-- bit 0: the lowercase word itself is a variant;
-- bit 1: the word with an upper-case first letter is a variant;
-- bit 2: an explicit key path follows (`varint len, bytes`). Otherwise the key path is derived: a–z are kept, `CMAP` letters are replaced by their base letter, everything else (apostrophes, hyphens) is dropped;
-- bits 3 and up: the number of explicit surface variants that follow, each `varint len, bytes` (e.g. `iPhone`, `NATO`).
-
-The variants' frequencies come from `FREQ` in this order: lowercase, capitalized, explicit ones.
-
-### Bigrams (`BIGR`)
-
-`n_bigram_prevs` groups sorted by previous-word id:
-`varint prev_id_delta, varint n, n × (varint word_id_delta, u8 round(ln(count) × 16))`.
-Word ids within a group are sorted, and deltas restart at 0 in every group. The loader turns this
-into a CSR array (`big_start_`, `big_word_`, `big_logc_`), and lookups use binary search.
-
-### Trigrams (`TRIG`)
-
-`u32 n_contexts, u32 n_trigrams`, then `n_contexts` groups sorted by `(w1, w2)` (the two words
-before the cursor, oldest first):
-`varint w1_delta, varint w2, u8 round(ln(count(w1 w2)) × 16), varint n, n × (varint w3_delta, u8 round(ln(count) × 16))`.
-`w2` is the delta to the previous group's `w2` when `w1_delta` is 0, otherwise absolute. Word ids
-within a group are sorted, and `w3` deltas restart at 0 in every group. The context count is the
-full bigram count of `w1 w2` before pruning, so the trigram estimate stays a proper probability.
-
-Scoring (`KpDictionary::logp_ctx`): the bigram estimate `P2(w | w2)` is Dirichlet-smoothed towards
-the unigram (K = 50), and the trigram estimate towards `P2`:
-`P3 = (count(w1 w2 w) + k3 × P2) / (count(w1 w2) + k3)` with `k3 = 10`. A context that is not in
-the section backs off to `P2`; an unknown previous word to the unigram. Swipe ranking adds
-`nu × (ln P3 − ln P(w))`; tap-typing prediction (`predict_words`) ranks by `ln P3` plus the
-language posterior of the context.
-
-Readers before the trigram support skip the section.
-
-## Quantization and pruning
-
-The ranking uses counts only through log probabilities, so they are stored as logarithms:
-1/2048 nats for words and 1/16 nats (about 6 %) for bigrams and trigrams. Bigrams below a minimum
-count are dropped: 30 for Slovak and 10 for English in the shipped files. Trigrams below a minimum
-count (5 for Slovak, 3 for English) are dropped, and of the rest only the most frequent ones that
-fit into about 2 MB per language are kept.
-
-Replay on the user's 106 recorded swipes gives the same top-1 as the TSV version (82.1 %). The
-synthetic evaluations in `tools/swipe-replay` move by at most 0.6 pp (SK 87.8 → 87.6, EN
-89.3 → 88.7, mixed 88.6 → 88.9).
-
-## Sizes
-
-| | TSV (zip-compressed in the APK) | `.kpd` without trigrams, raw / gzip | `.kpd` with trigrams, raw / gzip |
-|---|---|---|---|
-| Slovak | 7.2 MB | 3.4 / 1.9 MB | 5.4 / 3.5 MB |
-| English | 4.0 MB | 1.2 / 0.9 MB | 3.1 / 2.3 MB |
-
-The Slovak dictionary without trigrams loads in 0.33 s instead of 0.79 s for the TSVs (Mac).
+| `WREC` | yes | one varint-coded word record per lowercase word |
+| `FREQ` | yes | `n_variants × u8`: frequency on the 0–255 log scale |
+| `BIGR` | no | delta-varint bigrams |
+| `TRIG` | no | delta-varint trigrams |
