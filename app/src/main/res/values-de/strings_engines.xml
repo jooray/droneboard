@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
-    <!-- prediction engine badges in the language lists -->
-    <string name="engine_neural">neuronal</string>
-    <string name="engine_ngrams">N-Gramme</string>
     <string name="engine_swipe">Wischen</string>
+    <string name="engine_neural">Smarte Vorschläge</string>
+    <string name="engine_ngrams">Nur Tipp-Vorschläge</string>
+    <string name="engine_layout_only">Nur Layout (ohne Wischen)</string>
 </resources>

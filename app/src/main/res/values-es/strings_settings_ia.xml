@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">Adaptar el color de la barra de navegación al fondo del teclado</string>
+    <string name="settings_screen_theme_and_layout">Tema y diseño</string>
+    <string name="settings_category_layout_and_fonts">Tamaño, diseño y fuentes</string>
+    <string name="toolbar_settings_summary">Modo: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · sin conexión</string>
+    <string name="search_no_results">No hay ajustes coincidentes</string>
+    <string name="more_options">Más opciones</string>
+    <string name="settings_screen_correction_and_dictionaries">Corrección y diccionarios</string>
+    <string name="settings_screen_glide_typing">Escritura deslizando</string>
+    <string name="settings_category_space_and_delete_gestures">Gestos de espacio y borrado</string>
+    <string name="settings_category_swipe_improvement">Mejora del deslizamiento</string>
+    <string name="settings_screen_voice_dictation">Dictado por voz</string>
+    <string name="settings_screen_clipboard">Portapapeles</string>
+    <string name="settings_screen_backup_and_advanced">Copia de seguridad y avanzado</string>
+    <string name="settings_category_developer_tuning">Desarrollo y ajustes finos</string>
+    <string name="settings_screen_about_and_support">Acerca de y apoyo</string>
+    <string name="clipboard_screen_summary">Historial, recortes rápidos y retención</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Soporte completo (deslizar y predicciones)</string>
+    <string name="languages_section_other">Otros idiomas (solo tocar / distribución)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">Mostrar %1$d idioma más</item>
+        <item quantity="other">Mostrar los %1$d idiomas adicionales</item>
+    </plurals>
+    <string name="languages_hide_other">Ocultar otros idiomas</string>
+    <string name="secondary_layouts_summary">Símbolos, números, teclado numérico, emojis y portapapeles</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Desactivada por defecto para no cambiar palabras sin aviso. Al activarla, la barra espaciadora y la puntuación corrigen errores.</string>
+    <string name="clear_learned_words_title">Borrar palabras aprendidas</string>
+    <string name="clear_learned_words_summary">Eliminar palabras aprendidas al escribir sin desactivar las sugerencias</string>
+    <string name="clear_learned_words_confirm_message">¿Eliminar todas las palabras aprendidas al escribir? Las palabras de tu diccionario personal no se verán afectadas.</string>
+    <string name="clear_learned_words_confirm_action">Borrar</string>
+    <string name="clear_learned_words_done">Palabras aprendidas borradas</string>
+    <string name="smart_predictions_title">Predicciones inteligentes en el dispositivo</string>
+    <string name="smart_predictions_summary">Usar el modelo de lenguaje sin conexión de Droneboard para mejores predicciones y deslizamiento en idiomas compatibles</string>
+    <string name="dictionaries_summary">Listas de palabras integradas y personalizadas</string>
+    <string name="personal_dictionary_weight_label">Peso %1$d</string>
+    <string name="personal_dictionary_empty_title">Aún no hay palabras</string>
+    <string name="personal_dictionary_empty_summary">Añade nombres, jerga o términos técnicos para que Droneboard los sugiera, o importa una lista desde un archivo.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">¿Grabar deslizamientos localmente?</string>
+    <string name="typing_swipes_privacy_message">Las palabras y trazos deslizados se guardarán solo en este dispositivo para analizar y mejorar la precisión. Nunca se graban contraseñas ni el modo incógnito, y nada se envía a internet.</string>
+    <string name="typing_swipes_privacy_confirm">Activar</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Listo para dictado sin conexión</string>
+    <string name="dictation_status_ready_summary">Offline Speech to Text está instalado y activo en este dispositivo.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text listo</string>
+    <string name="dictation_status_missing_short">Instalar Offline Speech to Text</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text requiere atención</string>
+    <string name="dictation_status_unsupported_short">Requiere Android 13 o superior</string>
+    <string name="dictation_status_unsupported_detail">El dictado sin conexión integrado usa la API de audio de Android 13 y no está disponible en esta versión de Android.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">Paso %1$d de %2$d</string>
+    <string name="setup_welcome_subtitle">Escritura deslizando sin conexión, predicciones inteligentes y dictado por voz — en tu teléfono.</string>
+    <string name="setup_step3_languages_title">Idiomas y escritura</string>
+    <string name="setup_step3_languages_subtitle">Revisa tus idiomas y valores predeterminados. Puedes cambiar todo más adelante en Ajustes.</string>
+    <string name="setup_step3_languages_card_title">Idiomas de escritura</string>
+    <string name="setup_step3_languages_card_summary">Toca cualquier idioma en Ajustes para cambiar entre QWERTY y QWERTZ y activar idiomas de deslizamiento.</string>
+    <string name="setup_step3_configure_languages">Elegir idiomas y diseños</string>
+    <string name="setup_step3_autocorrect_title">Autocorrección</string>
+    <string name="setup_step3_autocorrect_summary">Droneboard deja la autocorrección desactivada por defecto para no sustituir palabras sin aviso. Las sugerencias siguen apareciendo encima del teclado.</string>
+    <string name="setup_step4_try_title">Prueba Droneboard</string>
+    <string name="setup_step4_try_subtitle">Toca o desliza abajo para probar tu nuevo teclado ahora mismo.</string>
+    <string name="setup_step4_try_placeholder">Escribe o desliza unas palabras aquí…</string>
+    <string name="setup_step4_tips_title">Atajos útiles</string>
+    <string name="setup_tip_trackpad_title">Mantén la barra espaciadora</string>
+    <string name="setup_tip_trackpad_detail">Mueve el cursor como un panel táctil</string>
+    <string name="setup_tip_delete_title">Desliza la tecla borrar</string>
+    <string name="setup_tip_delete_detail">Borra palabras enteras con un gesto</string>
+    <string name="setup_tip_edit_title">Mantén A / X / C / V / Z / Y</string>
+    <string name="setup_tip_edit_detail">Seleccionar todo, cortar, copiar, pegar, deshacer y rehacer</string>
+    <string name="setup_action_next">Siguiente</string>
+    <string name="setup_action_skip">Omitir</string>
+    <string name="setup_action_back">Atrás</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">Licencia de pesos del modelo FUTO</string>
+    <string name="about_futo_swipe_license_unavailable">No se pudo cargar el texto de la licencia.</string>
+    <string name="keyboard_tips_title">Consejos del teclado</string>
+    <string name="keyboard_tips_summary">Gestos, atajos de edición y acciones rápidas</string>
+    <string name="tip_trackpad_title">Panel táctil en la barra espaciadora</string>
+    <string name="tip_trackpad_body">Mantén pulsada la barra espaciadora para convertir el teclado en un panel táctil preciso, o desliza a izquierda y derecha sobre ella.</string>
+    <string name="tip_edit_shortcuts_title">Atajos de edición (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Mantén A para seleccionar todo, X para cortar, C para copiar, V para pegar, Z para deshacer e Y para rehacer.</string>
+    <string name="tip_delete_swipe_title">Deslizar Borrar para eliminar palabras</string>
+    <string name="tip_delete_swipe_body">Arrastra hacia la izquierda desde la tecla Borrar para seleccionar y eliminar palabras completas de un solo gesto.</string>
+    <string name="tip_dictation_undo_title">Deshacer bloque dictado</string>
+    <string name="tip_dictation_undo_body">Justo al terminar un dictado por voz, pulsa Borrar una vez para eliminar toda la frase dictada.</string>
+    <string name="tip_quick_clips_title">Recortes rápidos y portapapeles fijado</string>
+    <string name="tip_quick_clips_body">Los enlaces, códigos y textos recién copiados aparecen encima del teclado. Mantén pulsado para fijar o desliza a la izquierda para quitar.</string>
+    <string name="tip_resize_title">Tamaño y posición</string>
+    <string name="tip_resize_body">Abre Cambiar tamaño desde la barra de herramientas para arrastrar altura, ancho o posición a una mano directamente en pantalla.</string>
+    <string name="tip_shift_symbols_title">Mayúsculas y símbolos rápidos</string>
+    <string name="tip_shift_symbols_body">Desliza desde Mayús o ?123 a otra tecla para una sola mayúscula o símbolo. Selecciona texto y toca Mayús para alternar mayúsculas y minúsculas.</string>
+    <string name="tip_toolbar_incognito_title">Fijar herramientas e Incógnito</string>
+    <string name="tip_toolbar_incognito_body">Mantén pulsados los iconos de la barra para fijarlos. Activa el modo incógnito para pausar el aprendizaje de palabras y el historial del portapapeles.</string>
+    <string name="save_log_success">Registro guardado</string>
+    <string name="save_log_failed">No se pudo guardar el registro</string>
+    <string name="crash_report_found">Se encontraron informes de fallos</string>
+    <string name="crash_report_ignore">Ignorar</string>
+    <string name="crash_report_save">Guardar</string>
+</resources>

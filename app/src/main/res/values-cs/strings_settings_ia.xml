@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">Přizpůsobit barvu navigační lišty pozadí klávesnice</string>
+    <string name="settings_screen_theme_and_layout">Motiv a rozložení</string>
+    <string name="settings_category_layout_and_fonts">Velikost, rozložení a písmo</string>
+    <string name="toolbar_settings_summary">Režim: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · offline</string>
+    <string name="search_no_results">Žádná odpovídající nastavení</string>
+    <string name="more_options">Další možnosti</string>
+    <string name="settings_screen_correction_and_dictionaries">Opravy textu a slovníky</string>
+    <string name="settings_screen_glide_typing">Psaní tahem</string>
+    <string name="settings_category_space_and_delete_gestures">Gesta mezerníku a mazání</string>
+    <string name="settings_category_swipe_improvement">Zlepšování psaní tahem</string>
+    <string name="settings_screen_voice_dictation">Hlasové diktování</string>
+    <string name="settings_screen_clipboard">Schránka</string>
+    <string name="settings_screen_backup_and_advanced">Záloha a pokročilé</string>
+    <string name="settings_category_developer_tuning">Vývojářské a ladění</string>
+    <string name="settings_screen_about_and_support">O aplikaci a podpora</string>
+    <string name="clipboard_screen_summary">Historie, rychlé výstřižky a uchovávání</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Plná podpora (tah a návrhy)</string>
+    <string name="languages_section_other">Ostatní jazyky (jen klepání / rozložení)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">Zobrazit %1$d další jazyk</item>
+        <item quantity="few">Zobrazit %1$d další jazyky</item>
+        <item quantity="other">Zobrazit všech %1$d dalších jazyků</item>
+    </plurals>
+    <string name="languages_hide_other">Skrýt ostatní jazyky</string>
+    <string name="secondary_layouts_summary">Symboly, čísla, numerická klávesnice, emoji a schránka</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Výchozí stav je vypnuto, aby se slova potichu nepřepisovala. Po zapnutí mezerník a interpunkce opravují překlepy.</string>
+    <string name="clear_learned_words_title">Vymazat naučená slova</string>
+    <string name="clear_learned_words_summary">Smazat slova naučená z psaní bez vypnutí návrhů</string>
+    <string name="clear_learned_words_confirm_message">Smazat všechna slova naučená z vašeho psaní? Slova v osobním slovníku zůstanou zachována.</string>
+    <string name="clear_learned_words_confirm_action">Vymazat</string>
+    <string name="clear_learned_words_done">Naučená slova byla vymazána</string>
+    <string name="smart_predictions_title">Chytré návrhy v zařízení</string>
+    <string name="smart_predictions_summary">Používat offline jazykový model Droneboard pro přesnější návrhy slov a tahů v podporovaných jazycích</string>
+    <string name="dictionaries_summary">Vestavěné a vlastní seznamy slov</string>
+    <string name="personal_dictionary_weight_label">Váha %1$d</string>
+    <string name="personal_dictionary_empty_title">Zatím žádná slova</string>
+    <string name="personal_dictionary_empty_summary">Přidejte jména, slang nebo odborné termíny, aby je Droneboard navrhoval, nebo importujte seznam ze souboru.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">Nahrávat tahy lokálně?</string>
+    <string name="typing_swipes_privacy_message">Napsaná slova a dráhy dotyku se uloží pouze v tomto zařízení pro vyhodnocení a zlepšení přesnosti tahů. Hesla a anonymní režim se nikdy nenahrávají a nic se neodesílá.</string>
+    <string name="typing_swipes_privacy_confirm">Zapnout</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Připraveno k offline diktování</string>
+    <string name="dictation_status_ready_summary">Aplikace Offline Speech to Text je v tomto zařízení nainstalovaná a aktivní.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text připraveno</string>
+    <string name="dictation_status_missing_short">Nainstalovat Offline Speech to Text</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text vyžaduje pozornost</string>
+    <string name="dictation_status_unsupported_short">Vyžaduje Android 13 nebo novější</string>
+    <string name="dictation_status_unsupported_detail">Vestavěné offline diktování využívá rozhraní Androidu 13 pro předání zvuku a na této verzi Androidu není dostupné.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">Krok %1$d z %2$d</string>
+    <string name="setup_welcome_subtitle">Offline psaní tahem, chytré návrhy a hlasové diktování — přímo v telefonu.</string>
+    <string name="setup_step3_languages_title">Jazyky a psaní</string>
+    <string name="setup_step3_languages_subtitle">Zkontrolujte jazyky a výchozí volby. Vše můžete později změnit v Nastavení.</string>
+    <string name="setup_step3_languages_card_title">Jazyky psaní</string>
+    <string name="setup_step3_languages_card_summary">Klepnutím na jazyk v Nastavení přepnete QWERTY / QWERTZ a nastavíte jazyky psaní tahem.</string>
+    <string name="setup_step3_configure_languages">Vybrat jazyky a rozložení</string>
+    <string name="setup_step3_autocorrect_title">Automatické opravy</string>
+    <string name="setup_step3_autocorrect_summary">Droneboard nechává automatické opravy ve výchozím stavu vypnuté, aby se slova potichu nepřepisovala. Návrhy se stále zobrazují nad klávesnicí.</string>
+    <string name="setup_step4_try_title">Vyzkoušejte Droneboard</string>
+    <string name="setup_step4_try_subtitle">Klepněte nebo pište tahem níže a hned si novou klávesnici vyzkoušejte.</string>
+    <string name="setup_step4_try_placeholder">Napište nebo potáhněte pár slov sem…</string>
+    <string name="setup_step4_tips_title">Užitečné zkratky</string>
+    <string name="setup_tip_trackpad_title">Podržte mezerník</string>
+    <string name="setup_tip_trackpad_detail">Posouvejte kurzor jako na touchpadu</string>
+    <string name="setup_tip_delete_title">Přejeďte klávesou mazání</string>
+    <string name="setup_tip_delete_detail">Smažte celá slova jedním tahem</string>
+    <string name="setup_tip_edit_title">Podržte A / X / C / V / Z / Y</string>
+    <string name="setup_tip_edit_detail">Vybrat vše, vyjmout, kopírovat, vložit, zpět a znovu</string>
+    <string name="setup_action_next">Další</string>
+    <string name="setup_action_skip">Přeskočit</string>
+    <string name="setup_action_back">Zpět</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">Licence vah modelu FUTO</string>
+    <string name="about_futo_swipe_license_unavailable">Text licence se nepodařilo načíst.</string>
+    <string name="keyboard_tips_title">Tipy pro klávesnici</string>
+    <string name="keyboard_tips_summary">Gesta, editační zkratky a rychlé akce</string>
+    <string name="tip_trackpad_title">Touchpad na mezerníku a kurzor</string>
+    <string name="tip_trackpad_body">Podržte mezerník a proměňte klávesnici v přesný touchpad, nebo přejeďte doleva a doprava po mezerníku pro pohyb kurzoru.</string>
+    <string name="tip_edit_shortcuts_title">Editační zkratky (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Podržte A pro vybrat vše, X pro vyjmout, C pro kopírovat, V pro vložit, Z pro zpět a Y pro znovu.</string>
+    <string name="tip_delete_swipe_title">Mazání celých slov tahem</string>
+    <string name="tip_delete_swipe_body">Přejeďte doleva z klávesy mazání pro označení a smazání celých slov jedním pohybem.</string>
+    <string name="tip_dictation_undo_title">Vrácení celého diktovaného bloku</string>
+    <string name="tip_dictation_undo_body">Hned po dokončení hlasového diktování jednou klepněte na klávesu mazání a smažete celou nadiktovanou větu.</string>
+    <string name="tip_quick_clips_title">Rychlé výstřižky a připnutá schránka</string>
+    <string name="tip_quick_clips_body">Nedávno zkopírované odkazy, kódy a text se objeví nad klávesnicí na jedno klepnutí. Dlouhým stiskem položku připnete, přejetím doleva ji odeberete.</string>
+    <string name="tip_resize_title">Velikost a poloha</string>
+    <string name="tip_resize_body">Otevřete Změnu velikosti z lišty nástrojů a tažením upravte výšku, šířku nebo jednoruční polohu přímo na obrazovce.</string>
+    <string name="tip_shift_symbols_title">Rychlá velká písmena a symboly</string>
+    <string name="tip_shift_symbols_body">Přejeďte ze Shift nebo ?123 na jinou klávesu pro jedno velké písmeno či symbol. Označte text a klepnutím na Shift přepínejte velikost písmen.</string>
+    <string name="tip_toolbar_incognito_title">Připínání nástrojů a anonymní režim</string>
+    <string name="tip_toolbar_incognito_body">Dlouhým stiskem ikon v liště nástrojů je připnete k liště návrhů. Zapněte anonymní režim pro pozastavení učení slov a ukládání schránky.</string>
+    <string name="save_log_success">Záznam uložen</string>
+    <string name="save_log_failed">Záznam se nepodařilo uložit</string>
+    <string name="crash_report_found">Nalezeny zprávy o pádu</string>
+    <string name="crash_report_ignore">Ignorovat</string>
+    <string name="crash_report_save">Uložit</string>
+</resources>

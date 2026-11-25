@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="remove_suggestion_action">Odebrat návrh</string>
+    <string name="remove_suggestion_confirm">Odebrat „%1$s“?</string>
+    <string name="cancel_remove_suggestion">Zrušit</string>
+    <string name="more_suggestions_button_description">Více návrhů</string>
+    <string name="dismiss_clipboard_suggestion">Zavřít</string>
+    <string name="voice_try_again">Zkusit znovu</string>
+    <string name="resize_increase_size">Zvětšit velikost</string>
+    <string name="resize_decrease_size">Zmenšit velikost</string>
+    <string name="compact_switch_side">Přepnout stranu</string>
+    <string name="compact_expand_full">Roztáhnout na celou šířku</string>
+    <string name="compact_resize">Změnit velikost klávesnice</string>
+    <string name="toolbar_open_description">Otevřít lištu nástrojů</string>
+    <string name="toolbar_close_description">Zavřít lištu nástrojů</string>
+    <string name="toolbar_incognito_open_description">Anonymní režim aktivní — otevřít lištu nástrojů</string>
+    <string name="toolbar_incognito_close_description">Anonymní režim aktivní — zavřít lištu nástrojů</string>
+</resources>

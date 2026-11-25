@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">A rendszer navigációs sávjának színe kövesse a billentyűzet hátterét</string>
+    <string name="settings_screen_theme_and_layout">Téma és kiosztás</string>
+    <string name="settings_category_layout_and_fonts">Méret, kiosztás és betűtípusok</string>
+    <string name="toolbar_settings_summary">Mód: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · offline</string>
+    <string name="search_no_results">Nincs találat</string>
+    <string name="more_options">További lehetőségek</string>
+    <string name="settings_screen_correction_and_dictionaries">Szövegjavítás és szótárak</string>
+    <string name="settings_screen_glide_typing">Csúsztatásos gépelés</string>
+    <string name="settings_category_space_and_delete_gestures">Szóköz- és törlésgesztusok</string>
+    <string name="settings_category_swipe_improvement">Csúsztatás fejlesztése</string>
+    <string name="settings_screen_voice_dictation">Hangos diktálás</string>
+    <string name="settings_screen_clipboard">Vágólap</string>
+    <string name="settings_screen_backup_and_advanced">Biztonsági mentés és haladó</string>
+    <string name="settings_category_developer_tuning">Fejlesztői és finomhangolás</string>
+    <string name="settings_screen_about_and_support">Névjegy és támogatás</string>
+    <string name="clipboard_screen_summary">Előzmények, gyors kivágások és megőrzés</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Teljes támogatás (csúsztatás és javaslatok)</string>
+    <string name="languages_section_other">Egyéb nyelvek (csak gépelés / kiosztás)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">%1$d további nyelv megjelenítése</item>
+        <item quantity="other">Összes (%1$d) további nyelv megjelenítése</item>
+    </plurals>
+    <string name="languages_hide_other">Egyéb nyelvek elrejtése</string>
+    <string name="secondary_layouts_summary">Szimbólumok, számok, számbillentyűzet, emoji és vágólap</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Alapértelmezés szerint kikapcsolva, hogy a szavak ne íródjanak át észrevétlenül. Bekapcsolva a szóköz és az írásjelek javítják az elgépeléseket.</string>
+    <string name="clear_learned_words_title">Tanult szavak törlése</string>
+    <string name="clear_learned_words_summary">A gépelésből tanult szavak törlése a javaslatok kikapcsolása nélkül</string>
+    <string name="clear_learned_words_confirm_message">Törlöd az összes gépelésből tanult szót? A személyes szótárad szavai megmaradnak.</string>
+    <string name="clear_learned_words_confirm_action">Törlés</string>
+    <string name="clear_learned_words_done">Tanult szavak törölve</string>
+    <string name="smart_predictions_title">Okos, eszközön futó javaslatok</string>
+    <string name="smart_predictions_summary">A Droneboard offline nyelvi modelljének használata pontosabb szó- és csúsztatási javaslatokhoz a támogatott nyelveken</string>
+    <string name="dictionaries_summary">Beépített és saját szólisták</string>
+    <string name="personal_dictionary_weight_label">Súly: %1$d</string>
+    <string name="personal_dictionary_empty_title">Még nincsenek szavak</string>
+    <string name="personal_dictionary_empty_summary">Adj hozzá neveket, szlenget vagy szakkifejezéseket, hogy a Droneboard javasolja őket, vagy importálj listát fájlból.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">Csúsztatások helyi rögzítése?</string>
+    <string name="typing_swipes_privacy_message">A csúsztatott szavak és érintési útvonalak kizárólag ezen az eszközön kerülnek mentésre a pontosság vizsgálatához és javításához. Jelszavak és inkognitó mód sosem kerül rögzítésre, és semmi nem kerül feltöltésre.</string>
+    <string name="typing_swipes_privacy_confirm">Bekapcsolás</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Kész az offline diktálásra</string>
+    <string name="dictation_status_ready_summary">Az Offline Speech to Text telepítve van és aktív ezen az eszközön.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text kész</string>
+    <string name="dictation_status_missing_short">Offline Speech to Text telepítése</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text figyelmet igényel</string>
+    <string name="dictation_status_unsupported_short">Android 13 vagy újabb szükséges</string>
+    <string name="dictation_status_unsupported_detail">A beépített offline diktálás az Android 13 hangátadási felületét használja, és ezen az Android-verzión nem érhető el.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">%1$d / %2$d. lépés</string>
+    <string name="setup_welcome_subtitle">Offline csúsztatásos gépelés, okos javaslatok és hangos diktálás — közvetlenül a telefonodon.</string>
+    <string name="setup_step3_languages_title">Nyelvek és gépelés</string>
+    <string name="setup_step3_languages_subtitle">Ellenőrizd a gépelési nyelveket és alapbeállításokat. Később bármit módosíthatsz a Beállításokban.</string>
+    <string name="setup_step3_languages_card_title">Gépelési nyelvek</string>
+    <string name="setup_step3_languages_card_summary">Koppints bármely nyelvre a Beállításokban a QWERTY / QWERTZ váltáshoz és a csúsztatási nyelvek engedélyezéséhez.</string>
+    <string name="setup_step3_configure_languages">Nyelvek és kiosztások kiválasztása</string>
+    <string name="setup_step3_autocorrect_title">Automatikus javítás</string>
+    <string name="setup_step3_autocorrect_summary">A Droneboard alapértelmezetten kikapcsolva hagyja az automatikus javítást, így nem írja át észrevétlenül a szavaidat. A javaslatok továbbra is megjelennek a billentyűzet felett.</string>
+    <string name="setup_step4_try_title">Próbáld ki a Droneboardot</string>
+    <string name="setup_step4_try_subtitle">Gépelj vagy csúsztass lent, és próbáld ki az új billentyűzetet azonnal.</string>
+    <string name="setup_step4_try_placeholder">Írj vagy csúsztass ide pár szót…</string>
+    <string name="setup_step4_tips_title">Hasznos trükkök</string>
+    <string name="setup_tip_trackpad_title">Tartsd lenyomva a szóközt</string>
+    <string name="setup_tip_trackpad_detail">Mozgasd a kurzort úgy, mint egy érintőpadon</string>
+    <string name="setup_tip_delete_title">Csúsztass a törlés billentyűn</string>
+    <string name="setup_tip_delete_detail">Törölj egész szavakat egyetlen mozdulattal</string>
+    <string name="setup_tip_edit_title">Tartsd lenyomva: A / X / C / V / Z / Y</string>
+    <string name="setup_tip_edit_detail">Összes kijelölése, kivágás, másolás, beillesztés, visszavonás és ismétlés</string>
+    <string name="setup_action_next">Tovább</string>
+    <string name="setup_action_skip">Kihagyás</string>
+    <string name="setup_action_back">Vissza</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">FUTO modell-súlyok licence</string>
+    <string name="about_futo_swipe_license_unavailable">A licenc szövege nem tölthető be.</string>
+    <string name="keyboard_tips_title">Billentyűzet-tippek</string>
+    <string name="keyboard_tips_summary">Gesztusok, szerkesztési gyorsbillentyűk és gyors műveletek</string>
+    <string name="tip_trackpad_title">Szóköz érintőpad és kurzor</string>
+    <string name="tip_trackpad_body">Tartsd lenyomva a szóközt, hogy a billentyűzet pontos érintőpaddá váljon, vagy csúsztass rajta balra és jobbra a kurzor mozgatásához.</string>
+    <string name="tip_edit_shortcuts_title">Szerkesztési parancsok (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Tartsd lenyomva az A gombot az összes kijelöléséhez, X a kivágáshoz, C a másoláshoz, V a beillesztéshez, Z a visszavonáshoz és Y az ismétléshez.</string>
+    <string name="tip_delete_swipe_title">Szavak törlése csúsztatással</string>
+    <string name="tip_delete_swipe_body">Húzd balra az ujjad a Törlés billentyűről, hogy egész szavakat jelölj ki és törölj egyetlen mozdulattal.</string>
+    <string name="tip_dictation_undo_title">Diktált blokk visszavonása</string>
+    <string name="tip_dictation_undo_body">Közvetlenül a hangos diktálás után egyetlen Törlés érintéssel visszavonhatod a teljes lediktált szöveget.</string>
+    <string name="tip_quick_clips_title">Gyors kivágások és rögzített vágólap</string>
+    <string name="tip_quick_clips_body">A frissen másolt linkek, kódok és szövegek egyérintéses sávban jelennek meg. Hosszan nyomva rögzítheted, balra húzva törölheted őket.</string>
+    <string name="tip_resize_title">Méret és elhelyezkedés</string>
+    <string name="tip_resize_body">Nyisd meg az Átméretezést az eszköztárból, és húzással állítsd be a magasságot, szélességet vagy egykezes pozíciót.</string>
+    <string name="tip_shift_symbols_title">Gyors nagybetűk és szimbólumok</string>
+    <string name="tip_shift_symbols_body">Csúsztass a Shift vagy ?123 gombról egy másik billentyűre egyetlen nagybetűhöz vagy szimbólumhoz. Jelölj ki szöveget, és a Shift érintéssel válts kis- és nagybetű között.</string>
+    <string name="tip_toolbar_incognito_title">Eszköztár rögzítése és Inkognitó</string>
+    <string name="tip_toolbar_incognito_body">Hosszan nyomva rögzítheted az eszköztár ikonjait. Inkognitó módban szünetel a szótanulás és a vágólap mentése.</string>
+    <string name="save_log_success">Napló mentve</string>
+    <string name="save_log_failed">Nem sikerült menteni a naplót</string>
+    <string name="crash_report_found">Összeomlási jelentések találhatók</string>
+    <string name="crash_report_ignore">Mellőzés</string>
+    <string name="crash_report_save">Mentés</string>
+</resources>

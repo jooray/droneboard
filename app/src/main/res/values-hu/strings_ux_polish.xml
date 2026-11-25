@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="remove_suggestion_action">Javaslat eltávolítása</string>
+    <string name="remove_suggestion_confirm">Eltávolítod: „%1$s”?</string>
+    <string name="cancel_remove_suggestion">Mégse</string>
+    <string name="more_suggestions_button_description">További javaslatok</string>
+    <string name="dismiss_clipboard_suggestion">Bezárás</string>
+    <string name="voice_try_again">Újra</string>
+    <string name="resize_increase_size">Méret növelése</string>
+    <string name="resize_decrease_size">Méret csökkentése</string>
+    <string name="compact_switch_side">Oldal váltása</string>
+    <string name="compact_expand_full">Teljes szélesség</string>
+    <string name="compact_resize">Billentyűzet átméretezése</string>
+    <string name="toolbar_open_description">Eszköztár megnyitása</string>
+    <string name="toolbar_close_description">Eszköztár bezárása</string>
+    <string name="toolbar_incognito_open_description">Inkognitó aktív — eszköztár megnyitása</string>
+    <string name="toolbar_incognito_close_description">Inkognitó aktív — eszköztár bezárása</string>
+</resources>

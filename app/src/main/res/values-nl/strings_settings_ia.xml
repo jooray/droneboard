@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">Kleur van de systeemnavigatiebalk aanpassen aan de toetsenbordachtergrond</string>
+    <string name="settings_screen_theme_and_layout">Thema &amp; indeling</string>
+    <string name="settings_category_layout_and_fonts">Grootte, indeling &amp; lettertypen</string>
+    <string name="toolbar_settings_summary">Modus: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · offline</string>
+    <string name="search_no_results">Geen overeenkomende instellingen</string>
+    <string name="more_options">Meer opties</string>
+    <string name="settings_screen_correction_and_dictionaries">Tekstcorrectie &amp; woordenboeken</string>
+    <string name="settings_screen_glide_typing">Veegtypen</string>
+    <string name="settings_category_space_and_delete_gestures">Spatiebalk- &amp; wisgebaren</string>
+    <string name="settings_category_swipe_improvement">Veegtypen verbeteren</string>
+    <string name="settings_screen_voice_dictation">Spraakdicteren</string>
+    <string name="settings_screen_clipboard">Klembord</string>
+    <string name="settings_screen_backup_and_advanced">Back-up &amp; geavanceerd</string>
+    <string name="settings_category_developer_tuning">Ontwikkelaar &amp; afstelling</string>
+    <string name="settings_screen_about_and_support">Over &amp; ondersteuning</string>
+    <string name="clipboard_screen_summary">Geschiedenis, snelle knipsels en bewaartijd</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Volledige ondersteuning (vegen &amp; voorspellingen)</string>
+    <string name="languages_section_other">Andere talen (alleen tikken / indeling)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">%1$d andere taal tonen</item>
+        <item quantity="other">Alle %1$d andere talen tonen</item>
+    </plurals>
+    <string name="languages_hide_other">Andere talen verbergen</string>
+    <string name="secondary_layouts_summary">Symbolen, cijfers, numeriek toetsenblok, emoji &amp; klembord</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Standaard uit zodat woorden niet ongemerkt worden vervangen. Indien aan corrigeren spatie en leestekens typfouten.</string>
+    <string name="clear_learned_words_title">Geleerde woorden wissen</string>
+    <string name="clear_learned_words_summary">Woorden die tijdens het typen zijn geleerd verwijderen zonder suggesties uit te schakelen</string>
+    <string name="clear_learned_words_confirm_message">Alle tijdens het typen geleerde woorden wissen? Woorden in je persoonlijke woordenboek blijven behouden.</string>
+    <string name="clear_learned_words_confirm_action">Wissen</string>
+    <string name="clear_learned_words_done">Geleerde woorden gewist</string>
+    <string name="smart_predictions_title">Slimme voorspellingen op het apparaat</string>
+    <string name="smart_predictions_summary">Gebruik het offline taalmodel van Droneboard voor betere woord- en veegvoorspellingen in ondersteunde talen</string>
+    <string name="dictionaries_summary">Ingebouwde en eigen woordenlijsten</string>
+    <string name="personal_dictionary_weight_label">Gewicht %1$d</string>
+    <string name="personal_dictionary_empty_title">Nog geen woorden</string>
+    <string name="personal_dictionary_empty_summary">Voeg namen, vakjargon of eigen termen toe zodat Droneboard ze voorstelt, of importeer een lijst uit een bestand.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">Veegbewegingen lokaal opnemen?</string>
+    <string name="typing_swipes_privacy_message">Geveegde woorden en aanraakpaden worden alleen op dit apparaat opgeslagen om de nauwkeurigheid te onderzoeken en te verbeteren. Wachtwoorden en incognito worden nooit opgenomen en niets wordt geüpload.</string>
+    <string name="typing_swipes_privacy_confirm">Inschakelen</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Klaar voor offline dicteren</string>
+    <string name="dictation_status_ready_summary">Offline Speech to Text is geïnstalleerd en actief op dit apparaat.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text gereed</string>
+    <string name="dictation_status_missing_short">Offline Speech to Text installeren</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text vereist aandacht</string>
+    <string name="dictation_status_unsupported_short">Vereist Android 13 of nieuwer</string>
+    <string name="dictation_status_unsupported_detail">Ingebouwd offline dicteren gebruikt de audio-API van Android 13 en is niet beschikbaar op deze Android-versie.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">Stap %1$d van %2$d</string>
+    <string name="setup_welcome_subtitle">Offline veegtypen, slimme voorspellingen en spraakdicteren — rechtstreeks op je telefoon.</string>
+    <string name="setup_step3_languages_title">Talen &amp; typen</string>
+    <string name="setup_step3_languages_subtitle">Controleer je typtalen en standaardinstellingen. Je kunt alles later aanpassen in Instellingen.</string>
+    <string name="setup_step3_languages_card_title">Typtalen</string>
+    <string name="setup_step3_languages_card_summary">Tik op een taal in Instellingen om tussen QWERTY en QWERTZ te wisselen en veegtalen in te schakelen.</string>
+    <string name="setup_step3_configure_languages">Talen &amp; indelingen kiezen</string>
+    <string name="setup_step3_autocorrect_title">Autocorrectie</string>
+    <string name="setup_step3_autocorrect_summary">Droneboard laat autocorrectie standaard uit zodat woorden niet ongemerkt worden herschreven. Suggesties blijven boven het toetsenbord staan.</string>
+    <string name="setup_step4_try_title">Probeer Droneboard</string>
+    <string name="setup_step4_try_subtitle">Tik of veeg hieronder om je nieuwe toetsenbord meteen te testen.</string>
+    <string name="setup_step4_try_placeholder">Typ of veeg hier een paar woorden…</string>
+    <string name="setup_step4_tips_title">Handige sneltoetsen</string>
+    <string name="setup_tip_trackpad_title">Spatiebalk ingedrukt houden</string>
+    <string name="setup_tip_trackpad_detail">Verplaats de cursor als een touchpad</string>
+    <string name="setup_tip_delete_title">Veeg op Backspace</string>
+    <string name="setup_tip_delete_detail">Verwijder hele woorden in één beweging</string>
+    <string name="setup_tip_edit_title">Houd A / X / C / V / Z / Y ingedrukt</string>
+    <string name="setup_tip_edit_detail">Alles selecteren, knippen, kopiëren, plakken, ongedaan maken &amp; opnieuw</string>
+    <string name="setup_action_next">Volgende</string>
+    <string name="setup_action_skip">Overslaan</string>
+    <string name="setup_action_back">Terug</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">Licentie voor FUTO-modelgewichten</string>
+    <string name="about_futo_swipe_license_unavailable">Licentietekst kon niet worden geladen.</string>
+    <string name="keyboard_tips_title">Toetsenbordtips</string>
+    <string name="keyboard_tips_summary">Gebaren, bewerkingssneltoetsen en snelle acties</string>
+    <string name="tip_trackpad_title">Spatiebalk-touchpad &amp; cursor</string>
+    <string name="tip_trackpad_body">Houd de spatiebalk ingedrukt om het toetsenbord als precisie-touchpad te gebruiken, of veeg links en rechts over de spatiebalk.</string>
+    <string name="tip_edit_shortcuts_title">Bewerkingssneltoetsen (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Houd A ingedrukt voor alles selecteren, X voor knippen, C voor kopiëren, V voor plakken, Z voor ongedaan maken en Y voor opnieuw.</string>
+    <string name="tip_delete_swipe_title">Veeg op Backspace om woorden te wissen</string>
+    <string name="tip_delete_swipe_body">Sleep naar links vanaf de wistoets om hele woorden in één beweging te markeren en te verwijderen.</string>
+    <string name="tip_dictation_undo_title">Gedicteerd blok ongedaan maken</string>
+    <string name="tip_dictation_undo_body">Tik direct na het dicteren één keer op Backspace om het hele gedicteerde fragment te verwijderen.</string>
+    <string name="tip_quick_clips_title">Snelle knipsels &amp; vastgezet klembord</string>
+    <string name="tip_quick_clips_body">Recent gekopieerde links, codes en tekst verschijnen als knoppen boven het toetsenbord. Houd ingedrukt om vast te zetten of veeg naar links om te verwijderen.</string>
+    <string name="tip_resize_title">Grootte &amp; positie</string>
+    <string name="tip_resize_body">Open Formaat wijzigen via de werkbalk om hoogte, breedte of eenhandige positie direct op het scherm te verslepen.</string>
+    <string name="tip_shift_symbols_title">Snelle hoofdletters &amp; symbolen</string>
+    <string name="tip_shift_symbols_body">Veeg vanaf Shift of ?123 naar een andere toets voor één hoofdletter of symbool. Selecteer tekst en tik op Shift om hoofd- en kleine letters te wisselen.</string>
+    <string name="tip_toolbar_incognito_title">Werkbalk vastzetten &amp; Incognito</string>
+    <string name="tip_toolbar_incognito_body">Houd pictogrammen in de werkbalk ingedrukt om ze vast te zetten. Schakel Incognito in om woordleren en klembordopslag te pauzeren.</string>
+    <string name="save_log_success">Logboek opgeslagen</string>
+    <string name="save_log_failed">Kon logboek niet opslaan</string>
+    <string name="crash_report_found">Crashrapporten gevonden</string>
+    <string name="crash_report_ignore">Negeren</string>
+    <string name="crash_report_save">Opslaan</string>
+</resources>

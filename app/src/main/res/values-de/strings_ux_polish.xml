@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="remove_suggestion_action">Vorschlag entfernen</string>
+    <string name="remove_suggestion_confirm">„%1$s“ entfernen?</string>
+    <string name="cancel_remove_suggestion">Abbrechen</string>
+    <string name="more_suggestions_button_description">Weitere Vorschläge</string>
+    <string name="dismiss_clipboard_suggestion">Schließen</string>
+    <string name="voice_try_again">Erneut versuchen</string>
+    <string name="resize_increase_size">Größe erhöhen</string>
+    <string name="resize_decrease_size">Größe verringern</string>
+    <string name="compact_switch_side">Seite wechseln</string>
+    <string name="compact_expand_full">Auf volle Breite erweitern</string>
+    <string name="compact_resize">Tastaturgröße ändern</string>
+    <string name="toolbar_open_description">Symbolleiste öffnen</string>
+    <string name="toolbar_close_description">Symbolleiste schließen</string>
+    <string name="toolbar_incognito_open_description">Inkognito aktiv — Symbolleiste öffnen</string>
+    <string name="toolbar_incognito_close_description">Inkognito aktiv — Symbolleiste schließen</string>
+</resources>

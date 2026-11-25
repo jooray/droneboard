@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="remove_suggestion_action">Suggestie verwijderen</string>
+    <string name="remove_suggestion_confirm">“%1$s” verwijderen?</string>
+    <string name="cancel_remove_suggestion">Annuleren</string>
+    <string name="more_suggestions_button_description">Meer suggesties</string>
+    <string name="dismiss_clipboard_suggestion">Sluiten</string>
+    <string name="voice_try_again">Opnieuw proberen</string>
+    <string name="resize_increase_size">Groter maken</string>
+    <string name="resize_decrease_size">Kleiner maken</string>
+    <string name="compact_switch_side">Kant wisselen</string>
+    <string name="compact_expand_full">Uitbreiden naar volledige breedte</string>
+    <string name="compact_resize">Toetsenbordgrootte aanpassen</string>
+    <string name="toolbar_open_description">Werkbalk openen</string>
+    <string name="toolbar_close_description">Werkbalk sluiten</string>
+    <string name="toolbar_incognito_open_description">Incognito actief — werkbalk openen</string>
+    <string name="toolbar_incognito_close_description">Incognito actief — werkbalk sluiten</string>
+</resources>

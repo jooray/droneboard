@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <!-- Appearance -->
+    <string name="theme_navbar_summary">Farbe der System-Navigationsleiste an den Tastaturhintergrund anpassen</string>
+    <string name="settings_screen_theme_and_layout">Design &amp; Layout</string>
+    <string name="settings_category_layout_and_fonts">Größe, Layout &amp; Schriftarten</string>
+    <string name="toolbar_settings_summary">Modus: %1$s</string>
+
+    <!-- Main settings & Chrome -->
+    <string name="brand_version_offline">%1$s · offline</string>
+    <string name="search_no_results">Keine passenden Einstellungen</string>
+    <string name="more_options">Weitere Optionen</string>
+    <string name="settings_screen_correction_and_dictionaries">Textkorrektur &amp; Wörterbücher</string>
+    <string name="settings_screen_glide_typing">Wisch-Eingabe</string>
+    <string name="settings_category_space_and_delete_gestures">Leertasten- &amp; Löschgesten</string>
+    <string name="settings_category_swipe_improvement">Wisch-Erkennung verbessern</string>
+    <string name="settings_screen_voice_dictation">Sprachdiktat</string>
+    <string name="settings_screen_clipboard">Zwischenablage</string>
+    <string name="settings_screen_backup_and_advanced">Sicherung &amp; Erweitert</string>
+    <string name="settings_category_developer_tuning">Entwickler &amp; Feineinstellung</string>
+    <string name="settings_screen_about_and_support">Über &amp; Unterstützung</string>
+    <string name="clipboard_screen_summary">Verlauf, Quick Clips und Aufbewahrung</string>
+
+    <!-- Languages -->
+    <string name="languages_section_full_support">Volle Unterstützung (Wischen &amp; Vorschläge)</string>
+    <string name="languages_section_other">Weitere Sprachen (nur Tippen / Layout)</string>
+    <plurals name="languages_show_all_other">
+        <item quantity="one">%1$d weitere Sprache anzeigen</item>
+        <item quantity="other">Alle %1$d weiteren Sprachen anzeigen</item>
+    </plurals>
+    <string name="languages_hide_other">Weitere Sprachen ausblenden</string>
+    <string name="secondary_layouts_summary">Symbole, Zahlen, Ziffernblock, Emoji &amp; Zwischenablage</string>
+
+    <!-- Text correction & Dictionaries -->
+    <string name="auto_correction_default_off_summary">Standardmäßig aus, damit Wörter nicht unbemerkt ersetzt werden. Wenn aktiv, korrigieren Leertaste und Satzzeichen Tippfehler.</string>
+    <string name="clear_learned_words_title">Gelernte Wörter löschen</string>
+    <string name="clear_learned_words_summary">Beim Tippen gelernte Wörter löschen, ohne Vorschläge abzuschalten</string>
+    <string name="clear_learned_words_confirm_message">Alle beim Tippen gelernten Wörter löschen? Einträge im persönlichen Wörterbuch bleiben erhalten.</string>
+    <string name="clear_learned_words_confirm_action">Löschen</string>
+    <string name="clear_learned_words_done">Gelernte Wörter gelöscht</string>
+    <string name="smart_predictions_title">Smarte Offline-Vorschläge</string>
+    <string name="smart_predictions_summary">Lokales Droneboard-Sprachmodell für bessere Wort- und Wischvorschläge in unterstützten Sprachen nutzen</string>
+    <string name="dictionaries_summary">Integrierte und eigene Wortlisten</string>
+    <string name="personal_dictionary_weight_label">Gewicht %1$d</string>
+    <string name="personal_dictionary_empty_title">Noch keine Wörter</string>
+    <string name="personal_dictionary_empty_summary">Füge Namen, Slang oder Fachbegriffe hinzu, damit Droneboard sie vorschlägt, oder importiere eine Wortliste.</string>
+
+    <!-- Glide typing privacy confirmation -->
+    <string name="typing_swipes_privacy_title">Wischgesten lokal aufzeichnen?</string>
+    <string name="typing_swipes_privacy_message">Gewischte Wörter und Berührungspfade werden nur auf diesem Gerät gespeichert, um die Erkennung zu prüfen und zu verbessern. Passwörter und der Inkognito-Modus werden nie aufgezeichnet und nichts wird hochgeladen.</string>
+    <string name="typing_swipes_privacy_confirm">Aktivieren</string>
+
+    <!-- Voice dictation status -->
+    <string name="dictation_status_ready_title">Bereit für Offline-Diktat</string>
+    <string name="dictation_status_ready_summary">Offline Speech to Text ist auf diesem Gerät installiert und aktiv.</string>
+    <string name="dictation_status_ready_short">Offline Speech to Text bereit</string>
+    <string name="dictation_status_missing_short">Offline Speech to Text installieren</string>
+    <string name="dictation_status_unavailable_short">Offline Speech to Text prüfen</string>
+    <string name="dictation_status_unsupported_short">Erfordert Android 13 oder neuer</string>
+    <string name="dictation_status_unsupported_detail">Das integrierte Offline-Diktat nutzt die Audio-Schnittstelle von Android 13 und ist auf dieser Android-Version nicht verfügbar.</string>
+
+    <!-- Setup wizard -->
+    <string name="setup_wizard_step_progress">Schritt %1$d von %2$d</string>
+    <string name="setup_welcome_subtitle">Offline-Wischeingabe, smarte Vorschläge und Sprachdiktat — direkt auf deinem Smartphone.</string>
+    <string name="setup_step3_languages_title">Sprachen &amp; Eingabe</string>
+    <string name="setup_step3_languages_subtitle">Prüfe deine Eingabesprachen und Standardwerte. Alles lässt sich später in den Einstellungen ändern.</string>
+    <string name="setup_step3_languages_card_title">Eingabesprachen</string>
+    <string name="setup_step3_languages_card_summary">Tippe in den Einstellungen auf eine Sprache, um zwischen QWERTY und QWERTZ zu wechseln und Wischsprachen einzurichten.</string>
+    <string name="setup_step3_configure_languages">Sprachen &amp; Layouts wählen</string>
+    <string name="setup_step3_autocorrect_title">Autokorrektur</string>
+    <string name="setup_step3_autocorrect_summary">Droneboard lässt die Autokorrektur standardmäßig aus, damit Wörter nicht unbemerkt ersetzt werden. Vorschläge erscheinen weiterhin über der Tastatur.</string>
+    <string name="setup_step4_try_title">Droneboard ausprobieren</string>
+    <string name="setup_step4_try_subtitle">Tippe oder wische unten, um deine neue Tastatur direkt zu testen.</string>
+    <string name="setup_step4_try_placeholder">Hier ein paar Wörter tippen oder wischen…</string>
+    <string name="setup_step4_tips_title">Praktische Kurzbefehle</string>
+    <string name="setup_tip_trackpad_title">Leertaste gedrückt halten</string>
+    <string name="setup_tip_trackpad_detail">Cursor wie mit einem Trackpad bewegen</string>
+    <string name="setup_tip_delete_title">Löschtaste wischen</string>
+    <string name="setup_tip_delete_detail">Ganze Wörter mit einem Wisch löschen</string>
+    <string name="setup_tip_edit_title">A / X / C / V / Z / Y gedrückt halten</string>
+    <string name="setup_tip_edit_detail">Alles auswählen, ausschneiden, kopieren, einfügen, rückgängig &amp; wiederholen</string>
+    <string name="setup_action_next">Weiter</string>
+    <string name="setup_action_skip">Überspringen</string>
+    <string name="setup_action_back">Zurück</string>
+
+    <!-- About, Tips, Logs & Crash Dialog -->
+    <string name="about_futo_swipe_license_title">FUTO-Modellgewichte-Lizenz</string>
+    <string name="about_futo_swipe_license_unavailable">Lizenztext konnte nicht geladen werden.</string>
+    <string name="keyboard_tips_title">Tastatur-Tipps</string>
+    <string name="keyboard_tips_summary">Gesten, Bearbeitungskürzel und Schnellaktionen</string>
+    <string name="tip_trackpad_title">Leertasten-Trackpad &amp; Cursor</string>
+    <string name="tip_trackpad_body">Halte die Leertaste gedrückt, um die Tastatur als präzises Trackpad zu nutzen, oder wische auf der Leertaste nach links und rechts.</string>
+    <string name="tip_edit_shortcuts_title">Bearbeitungskürzel (A / X / C / V / Z / Y)</string>
+    <string name="tip_edit_shortcuts_body">Drücke lange auf A für Alles auswählen, X für Ausschneiden, C für Kopieren, V für Einfügen, Z für Rückgängig und Y für Wiederholen.</string>
+    <string name="tip_delete_swipe_title">Wörter per Wisch löschen</string>
+    <string name="tip_delete_swipe_body">Ziehe von der Löschtaste nach links, um ganze Wörter in einer Bewegung zu markieren und zu entfernen.</string>
+    <string name="tip_dictation_undo_title">Diktat-Block rückgängig machen</string>
+    <string name="tip_dictation_undo_body">Tippe direkt nach einem Sprachdiktat einmal auf die Löschtaste, um den gesamten diktierten Abschnitt zurückzunehmen.</string>
+    <string name="tip_quick_clips_title">Quick Clips &amp; angeheftete Zwischenablage</string>
+    <string name="tip_quick_clips_body">Kürzlich kopierte Links, Codes und Texte erscheinen als Chips über der Tastatur. Lange drücken zum Anheften, nach links wischen zum Entfernen.</string>
+    <string name="tip_resize_title">Größe &amp; Position</string>
+    <string name="tip_resize_body">Öffne „Größe ändern“ über die Symbolleiste, um Höhe, Breite oder Einhand-Position direkt auf dem Bildschirm anzupassen.</string>
+    <string name="tip_shift_symbols_title">Schnelle Großbuchstaben &amp; Symbole</string>
+    <string name="tip_shift_symbols_body">Wische von Shift oder ?123 auf eine Taste für einen einzelnen Großbuchstaben oder ein Symbol. Markiere Text und tippe auf Shift zum Umschalten der Groß-/Kleinschreibung.</string>
+    <string name="tip_toolbar_incognito_title">Symbolleiste anheften &amp; Inkognito</string>
+    <string name="tip_toolbar_incognito_body">Drücke lange auf Symbole in der Leiste, um sie anzuheften. Aktiviere Inkognito, um Wortlernen und Zwischenablage-Speicherung zu pausieren.</string>
+    <string name="save_log_success">Protokoll gespeichert</string>
+    <string name="save_log_failed">Protokoll konnte nicht gespeichert werden</string>
+    <string name="crash_report_found">Absturzberichte gefunden</string>
+    <string name="crash_report_ignore">Ignorieren</string>
+    <string name="crash_report_save">Speichern</string>
+</resources>

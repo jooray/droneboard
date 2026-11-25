@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
-    <!-- prediction engine badges in the language lists -->
-    <string name="engine_neural">neurális</string>
-    <string name="engine_ngrams">n-gram</string>
-    <string name="engine_swipe">csúsztatás</string>
+    <string name="engine_swipe">Csúsztatás</string>
+    <string name="engine_neural">Okos javaslatok</string>
+    <string name="engine_ngrams">Csak gépelési javaslatok</string>
+    <string name="engine_layout_only">Csak kiosztás (csúsztatás nélkül)</string>
 </resources>

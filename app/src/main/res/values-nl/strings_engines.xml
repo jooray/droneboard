@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
-    <!-- prediction engine badges in the language lists -->
-    <string name="engine_neural">neuraal</string>
-    <string name="engine_ngrams">n-grammen</string>
-    <string name="engine_swipe">vegen</string>
+    <string name="engine_swipe">Vegen</string>
+    <string name="engine_neural">Slimme voorspellingen</string>
+    <string name="engine_ngrams">Alleen bij tikken</string>
+    <string name="engine_layout_only">Alleen indeling (geen vegen)</string>
 </resources>

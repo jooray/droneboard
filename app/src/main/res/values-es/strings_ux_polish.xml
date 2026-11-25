@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+    <string name="remove_suggestion_action">Quitar sugerencia</string>
+    <string name="remove_suggestion_confirm">¿Quitar «%1$s»?</string>
+    <string name="cancel_remove_suggestion">Cancelar</string>
+    <string name="more_suggestions_button_description">Más sugerencias</string>
+    <string name="dismiss_clipboard_suggestion">Descartar</string>
+    <string name="voice_try_again">Reintentar</string>
+    <string name="resize_increase_size">Aumentar tamaño</string>
+    <string name="resize_decrease_size">Reducir tamaño</string>
+    <string name="compact_switch_side">Cambiar de lado</string>
+    <string name="compact_expand_full">Expandir al ancho completo</string>
+    <string name="compact_resize">Cambiar tamaño del teclado</string>
+    <string name="toolbar_open_description">Abrir barra de herramientas</string>
+    <string name="toolbar_close_description">Cerrar barra de herramientas</string>
+    <string name="toolbar_incognito_open_description">Incógnito activo — abrir barra de herramientas</string>
+    <string name="toolbar_incognito_close_description">Incógnito activo — cerrar barra de herramientas</string>
+</resources>

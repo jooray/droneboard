@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
-    <!-- prediction engine badges in the language lists -->
-    <string name="engine_neural">neuronal</string>
-    <string name="engine_ngrams">n-gramas</string>
-    <string name="engine_swipe">gestual</string>
+    <string name="engine_swipe">Deslizar</string>
+    <string name="engine_neural">Predicciones inteligentes</string>
+    <string name="engine_ngrams">Solo al pulsar</string>
+    <string name="engine_layout_only">Solo distribución (sin deslizar)</string>
 </resources>
