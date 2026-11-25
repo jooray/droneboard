@@ -23,7 +23,7 @@ of `KpDictionary` and is cleanly `munmap`ped in `~KpDictionary()`.
 |---:|---|---|---|
 | 0 | magic | 4 bytes | `DKPD` |
 | 4 | version | u32 | `2` |
-| 8 | flags | u32 | bit 0: BFS-ordered trie (implicit contiguous children `[child_start[n], child_start[n+1])`, no `TCHL` section); bit 1: trie contains non-`a..z` byte |
+| 8 | flags | u32 | bit 0: BFS-ordered trie (implicit contiguous children `[child_start[n], child_start[n+1])`, no `TCHL` section); bit 1: trie contains non-`a..z` byte; bit 2: 24-byte `DKPF` integrity footer appended at EOF |
 | 12 | n_lower | u32 | lowercase words (ids `0 … n_lower-1`, sorted by unsigned UTF-8 bytes) |
 | 16 | n_variants | u32 | surface variants (`ľahko`, `Ľahko`, `I'll`, …) |
 | 20 | n_kps | u32 | unique key paths (sorted by unsigned UTF-8/ASCII bytes) |
@@ -70,6 +70,19 @@ of `KpDictionary` and is cleanly `munmap`ped in `~KpDictionary()`.
 | `TPBS` | yes | `u32[257]` | CSR offsets into `TPBI` per leading UTF-8 byte `0..255` |
 | `TPBI` | yes | `u32[TPBS[256]]` | Top 64 most frequent `lower` ids per leading byte for O(1) 1-char `predict()` |
 | `BYRG` | yes | `u32[257]` | Contiguous `[BYRG[b], BYRG[b+1])` range in `LOWR` for leading byte `b` |
+
+### Integrity Footer (`DKPF`, 24 bytes, when `flags & 4`)
+
+`KpDictionary::save_v2()` appends a 24-byte footer, calls `fsync()` on the file before atomic
+`rename()`, and `fsync()`s the parent directory after rename. `load_v2_buffer()` verifies both
+file size and hash before accepting any mapping:
+
+| Offset (from EOF − 24) | Field | Type | Meaning |
+|---:|---|---|---|
+| 0 | magic | 4 bytes | `DKPF` |
+| 4 | reserved | u32 | `0` |
+| 8 | total_size | u64 | Expected total file size in bytes (including this 24-byte footer) |
+| 16 | hash64 | u64 | 64-bit `FastHash64` (8-byte word mixing) over bytes `[0, total_size - 24)` |
 
 ### Scoring & Unallocated-Mass Backoff
 

@@ -2,7 +2,9 @@
 // JNI glue between Droneboard (helium314.keyboard.latin.swipe.FutoSwipe) and the FUTO Swipe
 // engine (swipe-library, ExecuTorch encoder "honorable_sturgeon").
 #include <android/log.h>
+#include <fcntl.h>
 #include <jni.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <chrono>
@@ -167,6 +169,10 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionaryCached(JNIEnv*
              std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
         return (jlong)(uintptr_t)d;
     }
+    if (!cp.empty()) {
+        // Delete any corrupt/rejected cache file before rebuilding from v1.
+        std::remove(cp.c_str());
+    }
     const std::string vp = jstr(env, v1Path);
     if (!d->load_kpd(vp)) {
         LOGE("could not load dictionary %s", vp.c_str());
@@ -176,12 +182,21 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadDictionaryCached(JNIEnv*
     if (!cp.empty() && d->format_version() == 1) {
         const std::string tmp = cp + ".tmp";
         if (d->save_v2(tmp) && std::rename(tmp.c_str(), cp.c_str()) == 0) {
+            const size_t slash = cp.find_last_of('/');
+            const std::string dir = slash == std::string::npos ? "." : cp.substr(0, slash);
+            const int dfd = ::open(dir.c_str(), O_RDONLY | O_DIRECTORY);
+            if (dfd >= 0) {
+                ::fsync(dfd);
+                ::close(dfd);
+            }
             auto* mapped = new KpDictionary();
             if (mapped->load_kpd(cp)) {
                 delete d;
                 d = mapped;
             } else {
                 delete mapped;
+                // Never leave an unloadable cache file on disk.
+                std::remove(cp.c_str());
             }
         } else {
             std::remove(tmp.c_str());

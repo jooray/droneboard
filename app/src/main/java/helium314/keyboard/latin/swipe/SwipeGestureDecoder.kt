@@ -311,13 +311,20 @@ object SwipeGestureDecoder {
                     dir.mkdirs()
                     val v2Cache = File(dir, "$language.kpd2")
                     val params = params(language) + 0f
-                    val handle = if (v2Cache.isFile) {
-                        FutoSwipe.nativeLoadDictionary(v2Cache.absolutePath, params)
-                    } else {
-                        val v1File = extract(context, "$language.kpd")
-                        FutoSwipe.nativeLoadDictionaryCached(v1File.absolutePath, v2Cache.absolutePath, params).also { h ->
-                            if (h != 0L && v2Cache.isFile) v1File.delete()
+                    var handle = if (v2Cache.isFile) {
+                        FutoSwipe.nativeLoadDictionary(v2Cache.absolutePath, params).also { h ->
+                            if (h == 0L) {
+                                Log.w(TAG, "corrupt or rejected swipe dictionary cache $language.kpd2, rebuilding")
+                                v2Cache.delete()
+                            }
                         }
+                    } else 0L
+                    if (handle == 0L) {
+                        val v1File = extract(context, "$language.kpd")
+                        handle = FutoSwipe.nativeLoadDictionaryCached(v1File.absolutePath, v2Cache.absolutePath, params)
+                        // Native removes v2Cache if reloading the compiled cache fails, so v2Cache.isFile
+                        // is only true when the cache has been verified and mmapped.
+                        if (handle != 0L && v2Cache.isFile) v1File.delete()
                     }
                     if (handle != 0L) dictionaries[language] = handle
                     else Log.w(TAG, "could not load swipe dictionary $language")

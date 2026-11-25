@@ -37,6 +37,45 @@ DEFAULT_EN_ALIASES = {
 
 FLAG_BFS_TRIE = 1 << 0
 FLAG_TRIE_HAS_NON_AZ = 1 << 1
+FLAG_HAS_FOOTER = 1 << 2
+FOOTER_SIZE = 24
+
+
+def fast_hash64(data: bytes) -> int:
+    """Matches FastHash64 in native/droneswipe/kp_dictionary.cpp bit-for-bit."""
+    m64 = 0xFFFFFFFFFFFFFFFF
+    c0 = 0x9E3779B97F4A7C15
+    c1 = 0xBF58476D1CE4E5B9
+    c2 = 0x94D049BB133111EB
+    c3 = 0xD6E8FEB86659FD93
+    h0, h1, h2, h3 = c0, c1, c2, c3
+    n = len(data)
+    full = (n // 32) * 32
+    for w0, w1, w2, w3 in struct.iter_unpack("<4Q", memoryview(data)[:full]):
+        v0 = (h0 ^ ((w0 * c0) & m64))
+        h0 = ((((v0 << 31) | (v0 >> 33)) & m64) * c1) & m64
+        v1 = (h1 ^ ((w1 * c1) & m64))
+        h1 = ((((v1 << 27) | (v1 >> 37)) & m64) * c2) & m64
+        v2 = (h2 ^ ((w2 * c2) & m64))
+        h2 = ((((v2 << 33) | (v2 >> 31)) & m64) * c3) & m64
+        v3 = (h3 ^ ((w3 * c3) & m64))
+        h3 = ((((v3 << 29) | (v3 >> 35)) & m64) * c0) & m64
+    x = (
+        h0
+        ^ (((h1 << 13) | (h1 >> 51)) & m64)
+        ^ (((h2 << 29) | (h2 >> 35)) & m64)
+        ^ (((h3 << 47) | (h3 >> 17)) & m64)
+        ^ n
+    )
+    for b in data[full:]:
+        x ^= (b + c0 + ((x << 6) & m64) + (x >> 2)) & m64
+        x = (x * c1) & m64
+    x ^= x >> 30
+    x = (x * c1) & m64
+    x ^= x >> 27
+    x = (x * c2) & m64
+    x ^= x >> 31
+    return x
 
 
 def varint(n):
@@ -542,7 +581,7 @@ def write_kpd_v2(out_path, lowers, lower_logc_q, variants, kp_to_vids, bigrams, 
         (b"BYRG", struct.pack("<257I", *byte_range)),
     ])
 
-    flags = FLAG_BFS_TRIE | (FLAG_TRIE_HAS_NON_AZ if trie_has_non_az else 0)
+    flags = FLAG_BFS_TRIE | (FLAG_TRIE_HAS_NON_AZ if trie_has_non_az else 0) | FLAG_HAS_FOOTER
     header = b"DKPD" + struct.pack(
         "<9Id2I",
         2, flags, n_lower, n_variants, n_kps, n_nodes, n_big, n_tri_ctx, n_tri,
@@ -558,24 +597,29 @@ def write_kpd_v2(out_path, lowers, lower_logc_q, variants, kp_to_vids, bigrams, 
         directory += tag + struct.pack("<II", offset, len(data))
         offset = (offset + len(data) + 7) & ~7
 
+    payload = bytearray()
+    payload += header
+    payload += directory
+    for (_, data), sec_off in zip(sections, offsets):
+        if sec_off > len(payload):
+            payload += b"\x00" * (sec_off - len(payload))
+        payload += data
+    end_pad = (-len(payload)) % 8
+    if end_pad:
+        payload += b"\x00" * end_pad
+    total_size = len(payload) + FOOTER_SIZE
+    footer = b"DKPF" + struct.pack("<IQQ", 0, total_size, fast_hash64(payload))
+    assert len(footer) == FOOTER_SIZE
+
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
     with open(out_path, "wb") as f:
-        f.write(header)
-        f.write(directory)
-        cur_pos = len(header) + len(directory)
-        for (_, data), sec_off in zip(sections, offsets):
-            if sec_off > cur_pos:
-                f.write(b"\x00" * (sec_off - cur_pos))
-                cur_pos = sec_off
-            f.write(data)
-            cur_pos += len(data)
-        end_pad = (-cur_pos) % 8
-        if end_pad:
-            f.write(b"\x00" * end_pad)
-            cur_pos += end_pad
+        f.write(payload)
+        f.write(footer)
+        f.flush()
+        os.fsync(f.fileno())
 
     print(f"{out_path} [v2]: {n_lower} words, {n_variants} variants, {n_kps} kps, {n_nodes} nodes, "
-          f"{n_big} bigrams, {n_tri} trigrams, {cur_pos / 1e6:.2f} MB")
+          f"{n_big} bigrams, {n_tri} trigrams, {total_size / 1e6:.2f} MB")
 
 
 def repack_v2(in_kpd, out_kpd, prune_words=None, add_aliases=None):
