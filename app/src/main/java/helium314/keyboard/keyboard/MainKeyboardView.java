@@ -114,6 +114,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private boolean mPreviewPlacerLocated;
     private final GestureFloatingTextDrawingPreview mGestureFloatingTextDrawingPreview;
     private final GestureTrailsDrawingPreview mGestureTrailsDrawingPreview;
+    private boolean mGestureTrailEnabled;
     private final SlidingKeyInputDrawingPreview mSlidingKeyInputDrawingPreview;
 
     // EnterKeyGuard armed highlight
@@ -415,9 +416,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final int feedback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                 ? HapticFeedbackConstants.CONFIRM
                 : HapticFeedbackConstants.CLOCK_TICK;
-        performHapticFeedback(feedback);
-        AudioAndHapticFeedbackManager.getInstance().performAudioFeedback(
-                key.getCode(), HapticEvent.KEY_PRESS);
+        final AudioAndHapticFeedbackManager feedbackManager = AudioAndHapticFeedbackManager.getInstance();
+        feedbackManager.performHapticConstant(this, feedback);
+        feedbackManager.performAudioFeedback(key.getCode(), HapticEvent.KEY_PRESS);
     }
 
     public void clearEnterKeyGuardArmed() {
@@ -511,6 +512,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     private void setGesturePreviewMode(final boolean isGestureTrailEnabled,
             final boolean isGestureFloatingPreviewTextEnabled) {
+        mGestureTrailEnabled = isGestureTrailEnabled;
         mGestureFloatingTextDrawingPreview.setPreviewEnabled(isGestureFloatingPreviewTextEnabled);
         mGestureTrailsDrawingPreview.setPreviewEnabled(isGestureTrailEnabled);
     }
@@ -536,11 +538,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             final boolean showsFloatingPreviewText) {
         locatePreviewPlacerView();
         if (showsFloatingPreviewText) {
-            // Update floating pill coordinates without duplicating invalidateDrawingView();
-            // the trail call below invalidates DrawingPreviewPlacerView once for this event.
-            mGestureFloatingTextDrawingPreview.setPreviewPositionNoInvalidate(tracker);
+            if (mGestureTrailEnabled) {
+                // Trail call below invalidates DrawingPreviewPlacerView once for this event.
+                mGestureFloatingTextDrawingPreview.setPreviewPositionNoInvalidate(tracker);
+            } else {
+                mGestureFloatingTextDrawingPreview.setPreviewPosition(tracker);
+            }
         }
-        mGestureTrailsDrawingPreview.setPreviewPosition(tracker);
+        if (mGestureTrailEnabled) {
+            mGestureTrailsDrawingPreview.setPreviewPosition(tracker);
+        }
     }
 
     // Note that this method is called from a non-UI thread.

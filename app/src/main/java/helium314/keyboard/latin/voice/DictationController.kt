@@ -363,7 +363,8 @@ class DictationController(private val ime: LatinIME) : VoiceInputView.Actions, O
                     if (wasWaiting && s.input.bluetooth) {
                         tone(ToneGenerator.TONE_PROP_BEEP, 120, AudioManager.STREAM_VOICE_CALL) // go ahead, into the headset
                     } else if (!s.input.bluetooth) {
-                        p.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        helium314.keyboard.latin.AudioAndHapticFeedbackManager.getInstance()
+                            .performHapticConstant(p, HapticFeedbackConstants.CLOCK_TICK)
                     }
                 }
                 val title = if (s.silent) ime.getString(R.string.voice_silent) else ime.getString(R.string.voice_speak_now)

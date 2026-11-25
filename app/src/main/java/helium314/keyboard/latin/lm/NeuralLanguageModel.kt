@@ -293,13 +293,22 @@ object NeuralLanguageModel : LanguageModel {
     /** @return true when a load was started now */
     private fun requestLoad(context: Context, language: String): Boolean {
         if (!DirectBoot.isUnlocked(context) || models.containsKey(language) || !loading.add(language)) return false
+        // Re-check after claiming loading slot so a concurrent completion cannot schedule a duplicate load.
+        if (models.containsKey(language)) {
+            loading.remove(language)
+            return false
+        }
         val task = Runnable {
             try {
                 val start = SystemClock.elapsedRealtime()
                 val handle = loadNeuralModel(context, language)
                 if (handle != 0L) {
-                    models[language] = handle
-                    Log.i(TAG, "loaded $language in ${SystemClock.elapsedRealtime() - start} ms")
+                    val existing = models.putIfAbsent(language, handle)
+                    if (existing != null) {
+                        FutoSwipe.nativeFreeNeural(handle)
+                    } else {
+                        Log.i(TAG, "loaded $language in ${SystemClock.elapsedRealtime() - start} ms")
+                    }
                 } else {
                     Log.w(TAG, "could not load the neural model for $language")
                 }

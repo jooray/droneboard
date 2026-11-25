@@ -98,8 +98,22 @@ public final class AudioAndHapticFeedbackManager {
         mAudioManager.playSoundEffect(sound, mSettingsValues.mKeypressSoundVolume);
     }
 
+    public boolean canVibrate() {
+        return mSettingsValues != null && mSettingsValues.mVibrateOn
+                && (!mDoNotDisturb || mSettingsValues.mVibrateInDndMode);
+    }
+
+    public void performHapticConstant(final View viewToPerformHapticFeedbackOn, final int feedbackConstant) {
+        if (!canVibrate() || viewToPerformHapticFeedbackOn == null) {
+            return;
+        }
+        viewToPerformHapticFeedbackOn.performHapticFeedback(
+                feedbackConstant,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+    }
+
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn, final HapticEvent hapticEvent) {
-        if (!mSettingsValues.mVibrateOn || (mDoNotDisturb && !mSettingsValues.mVibrateInDndMode)) {
+        if (!canVibrate()) {
             return;
         }
         if (hapticEvent == HapticEvent.NO_HAPTICS) {

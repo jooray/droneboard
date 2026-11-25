@@ -3,6 +3,7 @@ package helium314.keyboard.settings.screens
 
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Surface
@@ -58,16 +59,18 @@ fun DebugScreen(
         DebugSettings.PREF_FORCE_SUPPORT_ASK,
         DebugSettings.PREF_EXPORT_DICTIONARY,
     )
+    val handleBack: () -> Unit = {
+        if (needsRestart) {
+            val intent = Intent.makeRestartActivityTask(ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)?.component)
+            intent.setPackage(ctx.packageName)
+            ctx.startActivity(intent)
+            Runtime.getRuntime().exit(0)
+        }
+        onClickBack()
+    }
+    BackHandler(enabled = needsRestart, onBack = handleBack)
     SearchSettingsScreen(
-        onClickBack = {
-            if (needsRestart) {
-                val intent = Intent.makeRestartActivityTask(ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)?.component)
-                intent.setPackage(ctx.packageName)
-                ctx.startActivity(intent)
-                Runtime.getRuntime().exit(0)
-            }
-            onClickBack()
-        },
+        onClickBack = handleBack,
         title = stringResource(R.string.debug_settings_title),
         settings = emptyList()
     ) {
@@ -80,7 +83,7 @@ fun DebugScreen(
     }
 }
 
-private var needsRestart = false
+private var needsRestart by mutableStateOf(false)
 
 private fun createDebugSettings(context: Context) = listOf(
     Setting(context, DebugSettings.PREF_SHOW_DEBUG_SETTINGS, R.string.prefs_show_debug_settings) { setting ->

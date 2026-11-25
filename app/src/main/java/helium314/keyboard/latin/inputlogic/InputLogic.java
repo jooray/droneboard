@@ -504,7 +504,14 @@ public final class InputLogic {
      */
     public InputTransaction onCodeInput(SettingsValues settingsValues, @NonNull Event event,
             CapsMode keyboardCapsMode, LatinIME.UIHandler handler) {
-        mSuggestionStripSeq.incrementAndGet();
+        final int rawKeyCode = event.getKeyCode();
+        if (rawKeyCode != KeyCode.SHIFT
+                && rawKeyCode != KeyCode.CAPS_LOCK
+                && rawKeyCode != KeyCode.SYMBOL_ALPHA
+                && rawKeyCode != KeyCode.ALPHA
+                && rawKeyCode != KeyCode.SYMBOL) {
+            mSuggestionStripSeq.incrementAndGet();
+        }
         mJustRevertedACommit = false;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.onKey(event.getKeyCode());
 

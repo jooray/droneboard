@@ -447,7 +447,10 @@ private fun Step3LanguagesAndTyping(
         osttStatus = checkOsttStatus(ctx)
     }
 
-    val enabledSubtypes = runCatching { SubtypeSettings.getEnabledSubtypes(true) }.getOrDefault(emptyList())
+    var subtypesVersion by remember { mutableStateOf(0) }
+    val enabledSubtypes = remember(subtypesVersion) {
+        runCatching { SubtypeSettings.getEnabledSubtypes(true) }.getOrDefault(emptyList())
+    }
     val fullSupportSubtypes: List<InputMethodSubtype> = remember {
         runCatching {
             val seenKeys = HashSet<String>()
@@ -503,6 +506,11 @@ private fun Step3LanguagesAndTyping(
                             FilterChip(
                                 selected = isEnabled,
                                 onClick = {
+                                    // Materialize implicit fallback subtypes before the first toggle so adding
+                                    // another language doesn't wipe out the phone's default language.
+                                    if (SubtypeSettings.getEnabledSubtypes(false).isEmpty()) {
+                                        enabledSubtypes.forEach { SubtypeSettings.addEnabledSubtype(prefs, it) }
+                                    }
                                     if (isEnabled) {
                                         if (enabledSubtypes.size > 1) {
                                             enabledSubtypes.filter { it.locale() == subtype.locale() }.forEach {
@@ -512,6 +520,7 @@ private fun Step3LanguagesAndTyping(
                                     } else {
                                         SubtypeSettings.addEnabledSubtype(prefs, subtype)
                                     }
+                                    subtypesVersion++
                                 },
                                 label = { Text(subtype.displayName()) }
                             )

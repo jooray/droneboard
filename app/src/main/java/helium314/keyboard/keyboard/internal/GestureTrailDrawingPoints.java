@@ -185,7 +185,7 @@ final class GestureTrailDrawingPoints {
 
         if (startIndex < trailSize) {
             final int rgb = params.mTrailColor & 0x00FFFFFF;
-            final boolean useVertices = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P;
+            final boolean useVertices = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
             int strokeStart = startIndex;
             while (strokeStart < trailSize) {
                 int strokeEnd = strokeStart + 1;
