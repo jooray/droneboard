@@ -555,18 +555,15 @@ bool KpDictionary::load_v2_buffer(const uint8_t* base, size_t size) {
         return false;
     }
 
-    size_t payload_end = size;
-    if ((flags & kFlagHasFooter) != 0) {
-        if (size < 56 + kFooterSize) return false;
-        const uint8_t* ft = base + size - kFooterSize;
-        if (std::memcmp(ft, "DKPF", 4) != 0) return false;
-        uint64_t ft_size = 0, ft_hash = 0;
-        std::memcpy(&ft_size, ft + 8, 8);
-        std::memcpy(&ft_hash, ft + 16, 8);
-        if (ft_size != (uint64_t)size) return false;
-        if (ft_hash != FastHash64::hash(base, size - kFooterSize)) return false;
-        payload_end = size - kFooterSize;
-    }
+    if ((flags & kFlagHasFooter) == 0 || size < 56 + kFooterSize) return false;
+    const uint8_t* ft = base + size - kFooterSize;
+    if (std::memcmp(ft, "DKPF", 4) != 0) return false;
+    uint64_t ft_size = 0, ft_hash = 0;
+    std::memcpy(&ft_size, ft + 8, 8);
+    std::memcpy(&ft_hash, ft + 16, 8);
+    if (ft_size != (uint64_t)size) return false;
+    if (ft_hash != FastHash64::hash(base, size - kFooterSize)) return false;
+    const size_t payload_end = size - kFooterSize;
     if (56 + (size_t)n_sections * 12 > payload_end) return false;
 
     struct Sec { const uint8_t* p; uint32_t off; size_t len; };
@@ -610,15 +607,6 @@ bool KpDictionary::load_v2_buffer(const uint8_t* base, size_t size) {
     } else {
         if (all_child_start_ptr_[n_nodes_] != n_nodes_) return false;
         all_child_list_ptr_ = nullptr;
-    }
-    if ((flags & kFlagHasFooter) == 0) {
-        // Legacy v2 files without a checksum footer: still validate TCHS monotonicity.
-        const uint32_t max_edge = all_child_start_ptr_[n_nodes_];
-        for (uint32_t i = 0; i < n_nodes_; ++i) {
-            if (all_child_start_ptr_[i] > all_child_start_ptr_[i + 1] || all_child_start_ptr_[i + 1] > max_edge) {
-                return false;
-            }
-        }
     }
     if (!get_sec("TNCH", n_nodes_, 1, p, sl)) return false;
     node_char_ptr_ = p;
@@ -1469,22 +1457,24 @@ std::vector<std::pair<uint32_t, float>> KpDictionary::predict(int32_t prev2, int
     const double inv_total = 1.0 / total_;
     const bool has_prev = (prev >= 0 && (uint32_t)prev < n_lower_);
 
-    // Hoist bigram context lookup out of candidate loop
+    // Hoist bigram context lookup out of candidate loop.
+    // predict() keeps the fixed K = 50 / K3 of 0.2.8: the 0.7/0.3 neural + n-gram mix is tuned for it, and the
+    // unallocated-mass backoff that pmi()/p_bigram()/logp_ctx() use for swipe costs 0.18 KSS here.
+    constexpr double kBigramK = 50.0;
     uint32_t big_b = 0, big_e = 0;
-    double big_inv_denom = 0.0, big_k_eff = 0.0, big_backoff = 0.0;
+    double big_inv_denom = 0.0, big_backoff = 0.0;
     if (has_prev) {
         big_b = big_start_ptr_[prev];
         big_e = big_start_ptr_[prev + 1];
         const double c_prev = lower_count((uint32_t)prev);
-        big_inv_denom = 1.0 / (c_prev + 50.0);
-        big_k_eff = (double)big_rem_ptr_[prev];
-        big_backoff = big_k_eff * big_inv_denom;
+        big_inv_denom = 1.0 / (c_prev + kBigramK);
+        big_backoff = kBigramK * big_inv_denom;
     }
 
     // Hoist trigram context lookup out of candidate loop
     uint32_t tri_b = 0, tri_e = 0;
     bool has_tri = false;
-    double tri_inv_denom = 0.0, tri_k_eff = 0.0, tri_backoff = 0.0;
+    double tri_inv_denom = 0.0, tri_k = 0.0, tri_backoff = 0.0;
     if (has_prev && prev2 >= 0 && n_tri_ctx_ > 0) {
         const uint64_t key = ((uint64_t)(uint32_t)prev2 << 32) | (uint32_t)prev;
         const int64_t ci = find_tri_ctx(tri_ctx_raw_ptr_, n_tri_ctx_, key);
@@ -1495,8 +1485,8 @@ std::vector<std::pair<uint32_t, float>> KpDictionary::predict(int32_t prev2, int
             const double cctx = luts.exp_u8[tri_ctx_logc_ptr_[c]];
             const double K3 = std::max(0.01f, params.k3);
             tri_inv_denom = 1.0 / (cctx + K3);
-            tri_k_eff = std::max(K3, (double)tri_rem_ptr_[c]);
-            tri_backoff = tri_k_eff * tri_inv_denom;
+            tri_k = K3;
+            tri_backoff = K3 * tri_inv_denom;
             has_tri = true;
         }
     }
@@ -1568,11 +1558,10 @@ std::vector<std::pair<uint32_t, float>> KpDictionary::predict(int32_t prev2, int
         const uint16_t q = lower_logc_q_ptr_[w];
         const double pu = (luts.exp_q_hi[q >> 8] * luts.exp_q_lo[q & 0xFF] + 0.5) * inv_total;
         if (!has_prev) return pu;
-        double p = c_bg > 0.0 ? std::min(1.0, (c_bg + big_k_eff * pu) * big_inv_denom)
-                              : std::min(1.0, pu * big_backoff);
+        // counts are quantized, so a nearly deterministic continuation can exceed 1 without the clamp
+        double p = c_bg > 0.0 ? std::min(1.0, (c_bg + kBigramK * pu) * big_inv_denom) : pu * big_backoff;
         if (has_tri) {
-            p = c_tri > 0.0 ? std::min(1.0, (c_tri + tri_k_eff * p) * tri_inv_denom)
-                            : std::min(1.0, p * tri_backoff);
+            p = c_tri > 0.0 ? std::min(1.0, (c_tri + tri_k * p) * tri_inv_denom) : p * tri_backoff;
         }
         return p;
     };
@@ -1655,7 +1644,7 @@ std::vector<std::pair<uint32_t, float>> KpDictionary::predict(int32_t prev2, int
     if (!all_prefix_scored && big_lo < big_hi) {
         const double inv_scale = (has_tri && tri_backoff > 0.0) ? (1.0 / (tri_backoff * big_inv_denom))
                                                                 : (1.0 / big_inv_denom);
-        const double max_unseen_term = big_k_eff * max_unseen_pu;
+        const double max_unseen_term = kBigramK * max_unseen_pu;
         auto compute_q_min = [&]() -> int {
             if (heap.size() < keep) return 0;
             const double c_need = heap.front().p * inv_scale - max_unseen_term;

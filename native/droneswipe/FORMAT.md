@@ -23,7 +23,7 @@ of `KpDictionary` and is cleanly `munmap`ped in `~KpDictionary()`.
 |---:|---|---|---|
 | 0 | magic | 4 bytes | `DKPD` |
 | 4 | version | u32 | `2` |
-| 8 | flags | u32 | bit 0: BFS-ordered trie (implicit contiguous children `[child_start[n], child_start[n+1])`, no `TCHL` section); bit 1: trie contains non-`a..z` byte; bit 2: 24-byte `DKPF` integrity footer appended at EOF |
+| 8 | flags | u32 | bit 0: BFS-ordered trie (implicit contiguous children `[child_start[n], child_start[n+1])`, no `TCHL` section); bit 1: trie contains non-`a..z` byte; bit 2: 24-byte `DKPF` integrity footer appended at EOF (required by `load_v2_buffer()`) |
 | 12 | n_lower | u32 | lowercase words (ids `0 … n_lower-1`, sorted by unsigned UTF-8 bytes) |
 | 16 | n_variants | u32 | surface variants (`ľahko`, `Ľahko`, `I'll`, …) |
 | 20 | n_kps | u32 | unique key paths (sorted by unsigned UTF-8/ASCII bytes) |

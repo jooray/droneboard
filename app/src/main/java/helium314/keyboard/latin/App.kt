@@ -16,7 +16,6 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -37,7 +36,8 @@ class App : Application() {
         DebugFlags.init(this) // needed by several other inits, so do it first
         DirectBoot.init(this) // Droneboard: minimal keyboard before the first unlock
 
-        val scope = CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, _ -> })
+        // no exception handler: continuing with half of the settings uninitialized would only fail later and unclearly
+        val scope = CoroutineScope(Dispatchers.Default)
         // other inits can be in parallel, except what depends on SubtypeSettings
         val jobs = listOf(
             scope.launch {

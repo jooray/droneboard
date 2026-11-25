@@ -48,7 +48,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">Csúsztatások helyi rögzítése?</string>
-    <string name="typing_swipes_privacy_message">A csúsztatott szavak és érintési útvonalak kizárólag ezen az eszközön kerülnek mentésre a pontosság vizsgálatához és javításához. Jelszavak és inkognitó mód sosem kerül rögzítésre, és semmi nem kerül feltöltésre.</string>
+    <string name="typing_swipes_privacy_message">A csúsztatással írt szavak, az előttük álló szavak és az érintési útvonalak kizárólag ezen az eszközön kerülnek mentésre a pontosság vizsgálatához és javításához. Jelszavak és inkognitó mód sosem kerül rögzítésre, és semmi nem kerül feltöltésre.</string>
     <string name="typing_swipes_privacy_confirm">Bekapcsolás</string>
 
     <!-- Voice dictation status -->

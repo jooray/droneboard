@@ -46,6 +46,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -123,7 +124,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private val wordsWaitingForHistory = hashMapOf<String, Job>()
     private val unlearnDuration = 25.seconds
 
-    private val scope = CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, _ -> })
+    // SupervisorJob: one failed job (e.g. adding a word to history) must not cancel the scope, or dictionaries
+    // would silently never load again until the process restarts
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e ->
+        runCatching { Log.e(TAG, "background dictionary job failed", e) }
+    })
 
     // judging by usage before adding multilingual typing, this should check primary group locale only
     override fun isForLocale(locale: Locale?): Boolean {

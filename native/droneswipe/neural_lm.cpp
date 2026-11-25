@@ -141,12 +141,6 @@ void matvec_i8_scalar(const int8_t* W, const float* scale, const float* bias,
     }
 }
 
-float dot_row_i8_scalar(const int8_t* row, float scale, float bias, const int8_t* xq, float sx, int cols) {
-    int32_t acc = 0;
-    for (int c = 0; c < cols; ++c) acc += (int32_t)row[c] * (int32_t)xq[c];
-    return (float)acc * scale * sx + bias;
-}
-
 #if defined(__aarch64__)
 void matvec_i8_neon(const int8_t* W, const float* scale, const float* bias,
                     const int8_t* xq, float sx, float* out, int rows, int cols) {
@@ -223,29 +217,6 @@ void matvec_i8_sdot(const int8_t* W, const float* scale, const float* bias,
         out[r] = (float)vaddvq_s32(vaddq_s32(acc0, acc1)) * scale[r] * sx + (bias ? bias[r] : 0.0f);
     }
 }
-
-__attribute__((target("dotprod")))
-float dot_row_i8_sdot(const int8_t* row, float scale, float bias, const int8_t* xq, float sx, int cols) {
-    int32x4_t acc0 = vdupq_n_s32(0), acc1 = vdupq_n_s32(0);
-    int c = 0;
-    for (; c + 32 <= cols; c += 32) {
-        acc0 = vdotq_s32(acc0, vld1q_s8(row + c), vld1q_s8(xq + c));
-        acc1 = vdotq_s32(acc1, vld1q_s8(row + c + 16), vld1q_s8(xq + c + 16));
-    }
-    for (; c < cols; c += 16) acc0 = vdotq_s32(acc0, vld1q_s8(row + c), vld1q_s8(xq + c));
-    return (float)vaddvq_s32(vaddq_s32(acc0, acc1)) * scale * sx + bias;
-}
-
-float dot_row_i8_neon(const int8_t* row, float scale, float bias, const int8_t* xq, float sx, int cols) {
-    int32x4_t acc = vdupq_n_s32(0);
-    for (int c = 0; c < cols; c += 16) {
-        int8x16_t wv = vld1q_s8(row + c), xv = vld1q_s8(xq + c);
-        int16x8_t p = vmull_s8(vget_low_s8(wv), vget_low_s8(xv));
-        p = vmlal_s8(p, vget_high_s8(wv), vget_high_s8(xv));
-        acc = vpadalq_s16(acc, p);
-    }
-    return (float)vaddvq_s32(acc) * scale * sx + bias;
-}
 #endif
 
 inline void matvec_i8(const int8_t* W, const float* scale, const float* bias,
@@ -255,14 +226,6 @@ inline void matvec_i8(const int8_t* W, const float* scale, const float* bias,
     if (kKernel == KernelKind::kNeon) { matvec_i8_neon(W, scale, bias, xq, sx, out, rows, cols); return; }
 #endif
     matvec_i8_scalar(W, scale, bias, xq, sx, out, rows, cols);
-}
-
-inline float dot_row_i8(const int8_t* row, float scale, float bias, const int8_t* xq, float sx, int cols) {
-#if defined(__aarch64__)
-    if (kKernel == KernelKind::kSdot) return dot_row_i8_sdot(row, scale, bias, xq, sx, cols);
-    if (kKernel == KernelKind::kNeon) return dot_row_i8_neon(row, scale, bias, xq, sx, cols);
-#endif
-    return dot_row_i8_scalar(row, scale, bias, xq, sx, cols);
 }
 
 // ---- INT4 group-32 dot products (NEON split-half nibble layout: lo = q[0..15]+8, hi = q[16..31]+8) ----
@@ -405,15 +368,6 @@ inline void matvec_i4(const uint8_t* W, const uint16_t* scales, const float* bia
     if (kKernel == KernelKind::kNeon) { matvec_i4_neon(W, scales, bias, xq, sx, out, rows, cols); return; }
 #endif
     matvec_i4_scalar(W, scales, bias, xq, sx, out, rows, cols);
-}
-
-inline float dot_row_i4(const uint8_t* packed, const uint16_t* scales, float bias,
-                        const int8_t* xq, float sx, int cols) {
-#if defined(__aarch64__)
-    if (kKernel == KernelKind::kSdot) return dot_row_i4_sdot(packed, scales, bias, xq, sx, cols);
-    if (kKernel == KernelKind::kNeon) return dot_row_i4_neon(packed, scales, bias, xq, sx, cols);
-#endif
-    return dot_row_i4_scalar(packed, scales, bias, xq, sx, cols);
 }
 
 // ---- 4-wide NEON fast-exp logsumexp (LSE error < 4e-6) ----
@@ -754,9 +708,6 @@ std::unique_ptr<NeuralLm> NeuralLm::load_fd(int lmb_fd, int64_t lmb_off, int64_t
         lm->n_int4_ = 0;
         lm->group_size_ = 32;
         lm->has_bias_ = false;
-        lm->self_norm_ = false;
-        lm->logz_mean_ = 0.0f;
-        lm->shortlist_k_ = lm->V_;
         lm->out_bias_ = nullptr;
         lm->scale_i8_ = reinterpret_cast<const float*>(p + 24 + words_bytes);
         lm->table_i8_ = reinterpret_cast<const int8_t*>(p + 24 + words_bytes + (size_t)lm->V_ * 4);
@@ -764,12 +715,8 @@ std::unique_ptr<NeuralLm> NeuralLm::load_fd(int lmb_fd, int64_t lmb_off, int64_t
         if (lmv_size < 48) return fail("truncated .lmv v2 header");
         uint32_t h[8];
         std::memcpy(h, p + 4, sizeof(h));
-        float logz_mean = 0.0f;
-        uint32_t shortlist_k = 0, reserved = 0;
-        std::memcpy(&logz_mean, p + 36, 4);
-        std::memcpy(&shortlist_k, p + 40, 4);
-        std::memcpy(&reserved, p + 44, 4);
-        (void)reserved;
+        // Bytes 36..47 hold optional legacy self-norm/shortlist/reserved metadata; ignored since
+        // scoring always computes exact logsumexp.
 
         lm->lmv_version_ = 2;
         lm->V_ = (int)h[1];
@@ -780,9 +727,6 @@ std::unique_ptr<NeuralLm> NeuralLm::load_fd(int lmb_fd, int64_t lmb_off, int64_t
         lm->group_size_ = (int)h[6];
         const uint32_t flags = h[7];
         lm->has_bias_ = (flags & 1u) != 0;
-        lm->self_norm_ = (flags & 2u) != 0;
-        lm->logz_mean_ = logz_mean;
-        lm->shortlist_k_ = shortlist_k > 0 ? std::min((int)shortlist_k, lm->V_) : lm->V_;
 
         if (lm->V_ < 3 || lm->E_ <= 0 || lm->E_ % 16 || lm->ctx_ <= 0 || words_bytes % 4 ||
             lm->n_int8_ < 0 || lm->n_int8_ > lm->V_) {
@@ -1324,28 +1268,6 @@ void NeuralLm::logits(const float* z, float* out) const {
     if (n_int4_ > 0) {
         matvec_i4(table_i4_, scale_i4_, out_bias_ ? (out_bias_ + n_int8_) : nullptr,
                   zq, sz, out + n_int8_, n_int4_, E_);
-    }
-}
-
-void NeuralLm::score_subset(const float* z, const int32_t* ids, size_t n, float* out_logits) const {
-    if (n == 0) return;
-    int8_t stack_zq[512];
-    std::vector<int8_t> heap_zq;
-    int8_t* zq = E_ <= 512 ? stack_zq : (heap_zq.resize(E_), heap_zq.data());
-    const float sz = quantize(z, E_, zq);
-    const int stride4 = E_ >> 1;
-    const int G = E_ >> 5;
-    for (size_t i = 0; i < n; ++i) {
-        const int32_t v = ids[i];
-        if (v < 0 || v >= V_) { out_logits[i] = -1e30f; continue; }
-        const float bias = out_bias_ ? out_bias_[v] : 0.0f;
-        if (v < n_int8_) {
-            out_logits[i] = dot_row_i8(table_i8_ + (size_t)v * E_, scale_i8_[v], bias, zq, sz, E_);
-        } else {
-            const int r = v - n_int8_;
-            out_logits[i] = dot_row_i4(table_i4_ + (size_t)r * stride4, scale_i4_ + (size_t)r * G,
-                                       bias, zq, sz, E_);
-        }
     }
 }
 

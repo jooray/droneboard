@@ -48,7 +48,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">¿Grabar deslizamientos localmente?</string>
-    <string name="typing_swipes_privacy_message">Las palabras y trazos deslizados se guardarán solo en este dispositivo para analizar y mejorar la precisión. Nunca se graban contraseñas ni el modo incógnito, y nada se envía a internet.</string>
+    <string name="typing_swipes_privacy_message">Las palabras escritas deslizando, las palabras anteriores y los trazos táctiles se guardarán solo en este dispositivo para analizar y mejorar la precisión. Nunca se graban contraseñas ni el modo incógnito, y nada se envía a internet.</string>
     <string name="typing_swipes_privacy_confirm">Activar</string>
 
     <!-- Voice dictation status -->

@@ -48,7 +48,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">Veegbewegingen lokaal opnemen?</string>
-    <string name="typing_swipes_privacy_message">Geveegde woorden en aanraakpaden worden alleen op dit apparaat opgeslagen om de nauwkeurigheid te onderzoeken en te verbeteren. Wachtwoorden en incognito worden nooit opgenomen en niets wordt geüpload.</string>
+    <string name="typing_swipes_privacy_message">Geveegde woorden, de woorden ervoor en aanraakpaden worden alleen op dit apparaat opgeslagen om de nauwkeurigheid te onderzoeken en te verbeteren. Wachtwoorden en incognito worden nooit opgenomen en niets wordt geüpload.</string>
     <string name="typing_swipes_privacy_confirm">Inschakelen</string>
 
     <!-- Voice dictation status -->

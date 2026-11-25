@@ -545,8 +545,8 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeural(JNIEnv* env, jcla
         LOGE("neural LM: %s", err.c_str());
         return 0;
     }
-    LOGI("neural LM v%d loaded: %d words, ctx=%d, self_norm=%d, %s kernel, %.1f ms",
-         lm->version(), lm->vocab(), lm->ctx(), lm->is_self_norm() ? 1 : 0, droneswipe::neural_kernel_name(),
+    LOGI("neural LM v%d loaded: %d words, ctx=%d, int8=%d, %s kernel, %.1f ms",
+         lm->version(), lm->vocab(), lm->ctx(), lm->int8_rows(), droneswipe::neural_kernel_name(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)lm.release();
 } catch (const std::exception& e) {
@@ -570,8 +570,8 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeuralFd(JNIEnv*, jclass
         LOGE("neural LM fd: %s", err.c_str());
         return 0;
     }
-    LOGI("neural LM v%d fd loaded: %d words, ctx=%d, self_norm=%d, %s kernel, %.1f ms",
-         lm->version(), lm->vocab(), lm->ctx(), lm->is_self_norm() ? 1 : 0, droneswipe::neural_kernel_name(),
+    LOGI("neural LM v%d fd loaded: %d words, ctx=%d, int8=%d, %s kernel, %.1f ms",
+         lm->version(), lm->vocab(), lm->ctx(), lm->int8_rows(), droneswipe::neural_kernel_name(),
          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
     return (jlong)(uintptr_t)lm.release();
 } catch (const std::exception& e) {
@@ -582,7 +582,7 @@ Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeLoadNeuralFd(JNIEnv*, jclass
     return 0;
 }
 
-// Finger-down prefetch: warms each model's KV cache (and logits for non-self-norm models) in parallel.
+// Finger-down prefetch: warms each model's KV cache and exact logits/logsumexp in parallel.
 JNIEXPORT void JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativePrefetchNeural(JNIEnv* env, jclass,
                                                                    jlongArray models, jobjectArray jcontext,

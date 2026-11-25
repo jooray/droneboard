@@ -48,7 +48,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">Record swipes locally?</string>
-    <string name="typing_swipes_privacy_message">Swiped words and touch paths will be saved only on this device so swipe accuracy can be inspected and improved. Passwords and incognito mode are never recorded, and nothing is ever uploaded.</string>
+    <string name="typing_swipes_privacy_message">Swiped words, the words before them, and touch paths will be saved only on this device so swipe accuracy can be inspected and improved. Passwords and incognito mode are never recorded, and nothing is ever uploaded.</string>
     <string name="typing_swipes_privacy_confirm">Turn on</string>
 
     <!-- Voice dictation status -->

@@ -3,7 +3,7 @@
 // tools/lm and exported by tools/lm/export_keyboard_lm.py:
 //   <lang>.lmb  the model body (v1 TinyGPT or v2 StripedLM: 2x GatedCausalConv1D + 2x RoPE-GQA + SwiGLU)
 //   <lang>.lmv  the word list and tied embedding table (v1 INT8, or v2 mixed INT8 + INT4-g32 +
-//               optional vocab bias + optional self-normalization)
+//               optional vocab bias)
 // Plain C++ without ExecuTorch/XNNPACK (their KleidiAI int8 packing crashed under hardened_malloc).
 // A key/value cache (v1 window, v2 RoPE ring buffer with zero restarts) keeps context history, so
 // typing one more word computes one new position.
@@ -36,9 +36,6 @@ public:
     int dim() const { return E_; }
     int ctx() const { return ctx_; }
     int version() const { return lmv_version_; }
-    bool is_self_norm() const { return self_norm_; }
-    float logz_mean() const { return logz_mean_; }
-    int shortlist_k() const { return shortlist_k_; }
     int int8_rows() const { return n_int8_; }
 
     // id of a normalized token (lowercase word, "<num>", punctuation), 1 (<unk>) when unknown
@@ -57,15 +54,12 @@ public:
     void logits(const float* z, float* out) const;
     // logits of the token after ids and their logsumexp; the last result is cached. Caller holds mutex().
     const float* distribution(const std::vector<int32_t>& ids, float* lse);
-    // Warm KV cache (and cached logits/lse for non-self-norm models) for upcoming inference.
+    // Warm KV cache and cached exact logits/logsumexp for upcoming inference.
     // Caller holds mutex().
     void prefetch(const std::vector<int32_t>& ids);
 
-    // Score only the requested token ids using hidden state z (O(ids.size()) instead of O(V)).
-    // Output values are raw logits (for self-norm models, log P ~= logit - logz_mean()).
-    void score_subset(const float* z, const int32_t* ids, size_t n, float* out_logits) const;
-    // Top-k word ids matching prefix_lower (using sorted prefix index; or empty-prefix shortlist for
-    // self-norm models). Returns pairs (log_prob, word_id) sorted descending by log_prob.
+    // Top-k word ids matching prefix_lower (using sorted prefix index and exact logsumexp).
+    // Returns pairs (log_prob, word_id) sorted descending by log_prob.
     // Caller holds mutex().
     std::vector<std::pair<float, int32_t>> top_words(const std::vector<int32_t>& ids,
                                                      const std::string& prefix_lower,
@@ -90,9 +84,6 @@ private:
     int lmv_version_ = 1;
     int n_int8_ = 0, n_int4_ = 0, group_size_ = 32;
     bool has_bias_ = false;
-    bool self_norm_ = false;
-    float logz_mean_ = 0.0f;
-    int shortlist_k_ = 0;
 
     std::vector<std::string> tokens_;
     std::vector<std::string> key_paths_;
@@ -117,7 +108,6 @@ private:
     std::vector<int32_t> cached_ids_;   // ids of cached_logits_
     std::vector<float> cached_logits_;
     float cached_lse_ = 0;
-    std::vector<float> shortlist_buf_;  // scratch for self-norm empty-prefix shortlist
     std::mutex mutex_;
 
     void step_v1(int32_t id);
@@ -143,7 +133,7 @@ struct NeuralLanguageInput {
     const KpDictionary* dict;  // optional: only words it knows are suggested, with its capitalization
 };
 
-// Warm KV cache (and logits for non-self-norm models) across all models in parallel.
+// Warm KV cache and exact logits/logsumexp across all models in parallel.
 void prefetch_neural(const std::vector<NeuralLm*>& models,
                      const std::vector<std::string>& context, bool bos);
 

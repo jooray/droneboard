@@ -113,4 +113,56 @@ class SuggestionStripViewTest {
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(listOf(expectedWord), picked)
     }
+
+    @Test
+    fun slideOffLiftClearsSnapshotSoSubsequentClickCommitsCurrentWord() {
+        initSettingsForToolbarMode(ToolbarMode.EXPANDABLE)
+        val strip = SuggestionStripView(themedContext, null)
+        val picked = mutableListOf<String>()
+        val keyboardView = MainKeyboardView(themedContext, null).apply {
+            id = R.id.keyboard_view
+        }
+        strip.setListener(object : SuggestionStripView.Listener {
+            override fun pickSuggestionManually(word: SuggestedWordInfo?) {
+                word?.word?.let { picked.add(it) }
+            }
+            override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {}
+            override fun removeSuggestion(word: String?) {}
+            override fun removeExternalSuggestions() {}
+            override fun onSwipeDownOnToolbar() {}
+        }, keyboardView)
+
+        fun makeWords(vararg words: String): SuggestedWords {
+            val list = ArrayList(words.map {
+                SuggestedWordInfo(it, "", 100, SuggestedWordInfo.KIND_CORRECTION, Dictionary.DICTIONARY_USER_TYPED, 0, 0)
+            })
+            return SuggestedWords(
+                list, null, list.first(), false, false, false,
+                InputStyle.TYPING, 1
+            )
+        }
+
+        strip.setSuggestions(makeWords("hello", "help", "hero"), false)
+        val stripGroup = strip.findViewById<android.view.ViewGroup>(R.id.suggestions_strip)
+        val firstWordView = (0 until stripGroup.childCount)
+            .map { stripGroup.getChildAt(it) }
+            .filterIsInstance<TextView>()
+            .first { it.tag is Int }
+
+        // Press down on the first word, then slide off (view unpressed) and lift.
+        val down = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0)
+        firstWordView.dispatchTouchEvent(down)
+        down.recycle()
+        firstWordView.isPressed = false
+        val up = MotionEvent.obtain(0L, 10L, MotionEvent.ACTION_UP, 500f, 500f, 0)
+        firstWordView.dispatchTouchEvent(up)
+        up.recycle()
+
+        // Strip updates to new suggestions; a later accessibility click must commit the current word.
+        strip.setSuggestions(makeWords("world", "work", "word"), false)
+        val currentWord = firstWordView.text.toString()
+        firstWordView.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(currentWord), picked)
+    }
 }

@@ -48,7 +48,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">Wischgesten lokal aufzeichnen?</string>
-    <string name="typing_swipes_privacy_message">Gewischte Wörter und Berührungspfade werden nur auf diesem Gerät gespeichert, um die Erkennung zu prüfen und zu verbessern. Passwörter und der Inkognito-Modus werden nie aufgezeichnet und nichts wird hochgeladen.</string>
+    <string name="typing_swipes_privacy_message">Gewischte Wörter, die Wörter davor und Berührungspfade werden nur auf diesem Gerät gespeichert, um die Erkennung zu prüfen und zu verbessern. Passwörter und der Inkognito-Modus werden nie aufgezeichnet und nichts wird hochgeladen.</string>
     <string name="typing_swipes_privacy_confirm">Aktivieren</string>
 
     <!-- Voice dictation status -->

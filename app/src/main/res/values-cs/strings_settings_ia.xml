@@ -49,7 +49,7 @@
 
     <!-- Glide typing privacy confirmation -->
     <string name="typing_swipes_privacy_title">Nahrávat tahy lokálně?</string>
-    <string name="typing_swipes_privacy_message">Napsaná slova a dráhy dotyku se uloží pouze v tomto zařízení pro vyhodnocení a zlepšení přesnosti tahů. Hesla a anonymní režim se nikdy nenahrávají a nic se neodesílá.</string>
+    <string name="typing_swipes_privacy_message">Slova napsaná tahem, slova před nimi a dráhy dotyku se uloží pouze v tomto zařízení pro vyhodnocení a zlepšení přesnosti tahů. Hesla a anonymní režim se nikdy nenahrávají a nic se neodesílá.</string>
     <string name="typing_swipes_privacy_confirm">Zapnout</string>
 
     <!-- Voice dictation status -->

@@ -120,6 +120,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                         pressedWordView = v
                         pressedWordInfo = if (idx != null && idx in 0 until suggestedWords.size) suggestedWords.getInfo(idx) else null
                     }
+                    MotionEvent.ACTION_UP -> {
+                        if (pressedWordView === v && (!v.isPressed || !v.isEnabled)) {
+                            pressedWordView = null
+                            pressedWordInfo = null
+                        }
+                    }
                     MotionEvent.ACTION_CANCEL -> {
                         if (pressedWordView === v) {
                             pressedWordView = null

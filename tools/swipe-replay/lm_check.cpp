@@ -36,11 +36,10 @@ int main(int argc, char** argv) {
     auto t0 = std::chrono::steady_clock::now();
     auto lm = droneswipe::NeuralLm::load(argv[1], argv[2], &err);
     if (!lm) { std::fprintf(stderr, "%s\n", err.c_str()); return 1; }
-    std::fprintf(stderr, "loaded v%d in %.1f ms (V=%d E=%d ctx=%d int8=%d self_norm=%d logz=%.3f shortlist=%d), kernel %s\n",
+    std::fprintf(stderr, "loaded v%d in %.1f ms (V=%d E=%d ctx=%d int8=%d), kernel %s\n",
                  lm->version(),
                  std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
                  lm->vocab(), lm->dim(), lm->ctx(), lm->int8_rows(),
-                 lm->is_self_norm() ? 1 : 0, lm->logz_mean(), lm->shortlist_k(),
                  droneswipe::neural_kernel_name());
     const bool app = argc > 4 && std::string(argv[4]) == "app";
     const size_t max_window = (size_t)std::max(1, lm->ctx() - 1);
@@ -64,13 +63,9 @@ int main(int argc, char** argv) {
             prefix.push_back(ids[k]);
             if (app && prefix.size() > max_window) prefix.erase(prefix.begin());
             auto s = std::chrono::steady_clock::now();
-            if (app && lm->is_self_norm()) {
-                z = lm->hidden(prefix);
-            } else {
-                float lse = 0.0f;
-                lm->distribution(prefix, &lse);
-                z = lm->hidden(prefix);
-            }
+            float lse = 0.0f;
+            lm->distribution(prefix, &lse);
+            z = lm->hidden(prefix);
             const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - s).count();
             (k == 0 ? restart_ms : step_ms).push_back(ms);
             if (app) {
