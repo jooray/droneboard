@@ -97,19 +97,12 @@ android {
     // unit tests exist only for one build type: on CI it is "runTests", which skips the tests known to fail there
     testBuildType = if (System.getenv("CI") != null) "runTests" else "debug"
 
-    // On CI these classes are left out until they are repaired: InputLogicTest and InputTest reach the native
-    // dictionary library (UnsatisfiedLinkError in a JVM test), SuggestTest fails 12 of 29, and a full run with them hangs.
-    // every test class gets its own JVM: classes that start the keyboard service leave threads behind,
-    // and a run with all classes in one JVM hangs for hours
+    // Every test class gets its own JVM so Robolectric singleton state does not leak across classes.
     tasks.withType<Test>().configureEach { forkEvery = 1 }
     if (System.getenv("CI") != null) {
         tasks.withType<Test>().configureEach {
             testLogging { events("started", "passed", "failed", "skipped") } // shows in the log where a run got stuck
             filter {
-                excludeTestsMatching("*.InputLogicTest")
-                excludeTestsMatching("*.InputTest")
-                excludeTestsMatching("*.SuggestTest")
-                excludeTestsMatching("*.StringUtilsTest") // hangs on the GitHub runner, passes locally
                 excludeTestsMatching("*.XLinkTest") // checks links on other people's servers
             }
         }

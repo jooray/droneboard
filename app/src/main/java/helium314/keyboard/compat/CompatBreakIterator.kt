@@ -142,8 +142,8 @@ private class GraphemeIterator : CompatBreakIterator {
     override fun following(offset: Int): Int {
         val i = if (bi.current() == offset) bi.next() else bi.following(offset) // Looking at Android source, next is likely faster than following
         // e.g. " 🏼" is detected as single grapheme, but we don't want this
-        val d83c = text.indexOfLastBefore(i, offset + 1) { it == '\uD83C' } // start of many emojis, including skin tones and regional indicators
-        if (d83c == -1) {
+        val lastD83c = text.indexOfLastBefore(i, offset + 1) { it == '\uD83C' } // start of many emojis, including skin tones and regional indicators
+        if (lastD83c == -1) {
             index = i
             return i
         }
@@ -153,15 +153,30 @@ private class GraphemeIterator : CompatBreakIterator {
             index = i
             return i
         }
-        index = if (singleEmojiRegex.matches(text.substring(offsetForEmojiCheck, i))) i
-        else d83c.coerceAtLeast(offset + 1)
+        if (singleEmojiRegex.matches(text.substring(offsetForEmojiCheck, i))) {
+            index = i
+            return i
+        }
+        // Multiple consecutive \uD83C modifiers (e.g. "🏼🏼🏼" or "🕵🏼🏼"): pick the longest valid emoji prefix,
+        // otherwise split at the earliest \uD83C after offset.
+        var pos = lastD83c
+        var earliest = lastD83c
+        while (pos != -1) {
+            if (singleEmojiRegex.matches(text.substring(offsetForEmojiCheck, pos))) {
+                index = pos
+                return pos
+            }
+            earliest = pos
+            pos = text.indexOfLastBefore(pos, offset + 1) { it == '\uD83C' }
+        }
+        index = earliest.coerceAtLeast(offset + 1)
         return index
     }
 
     override fun preceding(offset: Int): Int {
         val i = if (bi.current() == offset) bi.previous() else bi.preceding(offset)
-        val d83c = text.indexOfFirstAfter(i, offset - 1) { it == '\uD83C' }
-        if (d83c == -1) {
+        val lastD83c = text.indexOfLastBefore(offset, i + 1) { it == '\uD83C' }
+        if (lastD83c == -1) {
             index = i
             return i
         }
@@ -170,8 +185,15 @@ private class GraphemeIterator : CompatBreakIterator {
             index = i
             return i
         }
-        index = if (singleEmojiRegex.matches(text.substring(i, offsetForEmojiCheck))) i
-        else d83c
+        if (singleEmojiRegex.matches(text.substring(i, offsetForEmojiCheck))) {
+            index = i
+            return i
+        }
+        if (offset < text.length && text[offset] == '\uD83C' && singleEmojiRegex.matches(text.substring(i, offset))) {
+            index = i
+            return i
+        }
+        index = lastD83c
         return index
     }
 

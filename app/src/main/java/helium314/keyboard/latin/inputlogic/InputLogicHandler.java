@@ -37,6 +37,7 @@ class InputLogicHandler implements Handler.Callback {
     public InputLogicHandler(final LatinIME.UIHandler latinIMEHandler, final InputLogic inputLogic) {
         final HandlerThread handlerThread = new HandlerThread(
                 InputLogicHandler.class.getSimpleName());
+        handlerThread.setDaemon(true);
         handlerThread.start();
         mNonUIThreadHandler = new Handler(handlerThread.getLooper(), this);
         mLatinIMEHandler = latinIMEHandler;

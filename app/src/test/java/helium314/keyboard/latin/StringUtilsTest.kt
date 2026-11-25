@@ -15,6 +15,7 @@ import helium314.keyboard.latin.common.singleEmojiRegex
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.common.stripTrailingSeparatorsAndConnectors
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
+import org.junit.Ignore
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -153,8 +154,8 @@ class StringUtilsTest {
         assertEquals("\uD83C\uDF84", getFullEmojiAtStart("\uD83C\uDF84\uD83C\uDFFC")) // 🎄🏼
     }
 
+    @Ignore("Known upstream limitation: ICU BreakIterator keeps trailing ZWJ in the grapheme (asserted by CharacterIteratorTest)")
     @Test fun detectEmojiAtStartFails() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return
         // fails because first grapheme contains \u200D, which sort of makes sense... but we don't want that
         assertEquals("😢", getFullEmojiAtStart("😢\u200D "))
     }

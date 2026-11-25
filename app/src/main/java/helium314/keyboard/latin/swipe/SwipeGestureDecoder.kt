@@ -143,7 +143,7 @@ object SwipeGestureDecoder {
     private val failedAt = ConcurrentHashMap<String, Long>()
     private const val RETRY_FAILED_MS = 15_000L
     /** loads dictionaries one after another, never on the input thread, never under the decoder lock */
-    private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-load") }
+    private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-load").apply { isDaemon = true } }
     private val extractLock = Any()
     private val extractLocks = ConcurrentHashMap<String, Any>()
     private var assetDir: File? = null

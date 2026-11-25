@@ -16,13 +16,20 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.upgradeToolbarPrefs
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 class App : Application() {
+    private var startupBgJob: Job? = null
+
     override fun onCreate() {
         super.onCreate()
         app = this
@@ -30,7 +37,7 @@ class App : Application() {
         DebugFlags.init(this) // needed by several other inits, so do it first
         DirectBoot.init(this) // Droneboard: minimal keyboard before the first unlock
 
-        val scope = CoroutineScope(Dispatchers.Default)
+        val scope = CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, _ -> })
         // other inits can be in parallel, except what depends on SubtypeSettings
         val jobs = listOf(
             scope.launch {
@@ -55,25 +62,39 @@ class App : Application() {
         )
         runBlocking { jobs.joinAll() } // word should be finished before anything else is started
 
-        scope.launch { // do some uncritical work in background for faster startup
+        startupBgJob = scope.launch { // do some uncritical work in background for faster startup
             // Droneboard: an exception in this coroutine kills the whole process (also the keyboard on the lock
             // screen), and none of this is needed to type, so each step fails on its own
-            fun uncritical(name: String, block: () -> Unit) = try {
-                block()
-            } catch (e: Throwable) {
-                Log.e("startup", "$name failed", e)
+            fun uncritical(name: String, block: () -> Unit) {
+                if (!isActive) return
+                try {
+                    block()
+                } catch (e: Throwable) {
+                    runCatching { Log.e("startup", "$name failed", e) }
+                }
             }
             uncritical("SupportedEmojis.load") { SupportedEmojis.load(this@App) }
             uncritical("initUpToDateDicts") { ExpandableDictionaryUtils.initUpToDateDicts(this@App) }
             uncritical("removeMissingLayouts") { LayoutUtilsCustom.removeMissingLayouts(this@App) }
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            @Suppress("DEPRECATION")
-            Log.i(
-                "startup", "Starting ${applicationInfo.processName} version ${packageInfo.versionName} (${
-                    packageInfo.versionCode
-                }) on Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
-            )
+            uncritical("startupLog") {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                @Suppress("DEPRECATION")
+                Log.i(
+                    "startup", "Starting ${applicationInfo.processName} version ${packageInfo.versionName} (${
+                        packageInfo.versionCode
+                    }) on Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
+                )
+            }
         }
+    }
+
+    override fun onTerminate() {
+        val job = startupBgJob
+        startupBgJob = null
+        if (job != null) {
+            runBlocking { withTimeoutOrNull(1000L) { job.cancelAndJoin() } }
+        }
+        super.onTerminate()
     }
 
     companion object {

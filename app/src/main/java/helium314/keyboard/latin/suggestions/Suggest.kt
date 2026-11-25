@@ -116,7 +116,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         // we check against the capitalizedTypedWord because getTransformedSuggestedWordInfoList adjusts for capsMode
         val typedWordFirstOccurrenceWordInfo = suggestionsContainer.firstOrNull { it.word == capitalizedTypedWord }
         val firstOccurrenceOfTypedWordInSuggestions = SuggestedWordInfo.removeDupsAndTypedWord(capitalizedTypedWord, suggestionsContainer)
-        makeFirstTwoSuggestionsNonEmoji(suggestionsContainer)
+        makeFirstTwoSuggestionsNonEmoji(suggestionsContainer, promoteEmoji = typedWordString.isEmpty())
 
         val (allowsToBeAutoCorrected, hasAutoCorrection) = shouldBeAutoCorrected(
             trailingSingleQuotesCount,
@@ -175,7 +175,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 )
             }
         }
-        if (typedWordString.isEmpty() || firstOccurrenceOfTypedWordInSuggestions > -1) moveEmojiToRightSlot(suggestionsList)
+        if (typedWordString.isNotEmpty() && firstOccurrenceOfTypedWordInSuggestions > -1) moveEmojiToRightSlot(suggestionsList)
         val isTypedWordValid = firstOccurrenceOfTypedWordInSuggestions > -1
         return SuggestedWords(suggestionsList, suggestionResults.rawSuggestions, typedWordInfo,
             isTypedWordValid, hasAutoCorrection || correctToCapitalizedWord, false, inputStyle, sequenceNumber)
@@ -548,7 +548,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             else -> word
         }
 
-        internal fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
+        internal fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>, promoteEmoji: Boolean = true) {
             for (i in 0..1) {
                 if (words.size > 2 && words[i].isEmoji) {
                     val relativeIndex = words.subList(2, words.size).indexOfFirst { !it.isEmoji }
@@ -560,7 +560,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                 }
             }
             // Droneboard: the best emoji goes to the third visible slot, as in Gboard
-            if (words.size > 3 && !words[2].isEmoji) {
+            if (promoteEmoji && words.size > 3 && !words[2].isEmoji) {
                 val emojiIndex = words.indexOfFirst { it.isEmoji }
                 if (emojiIndex > 2) words.add(2, words.removeAt(emojiIndex))
             }

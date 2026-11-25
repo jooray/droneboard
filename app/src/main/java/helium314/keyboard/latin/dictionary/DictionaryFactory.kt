@@ -118,15 +118,25 @@ object DictionaryFactory {
         locale: Locale
     ): Dictionary? {
         if (!file.isFile) return null
-        val header = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
+        val header = try {
+            DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
+        } catch (e: UnsatisfiedLinkError) {
+            Log.w("DictionaryFactory", "native library not loaded, cannot open ${file.name}", e)
+            return null
+        }
         if (header == null) {
             killDictionary(file)
             return null
         }
         val dictType = header.mIdString.split(":").first()
-        val readOnlyBinaryDictionary = ReadOnlyBinaryDictionary(
-            file.absolutePath, 0, file.length(), false, locale, dictType
-        )
+        val readOnlyBinaryDictionary = try {
+            ReadOnlyBinaryDictionary(
+                file.absolutePath, 0, file.length(), false, locale, dictType
+            )
+        } catch (e: UnsatisfiedLinkError) {
+            Log.w("DictionaryFactory", "native library not loaded, cannot open ${file.name}", e)
+            return null
+        }
 
         if (readOnlyBinaryDictionary.isValidDictionary) {
             if (locale.language == "ko") {

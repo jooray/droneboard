@@ -10,18 +10,20 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.prefs
 
 object SupportedEmojis {
-    private val unsupportedEmojis = hashSetOf<String>()
+    @Volatile
+    private var unsupportedEmojis: Set<String> = emptySet()
 
     fun load(context: Context) {
         determineMaxSdk(context)
         val maxSdk = context.prefs().getInt(Settings.PREF_EMOJI_MAX_SDK, 0)
-        unsupportedEmojis.clear()
+        val loaded = hashSetOf<String>()
         context.assets.open("emoji/minApi.txt").reader().readLines().forEach {
             val s = it.split(" ")
             val minApi = s.first().toInt()
             if (minApi > maxSdk)
-                unsupportedEmojis.addAll(s.drop(1))
+                loaded.addAll(s.drop(1))
         }
+        unsupportedEmojis = loaded
     }
 
     private fun determineMaxSdk(context: Context) {

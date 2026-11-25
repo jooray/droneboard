@@ -42,9 +42,11 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -121,7 +123,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private val wordsWaitingForHistory = hashMapOf<String, Job>()
     private val unlearnDuration = 25.seconds
 
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Default + CoroutineExceptionHandler { _, _ -> })
 
     // judging by usage before adding multilingual typing, this should check primary group locale only
     override fun isForLocale(locale: Locale?): Boolean {
@@ -293,14 +295,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
-                latchForWaitingLoadingMainDictionary.countDown()
             } catch (e: Throwable) {
-                Log.e(TAG, "could not initialize main dictionaries for $locales", e)
+                runCatching { Log.e(TAG, "could not initialize main dictionaries for $locales", e) }
+            } finally {
+                latchForWaitingLoadingMainDictionary.countDown()
             }
         }
     }
 
     override fun closeDictionaries() {
+        scope.coroutineContext.cancelChildren()
         onFinishInput() // the dictionaries will save updates to file
         val dictionaryGroupsToClose: List<DictionaryGroup>
         synchronized(this) {

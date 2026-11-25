@@ -55,7 +55,7 @@ object SwipeRecorder {
     val recorded = MutableStateFlow(0)
     val lastResult = MutableStateFlow<List<String>>(emptyList())
 
-    private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-recorder") }
+    private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-recorder").apply { isDaemon = true } }
     private val main = Handler(Looper.getMainLooper())
 
     fun directory(context: Context): File? = context.getExternalFilesDir(DIR)

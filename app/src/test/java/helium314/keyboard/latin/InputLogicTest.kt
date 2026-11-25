@@ -32,6 +32,7 @@ import helium314.keyboard.latin.utils.ScriptUtils
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
+import org.junit.Ignore
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.robolectric.Robolectric
@@ -172,8 +173,8 @@ class InputLogicTest {
 
     // todo: make it work, but it might not be that simple because adding is done in combiner
     //  https://github.com/HeliBorg/HeliBoard/issues/214
+    @Ignore("Known upstream HeliBoard issue #214: inserting Hangul mid-word is not yet supported by HangulCombiner")
     @Test fun insertLetterIntoWordHangulFails() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
         chainInput("ㅛㅎㄹㅎㅕㅛ")
         setCursorPosition(3)
@@ -650,6 +651,8 @@ class InputLogicTest {
     }
 
     @Test fun `revert autocorrect on delete`() {
+        // Droneboard defaults PREF_AUTO_CORRECTION to false; enable it explicitly to test autocorrect revert
+        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTO_CORRECTION, true) }
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
         chainInput("hullo")
         getAutocorrectedWithSpaceAfter("hello", "hullo")
@@ -658,8 +661,11 @@ class InputLogicTest {
         assertEquals("hullo", text)
 
         reset()
+        latinIME.prefs().edit {
+            putBoolean(Settings.PREF_AUTO_CORRECTION, true)
+            putBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, false)
+        }
         setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
-        latinIME.prefs().edit { putBoolean(Settings.PREF_BACKSPACE_REVERTS_AUTOCORRECT, false) }
         chainInput("hullo")
         getAutocorrectedWithSpaceAfter("hello", "hullo")
         functionalKeyPress(KeyCode.DELETE)

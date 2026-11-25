@@ -42,6 +42,7 @@ public class ExecutorUtils {
         @Override
         public Thread newThread(final Runnable runnable) {
             Thread thread = new Thread(runnable, TAG);
+            thread.setDaemon(true);
             thread.setUncaughtExceptionHandler((thread1, ex) ->
                     Log.w(mName, runnable.getClass().getSimpleName(), ex));
             return thread;

@@ -23,6 +23,7 @@ import helium314.keyboard.latin.suggestions.SuggestedWordInfo.Companion.KIND_FLA
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo.Companion.KIND_SHORTCUT
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo.Companion.KIND_WHITELIST
 import helium314.keyboard.latin.suggestions.SuggestionResults
+import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -32,6 +33,7 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowLog
 import java.util.*
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,12 +59,21 @@ class SuggestTest {
         ShadowLog.stream = System.out
     }
 
+    private var savedHaveGestureLib = false
+
     @BeforeTest fun reset() {
+        savedHaveGestureLib = JniUtils.sHaveGestureLib
+        // Allow Suggest.getSuggestedWordsForBatchInput to query ShadowFacilitator in JVM tests
+        JniUtils.sHaveGestureLib = true
         latinIME.prefs().edit { clear() }
         currentTypingLocale = Locale.ENGLISH
         tapTypingSuggestions = suggestionResults(emptyList())
         glideTypingSuggestions = suggestionResults(emptyList())
         nextWordSuggestions = suggestionResults(emptyList())
+    }
+
+    @AfterTest fun tearDown() {
+        JniUtils.sHaveGestureLib = savedHaveGestureLib
     }
 
     @Test fun `'on' to 'in' if 'in' was used before in this context`() {
@@ -277,13 +288,20 @@ class SuggestTest {
     }
 
     @Test fun `typed word is first suggestion`() { // first suggestion will not be shown to the user
+        // Droneboard defaults PREF_CENTER_SUGGESTION_TEXT_TO_ENTER to true (Gboard-style center slot)
         tapTypingSuggestions = suggestionResults(listOf(suggestion("hello", 123, currentTypingLocale)))
         val results = getSuggestedWords(false, "henlo", CapsMode.OFF)
-        assertEquals(listOf("henlo", "hello"), results.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("henlo", "henlo", "hello"), results.suggestedWordInfoList.map { it.word })
 
         tapTypingSuggestions = suggestionResults(listOf(suggestion("hello", 123, currentTypingLocale)))
         val results2 = getSuggestedWords(false, "hello", CapsMode.OFF)
-        assertEquals(listOf("hello"), results2.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("hello", "hello"), results2.suggestedWordInfoList.map { it.word })
+
+        latinIME.prefs().edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, false) }
+        val resultsOff = getSuggestedWords(false, "henlo", CapsMode.OFF)
+        assertEquals(listOf("henlo", "hello"), resultsOff.suggestedWordInfoList.map { it.word })
+        val resultsOff2 = getSuggestedWords(false, "hello", CapsMode.OFF)
+        assertEquals(listOf("hello"), resultsOff2.suggestedWordInfoList.map { it.word })
     }
 
     @Test fun `typed word is second suggestion if autocorrect is pending`() {
@@ -309,13 +327,14 @@ class SuggestTest {
             suggestion("sure", 935),
             suggestion("siege", 925),
         ))
-        val results = getSuggestedWords(false, "suge", CapsMode.OFF)
-        assertEquals(listOf("suge", "surge", "sure", "siege"), results.suggestedWordInfoList.map { it.word })
-
-        latinIME.prefs().edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, true) }
+        // Droneboard defaults PREF_CENTER_SUGGESTION_TEXT_TO_ENTER to true:
         // first suggestion duplicated because the first element in the list is not shown to the user
-        val results2 = getSuggestedWords(false, "suge", CapsMode.OFF)
-        assertEquals(listOf("suge", "suge", "surge", "sure", "siege"), results2.suggestedWordInfoList.map { it.word })
+        val resultsDefault = getSuggestedWords(false, "suge", CapsMode.OFF)
+        assertEquals(listOf("suge", "suge", "surge", "sure", "siege"), resultsDefault.suggestedWordInfoList.map { it.word })
+
+        latinIME.prefs().edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, false) }
+        val resultsOff = getSuggestedWords(false, "suge", CapsMode.OFF)
+        assertEquals(listOf("suge", "surge", "sure", "siege"), resultsOff.suggestedWordInfoList.map { it.word })
     }
 
     @Test fun `empty typed word gives next word suggestions`() {
@@ -384,7 +403,8 @@ class SuggestTest {
             suggestion("🎄", 924),
         ))
         val results = getSuggestedWords(false, "someword'", CapsMode.OFF)
-        assertEquals(listOf("someword'", "ab'", "next'", "something'", "🎄'"), results.suggestedWordInfoList.map { it.word })
+        // Droneboard defaults PREF_CENTER_SUGGESTION_TEXT_TO_ENTER to true, so typed word sits in center slot too
+        assertEquals(listOf("someword'", "someword'", "ab'", "next'", "something'", "🎄'"), results.suggestedWordInfoList.map { it.word })
     }
 
     @Test fun `tap typing suggestions depend on typed word capitalization, ignoring automatic caps modes`() {
@@ -397,20 +417,21 @@ class SuggestTest {
         ))
 
         listOf(CapsMode.OFF, CapsMode.AUTO, CapsMode.AUTO_LOCKED).forEach { mode ->
+            // Droneboard: center slot echoes typed word; for valid typed words best emoji moves to right slot (index 3)
             // not capitalized -> original suggestions
-            assertEquals(listOf("but", "buy", "bit", "😢", "Butter"),
+            assertEquals(listOf("but", "but", "buy", "😢", "bit", "Butter"),
                 getSuggestedWords(false, "but", mode).suggestedWordInfoList.map { it.word })
 
             // capitalized -> capitalized suggestions
-            assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"),
+            assertEquals(listOf("But", "But", "Buy", "😢", "Bit", "Butter"),
                 getSuggestedWords(false, "But", mode).suggestedWordInfoList.map { it.word })
 
-            // more than one uppercase character, but not all -> original suggestions
-            assertEquals(listOf("BuT", "but", "buy", "bit", "😢", "Butter"),
+            // more than one uppercase character, but not all -> original suggestions (not in dict, so emoji does not displace)
+            assertEquals(listOf("BuT", "BuT", "but", "buy", "bit", "😢", "Butter"),
                 getSuggestedWords(false, "BuT", mode).suggestedWordInfoList.map { it.word })
 
             // full uppercase typed word -> uppercase suggestions
-            assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
+            assertEquals(listOf("BUT", "BUT", "BUY", "😢", "BIT", "BUTTER"),
                 getSuggestedWords(false, "BUT", mode).suggestedWordInfoList.map { it.word })
         }
     }
@@ -423,19 +444,20 @@ class SuggestTest {
             suggestion("😢", 85),
             suggestion("Butter", 80),
         ))
-        assertEquals(listOf("but", "buy", "bit", "😢", "Butter"),
+        // Droneboard: best emoji moves to third visible slot (index 2 for next-word and glide)
+        assertEquals(listOf("but", "buy", "😢", "bit", "Butter"),
             getSuggestedWords(true, "", CapsMode.OFF).suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"),
+        assertEquals(listOf("But", "Buy", "😢", "Bit", "Butter"),
             getSuggestedWords(true, "", CapsMode.AUTO).suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
+        assertEquals(listOf("BUT", "BUY", "😢", "BIT", "BUTTER"),
             getSuggestedWords(true, "", CapsMode.AUTO_LOCKED).suggestedWordInfoList.map { it.word })
 
         nextWordSuggestions = glideTypingSuggestions
-        assertEquals(listOf("but", "buy", "bit", "😢", "Butter"),
+        assertEquals(listOf("but", "buy", "😢", "bit", "Butter"),
             getSuggestedWords(false, "", CapsMode.OFF).suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"),
+        assertEquals(listOf("But", "Buy", "😢", "Bit", "Butter"),
             getSuggestedWords(false, "", CapsMode.AUTO).suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
+        assertEquals(listOf("BUT", "BUY", "😢", "BIT", "BUTTER"),
             getSuggestedWords(false, "", CapsMode.AUTO_LOCKED).suggestedWordInfoList.map { it.word })
     }
 
@@ -459,7 +481,8 @@ class SuggestTest {
 
         val result3 = getSuggestedWords(false, "BUr", CapsMode.OFF)
         assert(!result3.willAutoCorrect)
-        assertEquals(listOf("BUr", "but", "bit", "buy", "😢", "Butter"), result3.suggestedWordInfoList.map { it.word })
+        // Droneboard defaults PREF_CENTER_SUGGESTION_TEXT_TO_ENTER to true
+        assertEquals(listOf("BUr", "BUr", "but", "bit", "buy", "😢", "Butter"), result3.suggestedWordInfoList.map { it.word })
 
         val result4 = getSuggestedWords(false, "BUR", CapsMode.OFF)
         assert(result4.willAutoCorrect)
@@ -478,28 +501,28 @@ class SuggestTest {
             suggestion("Butter", 80),
         ))
 
-        // shift -> capitalized suggestions
+        // shift -> capitalized suggestions (Droneboard moves emoji to right slot index 3 for valid words)
         val result = getSuggestedWords(false, "but", CapsMode.MANUAL)
         assert(!result.willAutoCorrect)
-        assertEquals(listOf("but", "But", "Buy", "Bit", "😢", "Butter"), result.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("but", "But", "Buy", "😢", "Bit", "Butter"), result.suggestedWordInfoList.map { it.word })
 
         // caps lock -> uppercase suggestions
-        assertEquals(listOf("but", "BUT", "BUY", "BIT", "😢", "BUTTER"),
+        assertEquals(listOf("but", "BUT", "BUY", "😢", "BIT", "BUTTER"),
             getSuggestedWords(false, "but", CapsMode.MANUAL_LOCKED).suggestedWordInfoList.map { it.word })
 
-        // same for glide typing
+        // same for glide typing (right slot is index 2)
         glideTypingSuggestions = tapTypingSuggestions
         val result2 = getSuggestedWords(true, "", CapsMode.MANUAL)
         assert(!result2.willAutoCorrect)
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"), result2.suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
+        assertEquals(listOf("But", "Buy", "😢", "Bit", "Butter"), result2.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("BUT", "BUY", "😢", "BIT", "BUTTER"),
             getSuggestedWords(true, "", CapsMode.MANUAL_LOCKED).suggestedWordInfoList.map { it.word })
 
-        // same for next word suggestions
+        // same for next word suggestions (right slot is index 2)
         nextWordSuggestions = tapTypingSuggestions
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"),
+        assertEquals(listOf("But", "Buy", "😢", "Bit", "Butter"),
             getSuggestedWords(false, "", CapsMode.MANUAL).suggestedWordInfoList.map { it.word })
-        assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
+        assertEquals(listOf("BUT", "BUY", "😢", "BIT", "BUTTER"),
             getSuggestedWords(false, "", CapsMode.MANUAL_LOCKED).suggestedWordInfoList.map { it.word })
     }
 
@@ -513,15 +536,15 @@ class SuggestTest {
             suggestion("Butter", 80),
         ))
 
-        // shift -> capitalized suggestions
+        // shift -> capitalized suggestions (Droneboard moves emoji to right slot index 3 for valid words)
         val result = getSuggestedWords(false, "but", CapsMode.MANUAL)
         assert(result.willAutoCorrect)
-        assertEquals(listOf("but", "But", "Buy", "Bit", "😢", "Butter"), result.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("but", "But", "Buy", "😢", "Bit", "Butter"), result.suggestedWordInfoList.map { it.word })
 
         // caps lock -> uppercase suggestions
         val result2 = getSuggestedWords(false, "but", CapsMode.MANUAL_LOCKED)
         assert(result2.willAutoCorrect)
-        assertEquals(listOf("but", "BUT", "BUY", "BIT", "😢", "BUTTER"), result2.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("but", "BUT", "BUY", "😢", "BIT", "BUTTER"), result2.suggestedWordInfoList.map { it.word })
 
         glideTypingSuggestions = tapTypingSuggestions
         val result3 = getSuggestedWords(true, "", CapsMode.MANUAL)
@@ -529,7 +552,7 @@ class SuggestTest {
         // when pressing shift to capitalize it, autocorrect will only work if the typed word changes when capitalized. this does not work without typed word
         //assert(result3.mWillAutoCorrect)
         assertEquals("but", result3.typedWordInfo?.word)
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"), result3.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("But", "Buy", "😢", "Bit", "Butter"), result3.suggestedWordInfoList.map { it.word })
     }
 
     @Test fun `no caps mode autocorrect if word has many uppercase letters`() {
@@ -543,15 +566,15 @@ class SuggestTest {
             suggestion("Butter", 80),
         ))
 
-        // shift -> capitalized suggestions
+        // shift -> capitalized suggestions ("BuT" is not in dictionary, so emoji does not displace)
         val result = getSuggestedWords(false, "buT", CapsMode.MANUAL)
         assert(!result.willAutoCorrect)
         assertEquals(listOf("buT", "BuT", "But", "Buy", "Bit", "😢", "Butter"), result.suggestedWordInfoList.map { it.word })
 
-        // caps lock -> uppercase suggestions
+        // caps lock -> uppercase suggestions ("BUT" matches dictionary, so emoji moves to right slot index 3)
         val result2 = getSuggestedWords(false, "buT", CapsMode.MANUAL_LOCKED)
         assert(!result2.willAutoCorrect)
-        assertEquals(listOf("buT", "BUT", "BUY", "BIT", "😢", "BUTTER"), result2.suggestedWordInfoList.map { it.word })
+        assertEquals(listOf("buT", "BUT", "BUY", "😢", "BIT", "BUTTER"), result2.suggestedWordInfoList.map { it.word })
     }
 
     @Test fun `normal autocorrect works with manual caps modes`() {
@@ -589,6 +612,21 @@ class SuggestTest {
         val result4 = getSuggestedWords(false, "bur", CapsMode.MANUAL_LOCKED)
         assert(result4.willAutoCorrect)
         assertEquals(listOf("bur", "BUR", "BUT", "BIT", "BUY", "😢", "BUTTER"), result4.suggestedWordInfoList.map { it.word })
+    }
+
+    @Test fun `misspelled word does not promote emoji into right correction slot`() {
+        latinIME.prefs().edit { putBoolean(Settings.PREF_CENTER_SUGGESTION_TEXT_TO_ENTER, false) }
+        tapTypingSuggestions = suggestionResults(listOf(
+            suggestion("but", 650000),
+            suggestion("bit", 620000),
+            suggestion("buy", 500000),
+            suggestion("😢", 100000),
+            suggestion("Butter", 80000),
+        ))
+        val result = getSuggestedWords(false, "bur", CapsMode.OFF)
+        assert(!result.willAutoCorrect)
+        // Right visible slot (index 3) keeps the 3rd correction "buy" instead of promoting "😢"
+        assertEquals(listOf("bur", "but", "bit", "buy", "😢", "Butter"), result.suggestedWordInfoList.map { it.word })
     }
 
     private fun getSuggestedWords(gesture: Boolean, typedWord: String, capsMode: CapsMode): SuggestedWords {

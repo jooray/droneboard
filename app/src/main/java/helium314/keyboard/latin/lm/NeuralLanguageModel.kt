@@ -65,7 +65,7 @@ object NeuralLanguageModel : LanguageModel {
     // evicted callers wake up immediately instead of stalling for TIMEOUT_MS
     private val executor = ThreadPoolExecutor(
         1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(1),
-        { r -> Thread(r, "neural-lm").apply { priority = Thread.NORM_PRIORITY } },
+        { r -> Thread(r, "neural-lm").apply { priority = Thread.NORM_PRIORITY; isDaemon = true } },
         RejectedExecutionHandler { r, e ->
             if (!e.isShutdown) {
                 val evicted = e.queue.poll()
@@ -79,13 +79,13 @@ object NeuralLanguageModel : LanguageModel {
     // lightweight helper to run NgramLanguageModel.predict() in parallel with nativePredictNeural()
     private val ngramExecutor = ThreadPoolExecutor(
         1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2),
-        { r -> Thread(r, "ngram-lm").apply { priority = Thread.NORM_PRIORITY } },
+        { r -> Thread(r, "ngram-lm").apply { priority = Thread.NORM_PRIORITY; isDaemon = true } },
         ThreadPoolExecutor.CallerRunsPolicy()
     ).apply { allowCoreThreadTimeOut(true) }
     // 2 loader threads so multilingual language pairs (e.g. SK + EN) load in parallel on cold start
     private val loader = ThreadPoolExecutor(
         2, 2, 30, TimeUnit.SECONDS, java.util.concurrent.LinkedBlockingQueue(),
-        { r -> Thread(r, "neural-lm-load") }
+        { r -> Thread(r, "neural-lm-load").apply { isDaemon = true } }
     ).apply { allowCoreThreadTimeOut(true) }
 
     private val cache = object : LinkedHashMap<String, List<WordPrediction>>(CACHE_SIZE, 0.75f, true) {

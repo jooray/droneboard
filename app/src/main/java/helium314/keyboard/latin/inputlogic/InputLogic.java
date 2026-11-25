@@ -1180,7 +1180,9 @@ public final class InputLogic {
                         : StringUtils.newSingleCodePointString(codePoint);
                 commitCurrentAutoCorrection(settingsValues, separator, handler);
                 inputTransaction.setDidAutoCorrect();
-            } else if (!commitWithEnglishICapitalization(settingsValues, StringUtils.newSingleCodePointString(codePoint))) {
+            } else if (commitWithEnglishICapitalization(settingsValues, StringUtils.newSingleCodePointString(codePoint))) {
+                inputTransaction.setDidAutoCorrect();
+            } else {
                 commitTyped(settingsValues, StringUtils.newSingleCodePointString(codePoint));
             }
         }
