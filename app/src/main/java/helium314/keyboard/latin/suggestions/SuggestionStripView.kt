@@ -95,6 +95,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val dividerViews = ArrayList<View>()
     private val removeSuggestionActionId = View.generateViewId()
     private var confirmingDeleteWord: String? = null
+    // Snapshot of the suggestion under the finger at ACTION_DOWN so an in-flight async update
+    // reusing the same TextView cannot silently commit a different word on ACTION_UP.
+    private var pressedWordView: View? = null
+    private var pressedWordInfo: SuggestedWordInfo? = null
 
     init {
         val inflater = LayoutInflater.from(context)
@@ -108,6 +112,23 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             word.contentDescription = resources.getString(R.string.spoken_empty_suggestion)
             word.setOnClickListener(this)
             word.setOnLongClickListener(this)
+            @SuppressLint("ClickableViewAccessibility")
+            word.setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        val idx = v.tag as? Int
+                        pressedWordView = v
+                        pressedWordInfo = if (idx != null && idx in 0 until suggestedWords.size) suggestedWords.getInfo(idx) else null
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        if (pressedWordView === v) {
+                            pressedWordView = null
+                            pressedWordInfo = null
+                        }
+                    }
+                }
+                false
+            }
             colors.setBackground(word, ColorType.STRIP_BACKGROUND)
             ViewCompat.setAccessibilityDelegate(word, object : AccessibilityDelegateCompat() {
                 override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
@@ -163,6 +184,30 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
         LinearLayout.LayoutParams.MATCH_PARENT
     )
+
+    private lateinit var listener: Listener
+    private var suggestedWords = SuggestedWords.emptyInstance
+    private var startIndexOfMoreSuggestions = 0
+    private var isExternalSuggestionVisible = false // Required to disable the more suggestions if other suggestions are visible
+    private val layoutHelper = SuggestionStripLayoutHelper(context, attrs, defStyle, wordViews, dividerViews, debugInfoViews)
+    private val moreSuggestionsView = moreSuggestionsContainer.findViewById<MoreSuggestionsView>(R.id.more_suggestions_view).apply {
+        val slidingListener = object : SimpleOnGestureListener() {
+            override fun onScroll(down: MotionEvent?, me: MotionEvent, deltaX: Float, deltaY: Float): Boolean {
+                if (down == null) return false
+                val dy = me.y - down.y
+                val dx = me.x - down.x
+
+                if (Settings.getValues().mToolbarSwipeDownToHide && dy > 50.dpToPx(resources) && abs(dy) > abs(dx)) {
+                    listener.onSwipeDownOnToolbar()
+                    return true
+                }
+
+                return if (!isExternalSuggestionVisible && toolbarContainer.visibility != VISIBLE && deltaY > 0 && dy < (-10).dpToPx(resources)) showMoreSuggestions()
+                else false
+            }
+        }
+        gestureDetector = GestureDetector(context, slidingListener)
+    }
 
     init {
         val colors = Settings.getValues().mColors
@@ -258,30 +303,6 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             if (child.layoutParams.width != keyWidth)
                 child.layoutParams = LinearLayout.LayoutParams(keyWidth, LinearLayout.LayoutParams.MATCH_PARENT)
         }
-    }
-
-    private lateinit var listener: Listener
-    private var suggestedWords = SuggestedWords.emptyInstance
-    private var startIndexOfMoreSuggestions = 0
-    private var isExternalSuggestionVisible = false // Required to disable the more suggestions if other suggestions are visible
-    private val layoutHelper = SuggestionStripLayoutHelper(context, attrs, defStyle, wordViews, dividerViews, debugInfoViews)
-    private val moreSuggestionsView = moreSuggestionsContainer.findViewById<MoreSuggestionsView>(R.id.more_suggestions_view).apply {
-        val slidingListener = object : SimpleOnGestureListener() {
-            override fun onScroll(down: MotionEvent?, me: MotionEvent, deltaX: Float, deltaY: Float): Boolean {
-                if (down == null) return false
-                val dy = me.y - down.y
-                val dx = me.x - down.x
-
-                if (Settings.getValues().mToolbarSwipeDownToHide && dy > 50.dpToPx(resources) && abs(dy) > abs(dx)) {
-                    listener.onSwipeDownOnToolbar()
-                    return true
-                }
-
-                return if (!isExternalSuggestionVisible && toolbarContainer.visibility != VISIBLE && deltaY > 0 && dy < (-10).dpToPx(resources)) showMoreSuggestions()
-                else false
-            }
-        }
-        gestureDetector = GestureDetector(context, slidingListener)
     }
 
     // public stuff
@@ -440,15 +461,20 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
         // tag for word views is set in SuggestionStripLayoutHelper (setupWordViewsTextAndColor, layoutPunctuationSuggestions)
         if (tag is Int) {
-            if (tag >= suggestedWords.size) {
-                return
+            val captured = if (pressedWordView === view) pressedWordInfo else null
+            pressedWordView = null
+            pressedWordInfo = null
+            val wordInfo = captured ?: run {
+                if (tag >= suggestedWords.size) return
+                suggestedWords.getInfo(tag)
             }
-            val wordInfo = suggestedWords.getInfo(tag)
             listener.pickSuggestionManually(wordInfo)
         }
     }
 
     override fun onLongClick(view: View): Boolean {
+        pressedWordView = null
+        pressedWordInfo = null
         if (view.tag is ToolbarKey) {
             onLongClickToolbarKey(view)
             return true
@@ -666,6 +692,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     private fun clear() {
         confirmingDeleteWord = null
+        pressedWordView = null
+        pressedWordInfo = null
         suggestionsStrip.removeAllViews()
         layoutHelper.resetLayoutState()
         if (DEBUG_SUGGESTIONS) removeAllDebugInfoViews()
