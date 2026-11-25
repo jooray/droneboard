@@ -7,7 +7,7 @@
 - The setup wizard has new steps for languages and for trying the keyboard, and About has a page with keyboard tips.
 - Suggestion strip: a button shows more suggestions when there are any, and removing a suggestion asks first. Copied text is offered as a pill that can be dismissed.
 - Dictation shows a live waveform and a "Try again" button when something went wrong.
-- The trackpad on the space bar moves the cursor the same way on every screen density, and keeps moving when you reach the edge.
+- The trackpad on the space bar moves the cursor the same way on every screen density, and the cursor no longer starts running down when you begin at the bottom of the keyboard.
 - Keyboard resizing works with TalkBack, and the compact keyboard has its own buttons for switching sides, expanding and resizing.
 - Turning on the recording of your swipes now asks first and says what is stored: the swiped words, the words before them and the touch paths. As before, it is off by default and nothing leaves the phone.
 - Fixed: backspace right after "i" was changed to "I" takes the change back.
