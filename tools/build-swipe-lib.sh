@@ -75,6 +75,7 @@ if "DRONEBOARD_PARALLEL_TRIES" not in eng:
     new_inc = """#include <cmath>
 #include <atomic>
 #include <condition_variable>
+#include <exception>
 #include <functional>
 #include <mutex>
 #include <thread>"""
@@ -89,6 +90,7 @@ if "DRONEBOARD_PARALLEL_TRIES" not in eng:
         std::mutex mtx;
         std::condition_variable cv_work, cv_done;
         std::function<void()> task;
+        std::exception_ptr worker_exc;
         bool has_task = false;
         bool busy = false;
         bool stop = false;
@@ -105,9 +107,15 @@ if "DRONEBOARD_PARALLEL_TRIES" not in eng:
                         fn = std::move(task);
                         has_task = false;
                     }
-                    if (fn) fn();
+                    std::exception_ptr exc;
+                    try {
+                        if (fn) fn();
+                    } catch (...) {
+                        exc = std::current_exception();
+                    }
                     {
                         std::lock_guard<std::mutex> lk(mtx);
+                        worker_exc = exc;
                         busy = false;
                     }
                     cv_done.notify_one();
@@ -119,12 +127,23 @@ if "DRONEBOARD_PARALLEL_TRIES" not in eng:
             {
                 std::lock_guard<std::mutex> lk(mtx);
                 task = std::move(fn);
+                worker_exc = nullptr;
                 has_task = true;
                 busy = true;
             }
             cv_work.notify_one();
         }
         void wait() {
+            std::exception_ptr exc;
+            {
+                std::unique_lock<std::mutex> lk(mtx);
+                cv_done.wait(lk, [this]() { return !busy; });
+                exc = worker_exc;
+                worker_exc = nullptr;
+            }
+            if (exc) std::rethrow_exception(exc);
+        }
+        void wait_nothrow() noexcept {
             std::unique_lock<std::mutex> lk(mtx);
             cv_done.wait(lk, [this]() { return !busy; });
         }
@@ -225,7 +244,13 @@ if "DRONEBOARD_PARALLEL_TRIES" not in eng:
             }
         };
         impl_->trie_worker.submit([&]() { run_slot(impl_->extra_beam_searches[0].get()); });
+        struct WaitGuard {
+            decltype(impl_->trie_worker)* w;
+            bool joined = false;
+            ~WaitGuard() { if (!joined) w->wait_nothrow(); }
+        } guard{&impl_->trie_worker};
         run_slot(impl_->beam_search.get());
+        guard.joined = true;
         impl_->trie_worker.wait();
         for (auto& pt : per_trie) {
             results.insert(results.end(),

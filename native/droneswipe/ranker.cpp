@@ -53,7 +53,8 @@ std::vector<Ranked> rank_candidates(const std::vector<swipe_decoder::DecodedWord
         }
     }
     // When multiple languages are active and another language does not know the previous word (so its
-    // context score is 0.0), clamp negative PMI to 0.0 to eliminate cross-language asymmetry.
+    // context score is 0.0), clamp negative PMI to 0.0 so known languages are not penalized below the
+    // unknown language's neutral 0.0 baseline.
     const bool clamp_neg_pmi = lang_dicts > 1 && any_prev_unknown;
     std::vector<float> scores, lps, ctxs;
     for (const auto& r : beam) {

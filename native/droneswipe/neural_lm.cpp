@@ -1365,12 +1365,10 @@ const float* NeuralLm::distribution(const std::vector<int32_t>& ids, float* lse)
 
 void NeuralLm::prefetch(const std::vector<int32_t>& ids) {
     if (ids.empty()) return;
-    if (self_norm_) {
-        hidden(ids);
-    } else {
-        float lse = 0.0f;
-        distribution(ids, &lse);
-    }
+    // Always warm full calibrated logits + exact fast_logsumexp so both tap completions and
+    // bilingual swipe fusion hit the exact probability cache in <0.1 ms with zero P>1 drift.
+    float lse = 0.0f;
+    distribution(ids, &lse);
 }
 
 std::vector<std::pair<float, int32_t>> NeuralLm::top_words(const std::vector<int32_t>& ids,
@@ -1395,73 +1393,30 @@ std::vector<std::pair<float, int32_t>> NeuralLm::top_words(const std::vector<int
         }
     };
 
-    if (self_norm_) {
-        const float* z = hidden(ids);
-        if (!z) return heap;
-        int8_t stack_zq[512];
-        std::vector<int8_t> heap_zq;
-        int8_t* zq = E_ <= 512 ? stack_zq : (heap_zq.resize(E_), heap_zq.data());
-        const float sz = quantize(z, E_, zq);
-        const int stride4 = E_ >> 1;
-        const int G = E_ >> 5;
-
-        if (!prefix_lower.empty()) {
-            // Self-normalized prefix fast path: score ONLY prefix-matching words!
-            const int32_t* beg = nullptr;
-            const int32_t* end = nullptr;
-            prefix_range(prefix_lower, prefix_kp, fold, beg, end);
-            for (const int32_t* it = beg; it < end; ++it) {
-                const int32_t id = *it;
-                const std::string& t = tokens_[id];
-                if (t == prefix_lower) continue;
-                const float bias = out_bias_ ? out_bias_[id] : 0.0f;
-                const float lg = (id < n_int8_)
-                                     ? dot_row_i8(table_i8_ + (size_t)id * E_, scale_i8_[id], bias, zq, sz, E_)
-                                     : dot_row_i4(table_i4_ + (size_t)(id - n_int8_) * stride4,
-                                                  scale_i4_ + (size_t)(id - n_int8_) * G, bias, zq, sz, E_);
-                push_cand(lg - logz_mean_, id);
-            }
-        } else {
-            // Self-normalized empty-prefix fast path: score ONLY leading shortlist_k_ rows!
-            const int limit = std::min(shortlist_k_ > 0 ? shortlist_k_ : V_, V_);
-            if ((int)shortlist_buf_.size() < limit) shortlist_buf_.resize(limit);
-            const int n8 = std::min(limit, n_int8_);
-            if (n8 > 0) {
-                matvec_i8(table_i8_, scale_i8_, out_bias_, zq, sz, shortlist_buf_.data(), n8, E_);
-            }
-            if (limit > n_int8_) {
-                matvec_i4(table_i4_, scale_i4_, out_bias_ ? (out_bias_ + n_int8_) : nullptr,
-                          zq, sz, shortlist_buf_.data() + n_int8_, limit - n_int8_, E_);
-            }
-            for (int32_t id = 3; id < limit; ++id) {
-                if (!word_[id]) continue;
-                push_cand(shortlist_buf_[id] - logz_mean_, id);
-            }
+    // Always use exact calibrated distribution() (4-row SDOT + NEON INT4-g32 + NEON fast_logsumexp,
+    // cached per context) so bilingual language mixing and 0.7/0.3 neural+ngram interpolation use
+    // exact log probabilities summing to 1.0 (never P > 1 and zero shortlist misses).
+    float lse = 0.0f;
+    const float* lg = distribution(ids, &lse);
+    if (!lg) return heap;
+    if (!prefix_lower.empty()) {
+        const int32_t* beg = nullptr;
+        const int32_t* end = nullptr;
+        prefix_range(prefix_lower, prefix_kp, fold, beg, end);
+        for (const int32_t* it = beg; it < end; ++it) {
+            const int32_t id = *it;
+            if (heap.size() == keep && lg[id] <= heap.front().first) continue;
+            if (tokens_[id] == prefix_lower) continue;
+            push_cand(lg[id], id);
         }
+        for (auto& e : heap) e.first -= lse;
     } else {
-        // Non-self-normalized models (v1 or v2 without self_norm): full distribution + O(log V + M) prefix index
-        float lse = 0.0f;
-        const float* lg = distribution(ids, &lse);
-        if (!lg) return heap;
-        if (!prefix_lower.empty()) {
-            const int32_t* beg = nullptr;
-            const int32_t* end = nullptr;
-            prefix_range(prefix_lower, prefix_kp, fold, beg, end);
-            for (const int32_t* it = beg; it < end; ++it) {
-                const int32_t id = *it;
-                if (heap.size() == keep && lg[id] <= heap.front().first) continue;
-                if (tokens_[id] == prefix_lower) continue;
-                push_cand(lg[id], id);
-            }
-            for (auto& e : heap) e.first -= lse;
-        } else {
-            for (int32_t id = 3; id < V_; ++id) {
-                if (!word_[id]) continue;
-                if (heap.size() == keep && lg[id] <= heap.front().first) continue;
-                push_cand(lg[id], id);
-            }
-            for (auto& e : heap) e.first -= lse;
+        for (int32_t id = 3; id < V_; ++id) {
+            if (!word_[id]) continue;
+            if (heap.size() == keep && lg[id] <= heap.front().first) continue;
+            push_cand(lg[id], id);
         }
+        for (auto& e : heap) e.first -= lse;
     }
 
     std::sort(heap.begin(), heap.end(), worse);
@@ -1634,43 +1589,16 @@ std::vector<float> neural_word_logp(const std::vector<NeuralLanguageInput>& lang
         auto& res = results[k];
         res.lp.assign(W, -INFINITY);
 
-        if (lm->is_self_norm()) {
-            // Self-normalized fast path: score ONLY <unk> + valid candidate tokens (typically ~40 rows!)
-            std::vector<int32_t> qids;
-            std::vector<size_t> qpos;
-            qids.reserve(W + 1);
-            qpos.reserve(W);
-            qids.push_back(1);  // <unk>
-            for (size_t i = 0; i < W; ++i) {
-                const int32_t id = lm->id_of(words_lower[i]);
-                if (id <= 2 || !lm->is_word(id)) continue;
-                qids.push_back(id);
-                qpos.push_back(i);
-            }
-            std::vector<float> lgs(qids.size());
-            {
-                std::lock_guard<std::mutex> lock(lm->mutex());
-                const float* z = lm->hidden(ids);
-                if (!z) return;
-                lm->score_subset(z, qids.data(), qids.size(), lgs.data());
-            }
-            const float offset = lpost[k] - lm->logz_mean();
-            res.unk = lgs[0] + offset;
-            for (size_t j = 0; j < qpos.size(); ++j) {
-                res.lp[qpos[j]] = lgs[j + 1] + offset;
-            }
-        } else {
-            std::lock_guard<std::mutex> lock(lm->mutex());
-            float lse = 0.0f;
-            const float* lg = lm->distribution(ids, &lse);
-            if (!lg) return;
-            const float offset = lpost[k] - lse;
-            res.unk = lg[1] + offset;
-            for (size_t i = 0; i < W; ++i) {
-                const int32_t id = lm->id_of(words_lower[i]);
-                if (id <= 2 || !lm->is_word(id)) continue;
-                res.lp[i] = lg[id] + offset;
-            }
+        std::lock_guard<std::mutex> lock(lm->mutex());
+        float lse = 0.0f;
+        const float* lg = lm->distribution(ids, &lse);
+        if (!lg) return;
+        const float offset = lpost[k] - lse;
+        res.unk = lg[1] + offset;
+        for (size_t i = 0; i < W; ++i) {
+            const int32_t id = lm->id_of(words_lower[i]);
+            if (id <= 2 || !lm->is_word(id)) continue;
+            res.lp[i] = lg[id] + offset;
         }
     });
 
