@@ -303,15 +303,16 @@ float dot_row_i4_sdot(const uint8_t* packed, const uint16_t* scales, float bias,
     const int8x16_t eight = vdupq_n_s8(8);
     const int G = cols >> 5;
     if (G == 4) {
-        int32x4_t a0 = vdupq_n_s32(0), a1 = vdupq_n_s32(0), a2 = vdupq_n_s32(0), a3 = vdupq_n_s32(0);
-        auto grp = [&](int g) -> int32x4_t {
-            const uint8x16_t raw = vld1q_u8(packed + g * 16);
-            const int8x16_t q_lo = vsubq_s8(vreinterpretq_s8_u8(vandq_u8(raw, mask0f)), eight);
-            const int8x16_t q_hi = vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(raw, 4)), eight);
-            int32x4_t acc = vdotq_s32(vdupq_n_s32(0), q_lo, vld1q_s8(xq + g * 32));
-            return vdotq_s32(acc, q_hi, vld1q_s8(xq + g * 32 + 16));
-        };
-        a0 = grp(0); a1 = grp(1); a2 = grp(2); a3 = grp(3);
+        const uint8x16_t u0 = vld1q_u8(packed + 0),  u1 = vld1q_u8(packed + 16);
+        const uint8x16_t u2 = vld1q_u8(packed + 32), u3 = vld1q_u8(packed + 48);
+        int32x4_t a0 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u0, mask0f)), eight), vld1q_s8(xq + 0)),
+                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u0, 4)), eight), vld1q_s8(xq + 16));
+        int32x4_t a1 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u1, mask0f)), eight), vld1q_s8(xq + 32)),
+                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u1, 4)), eight), vld1q_s8(xq + 48));
+        int32x4_t a2 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u2, mask0f)), eight), vld1q_s8(xq + 64)),
+                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u2, 4)), eight), vld1q_s8(xq + 80));
+        int32x4_t a3 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u3, mask0f)), eight), vld1q_s8(xq + 96)),
+                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u3, 4)), eight), vld1q_s8(xq + 112));
         int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
         float32x4_t sc = vcvt_f32_f16(vld1_f16(reinterpret_cast<const __fp16*>(scales)));
         return vaddvq_f32(vmulq_f32(vcvtq_f32_s32(dots), sc)) * sx + bias;
