@@ -1,0 +1,19 @@
+- New prediction models for all nine languages, a faster prediction and swipe engine, and reorganised settings. In our desktop tests a swipe is decoded and ranked in about half the time, and the next word is predicted in about a third. Accuracy is about the same as in 0.2.8.
+- Suggestions no longer wait for each other: the keyboard computes them in the background, and typing goes on while they are being prepared. If the suggestions change under your finger, the word you pressed is the one that gets typed.
+- The models look at a longer piece of the text before the cursor, up to 64 words and punctuation marks.
+- Swipe typing: the word preview follows your finger in a small pill, the trail is smoother and fades sooner, and a swipe is recognised as a swipe earlier.
+- The first word you swipe in an app slightly prefers the language you last swiped in that app. This has no effect in the middle of a sentence.
+- Settings are grouped into fewer screens, with new ones for voice dictation and the clipboard, and a new "Clear learned words". Each language says what it supports: swipe, smart predictions, or layout only.
+- The setup wizard has new steps for languages and for trying the keyboard, and About has a page with keyboard tips.
+- Suggestion strip: a button shows more suggestions when there are any, and removing a suggestion asks first. Copied text is offered as a pill that can be dismissed.
+- Dictation shows a live waveform and a "Try again" button when something went wrong.
+- The trackpad on the space bar moves the cursor the same way on every screen density, and keeps moving when you reach the edge.
+- Keyboard resizing works with TalkBack, and the compact keyboard has its own buttons for switching sides, expanding and resizing.
+- Turning on the recording of your swipes now asks first and says what is stored: the swiped words, the words before them and the touch paths. As before, it is off by default and nothing leaves the phone.
+- Fixed: backspace right after "i" was changed to "I" takes the change back.
+- Fixed: an emoji no longer pushes a spelling correction out of the suggestion strip.
+- Fixed: vibration when holding Enter and when starting dictation follows the vibration setting and Do Not Disturb.
+- Fixed: the colour of the navigation bar on Android 15 and newer.
+- Fixed: deleting emojis with several skin tones in a row.
+- The dictionaries are prepared once after an update, so the first seconds after installing can be slower. The prepared files are checked each time they are opened and built again if they are damaged.
+- The download is about 12 MB smaller. All new texts are translated into Slovak, Czech, German, Spanish, Dutch and Hungarian.
