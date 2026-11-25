@@ -21,7 +21,11 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
         val context = ApplicationProvider.getApplicationContext<App>()
         val urls = mutableSetOf<String>()
         context.assets.open("dictionaries_in_dict_repo.txt").reader().readLines().forEach { line ->
-            getKnownDictionariesForLocale(line.split(",")[1].constructLocale(), context).forEach {
+            if (line.isBlank()) return@forEach
+            // same formats as getKnownDictionariesForLocale: "cldr,<locale>" or "<type>_<locale>[__<extra>]"
+            val localeString = if (line.startsWith("cldr,")) line.substringAfter("cldr,")
+                else line.substringAfter("_").substringBefore("__")
+            getKnownDictionariesForLocale(localeString.constructLocale(), context).forEach {
                 urls.add(it.second)
             }
         }
