@@ -453,19 +453,17 @@ private fun Step3LanguagesAndTyping(
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0) {
-        // triggers recomposition when subtype or autocorrect preferences change
-    }
-    var autocorrect by rememberSaveable {
+    val prefVersion = b?.value ?: 0
+    var autocorrect by remember(prefVersion) {
         mutableStateOf(prefs.getBoolean(KeyboardSettings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION))
     }
     var osttStatus by remember { mutableStateOf(checkOsttStatus(ctx)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         osttStatus = checkOsttStatus(ctx)
+        autocorrect = prefs.getBoolean(KeyboardSettings.PREF_AUTO_CORRECTION, Defaults.PREF_AUTO_CORRECTION)
     }
 
     var subtypesVersion by remember { mutableStateOf(0) }
-    val prefVersion = b?.value ?: 0
     val enabledSubtypes = remember(subtypesVersion, prefVersion) {
         runCatching { SubtypeSettings.getEnabledSubtypes(true) }.getOrDefault(emptyList())
     }

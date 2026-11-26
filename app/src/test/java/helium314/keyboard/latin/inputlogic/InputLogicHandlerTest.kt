@@ -55,7 +55,7 @@ class InputLogicHandlerTest {
         val emptyTail = words(InputStyle.TAIL_BATCH)
         handler.showGestureSuggestionsWithPreviewVisuals(emptyTail, true, 1)
         verify(uiHandler).showGesturePreviewAndSetSuggestions(emptyTail, true)
-        verify(uiHandler).showTailBatchInputResult(emptyTail)
+        verify(uiHandler).showTailBatchInputResult(emptyTail, 1)
         assertFalse(handler.isInBatchInput)
     }
 
@@ -71,7 +71,7 @@ class InputLogicHandlerTest {
 
         handler.showGestureSuggestionsWithPreviewVisuals(words(InputStyle.TAIL_BATCH), true, 1)
         verify(uiHandler).showGesturePreviewAndSetSuggestions(preview, true)
-        verify(uiHandler).showTailBatchInputResult(preview)
+        verify(uiHandler).showTailBatchInputResult(preview, 1)
     }
 
     @Test
@@ -80,7 +80,7 @@ class InputLogicHandlerTest {
         handler.showGestureSuggestionsWithPreviewVisuals(words(InputStyle.UPDATE_BATCH, "you"), false, 1)
         val tail = words(InputStyle.TAIL_BATCH, "your")
         handler.showGestureSuggestionsWithPreviewVisuals(tail, true, 1)
-        verify(uiHandler).showTailBatchInputResult(tail)
+        verify(uiHandler).showTailBatchInputResult(tail, 1)
     }
 
     @Test
@@ -92,7 +92,7 @@ class InputLogicHandlerTest {
         handler.onStartBatchInput()
         val emptyTail = words(InputStyle.TAIL_BATCH)
         handler.showGestureSuggestionsWithPreviewVisuals(emptyTail, true, 2)
-        verify(uiHandler).showTailBatchInputResult(emptyTail)
+        verify(uiHandler).showTailBatchInputResult(emptyTail, 2)
     }
 
     @Test
@@ -109,13 +109,13 @@ class InputLogicHandlerTest {
         // its tail is still committed, and the second swipe goes on
         val lateTail = words(InputStyle.TAIL_BATCH, "hello")
         handler.showGestureSuggestionsWithPreviewVisuals(lateTail, true, 1)
-        verify(uiHandler).showTailBatchInputResult(lateTail)
+        verify(uiHandler).showTailBatchInputResult(lateTail, 1)
         assertTrue(handler.isInBatchInput)
 
         // the second swipe cannot be read: it commits nothing, not "hello"
         val emptyTail = words(InputStyle.TAIL_BATCH)
         handler.showGestureSuggestionsWithPreviewVisuals(emptyTail, true, 2)
-        verify(uiHandler).showTailBatchInputResult(emptyTail)
+        verify(uiHandler).showTailBatchInputResult(emptyTail, 2)
         assertFalse(handler.isInBatchInput)
         verify(uiHandler).showGesturePreviewAndSetSuggestions(lateTail, true)
         verify(uiHandler).showGesturePreviewAndSetSuggestions(emptyTail, true)
@@ -187,7 +187,8 @@ class InputLogicHandlerTest {
 
         // the first word is committed on the UI thread: now the second tail is decoded, with it in its context
         `when`(inputLogic.captureContextForBatchInput(isNull())).thenReturn(after)
-        handler.onTailBatchInputCommitted()
+        handler.onTailBatchInputCommitted(1)
+        verify(inputLogic).refreshDeferredBatchCapsMode(composer2)
         verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
             eq(composer2), eq(InputStyle.TAIL_BATCH), eq(after), eq(2), any()
         )
@@ -200,6 +201,8 @@ class InputLogicHandlerTest {
         handler.onStartBatchInput()
         handler.updateTailBatchInput(pointers(), 1)
         handler.reset() // a new input field: the queued tail and its commit are gone
+        assertFalse(handler.isInBatchInput)
+        verify(uiHandler).cancelBatchInputResults()
         val composer = WordComposer()
         `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer)
         handler.onStartBatchInput()
@@ -207,5 +210,76 @@ class InputLogicHandlerTest {
         verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
             eq(composer), eq(InputStyle.TAIL_BATCH), isNull(), eq(2), any()
         )
+    }
+
+    @Test
+    fun resetDropsInFlightWorkerResultAndIgnoresStaleCommit() {
+        val composer1 = WordComposer()
+        val composer2 = WordComposer()
+        val composer3 = WordComposer()
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer1, composer2, composer3)
+
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 1)
+        // field switches while gesture 1 is still decoding on the worker
+        handler.reset()
+        // a worker completion from generation 0 (before reset) must be dropped silently
+        val staleTail = words(InputStyle.TAIL_BATCH, "old")
+        handler.showGestureSuggestionsWithPreviewVisuals(staleTail, true, 1, 0)
+        verify(uiHandler, never()).showTailBatchInputResult(eq(staleTail), anyInt())
+
+        // new gestures 2 and 3 start in the new field
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 2)
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 3)
+
+        // stale gesture 1 must not be considered expected or unlock gesture 2's in-flight slot
+        assertFalse(handler.isTailExpected(1))
+        assertTrue(handler.isTailExpected(2))
+        handler.onTailBatchInputCommitted(1)
+        onWorkerAfterQueuedTasks {
+            verify(inputLogic, never()).getSuggestedWordsForBatchInput(
+                eq(composer3), any(), any(), anyInt(), any()
+            )
+        }
+        assertTrue(handler.isTailExpected(2))
+    }
+
+    @Test
+    fun timeoutReleasesDeferredTailsOneAtATime() {
+        val composer1 = WordComposer()
+        val composer2 = WordComposer()
+        val composer3 = WordComposer()
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer1, composer2, composer3)
+
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 1)
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 2)
+
+        // gesture 1's commit is lost for > 10s when gesture 3 ends
+        org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofSeconds(11))
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 3)
+
+        // only gesture 2 is released first; gesture 3 stays deferred until gesture 2 commits
+        onWorkerAfterQueuedTasks {
+            verify(inputLogic).getSuggestedWordsForBatchInput(
+                eq(composer2), eq(InputStyle.TAIL_BATCH), any(), eq(2), any()
+            )
+            verify(inputLogic, never()).getSuggestedWordsForBatchInput(
+                eq(composer3), any(), any(), anyInt(), any()
+            )
+        }
+        assertTrue(handler.isTailExpected(2))
+        assertTrue(handler.hasNewerGestureThanTailInFlight())
+
+        handler.onTailBatchInputCommitted(2)
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer3), eq(InputStyle.TAIL_BATCH), any(), eq(3), any()
+        )
+        assertTrue(handler.isTailExpected(3))
+        assertFalse(handler.hasNewerGestureThanTailInFlight())
     }
 }

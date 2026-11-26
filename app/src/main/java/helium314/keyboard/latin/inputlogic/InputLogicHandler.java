@@ -30,6 +30,8 @@ class InputLogicHandler implements Handler.Callback {
     private boolean mInBatchInput; // synchronized using {@link #mLock}.
     // counts gestures, so that a result can tell whether it belongs to the gesture in progress; guarded by mLock
     private int mGestureId;
+    // incremented on every reset() so a decode still running on the worker thread cannot publish into a new field; guarded by mLock
+    private int mResetGeneration;
     // the last non-empty preview of the gesture in progress; guarded by mLock
     private SuggestedWords mGesturePreview;
     // the text before the cursor of the gesture in progress, taken on the UI thread; guarded by mLock
@@ -71,8 +73,15 @@ class InputLogicHandler implements Handler.Callback {
 
     public void reset() {
         mNonUIThreadHandler.removeCallbacksAndMessages(null);
+        if (mLatinIMEHandler != null) {
+            mLatinIMEHandler.cancelBatchInputResults();
+        }
         synchronized (mLock) {
-            // the queued tails were removed above, so no commit will come for them
+            // the queued tails were removed above, and anything still running on the worker will be dropped
+            ++mResetGeneration;
+            mInBatchInput = false;
+            mGesturePreview = null;
+            mBatchContext = null;
             mTailInFlightGestureId = 0;
             mDeferredTails.clear();
         }
@@ -120,18 +129,33 @@ class InputLogicHandler implements Handler.Callback {
         }
     }
 
+    /** Whether [gestureId] is still the tail expected to commit (0 = direct/untagged call). */
+    boolean isTailExpected(final int gestureId) {
+        if (gestureId == 0) return true;
+        synchronized (mLock) {
+            return mTailInFlightGestureId == gestureId;
+        }
+    }
+
+    void onTailBatchInputCommitted() {
+        onTailBatchInputCommitted(0);
+    }
+
     /**
      * The tail in flight has been committed (or turned out empty). Called on the UI thread. The context of the
      * gesture in progress is taken again so that it contains the committed word, and the next waiting tail is
      * sent to the decoder with a fresh context.
      */
-    void onTailBatchInputCommitted() {
+    void onTailBatchInputCommitted(final int gestureId) {
         final boolean refresh;
         final DeferredTail next;
+        final int resetGeneration;
         synchronized (mLock) {
+            if (gestureId != 0 && mTailInFlightGestureId != gestureId) return;
             mTailInFlightGestureId = 0;
             refresh = mInBatchInput;
             next = mDeferredTails.poll();
+            resetGeneration = mResetGeneration;
             if (next != null) markTailInFlightLocked(next.gestureId);
         }
         if (mInputLogic == null) return;
@@ -139,10 +163,13 @@ class InputLogicHandler implements Handler.Callback {
             final InputLogic.BatchContextSnapshot context = mInputLogic.captureContextForBatchInput(null);
             if (refresh) {
                 synchronized (mLock) {
-                    if (mInBatchInput) mBatchContext = context;
+                    if (mInBatchInput && mResetGeneration == resetGeneration) mBatchContext = context;
                 }
             }
-            if (next != null) sendTail(next.composer, context, next.sequenceNumber, next.gestureId);
+            if (next != null) {
+                mInputLogic.refreshDeferredBatchCapsMode(next.composer);
+                sendTail(next.composer, context, next.sequenceNumber, next.gestureId, resetGeneration);
+            }
         }
     }
 
@@ -152,12 +179,14 @@ class InputLogicHandler implements Handler.Callback {
     }
 
     private void sendTail(final WordComposer composer, final InputLogic.BatchContextSnapshot context,
-            final int sequenceNumber, final int gestureId) {
-        sendBatchTask(composer, context, sequenceNumber, true, gestureId);
+            final int sequenceNumber, final int gestureId, final int resetGeneration) {
+        sendBatchTask(composer, context, sequenceNumber, true, gestureId, resetGeneration);
     }
 
     public boolean isInBatchInput() {
-        return mInBatchInput;
+        synchronized (mLock) {
+            return mInBatchInput;
+        }
     }
 
     /**
@@ -175,6 +204,7 @@ class InputLogicHandler implements Handler.Callback {
     private void updateBatchInput(final InputPointers batchPointers,
             final int sequenceNumber, final boolean isTailBatchInput) {
         final int gestureId;
+        final int resetGeneration;
         final InputPointers pointersSnapshot;
         final WordComposer batchComposerSnapshot;
         final InputLogic.BatchContextSnapshot contextSnapshot;
@@ -187,6 +217,7 @@ class InputLogicHandler implements Handler.Callback {
             // or the final finger-up TAIL_BATCH commit.
             mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
             gestureId = mGestureId;
+            resetGeneration = mResetGeneration;
             pointersSnapshot = new InputPointers(Math.max(1, batchPointers.getPointerSize()));
             pointersSnapshot.copy(batchPointers);
             if (isTailBatchInput && mInputLogic != null && mInputLogic.mWordComposer != null) {
@@ -199,11 +230,13 @@ class InputLogicHandler implements Handler.Callback {
             if (isTailBatchInput) {
                 if (mTailInFlightGestureId != 0
                         && SystemClock.uptimeMillis() - mTailInFlightSince > TAIL_IN_FLIGHT_TIMEOUT_MS) {
-                    // its commit is lost: send what waits for it now instead of blocking swipe typing
-                    mTailInFlightGestureId = 0;
-                    DeferredTail waiting;
-                    while ((waiting = mDeferredTails.poll()) != null)
-                        sendTail(waiting.composer, contextSnapshot, waiting.sequenceNumber, waiting.gestureId);
+                    // its commit is lost: queue this tail behind any waiting ones and release only the head
+                    // so queued tails still decode one at a time instead of overtaking each other
+                    mDeferredTails.add(new DeferredTail(batchComposerSnapshot, sequenceNumber, gestureId));
+                    final DeferredTail first = mDeferredTails.poll();
+                    markTailInFlightLocked(first.gestureId);
+                    sendTail(first.composer, contextSnapshot, first.sequenceNumber, first.gestureId, resetGeneration);
+                    return;
                 }
                 if (mTailInFlightGestureId != 0) {
                     // the word of an earlier gesture is not committed yet: decode this tail once it is, so
@@ -214,12 +247,12 @@ class InputLogicHandler implements Handler.Callback {
                 markTailInFlightLocked(gestureId);
             }
         }
-        sendBatchTask(batchComposerSnapshot, contextSnapshot, sequenceNumber, isTailBatchInput, gestureId);
+        sendBatchTask(batchComposerSnapshot, contextSnapshot, sequenceNumber, isTailBatchInput, gestureId, resetGeneration);
     }
 
     private void sendBatchTask(final WordComposer batchComposerSnapshot,
             final InputLogic.BatchContextSnapshot contextSnapshot, final int sequenceNumber,
-            final boolean isTailBatchInput, final int gestureId) {
+            final boolean isTailBatchInput, final int gestureId, final int resetGeneration) {
         final int what = isTailBatchInput ? MSG_TAIL_BATCH : MSG_UPDATE_BATCH;
         final Runnable task = () -> {
             if (mInputLogic == null) return;
@@ -229,7 +262,7 @@ class InputLogicHandler implements Handler.Callback {
                     contextSnapshot,
                     sequenceNumber,
                     suggestedWords -> showGestureSuggestionsWithPreviewVisuals(
-                            suggestedWords, isTailBatchInput, gestureId));
+                            suggestedWords, isTailBatchInput, gestureId, resetGeneration));
         };
         mNonUIThreadHandler.obtainMessage(what, task).sendToTarget();
     }
@@ -243,8 +276,18 @@ class InputLogicHandler implements Handler.Callback {
     // Runs on the Non-UI thread, no matter what thread updateBatchInput was originally called on.
     void showGestureSuggestionsWithPreviewVisuals(final SuggestedWords suggestedWordsForBatchInput,
             final boolean isTailBatchInput, final int gestureId) {
+        final int resetGeneration;
+        synchronized (mLock) {
+            resetGeneration = mResetGeneration;
+        }
+        showGestureSuggestionsWithPreviewVisuals(suggestedWordsForBatchInput, isTailBatchInput, gestureId, resetGeneration);
+    }
+
+    void showGestureSuggestionsWithPreviewVisuals(final SuggestedWords suggestedWordsForBatchInput,
+            final boolean isTailBatchInput, final int gestureId, final int resetGeneration) {
         final SuggestedWords suggestedWordsToShowSuggestions;
         synchronized (mLock) {
+            if (resetGeneration != mResetGeneration) return; // reset() ran while this decode was in flight
             // a result that belongs to an earlier gesture (its tail was still being decoded when the next
             // swipe began) is still shown and committed, but leaves the state of the running gesture alone
             final boolean current = gestureId == mGestureId;
@@ -266,7 +309,7 @@ class InputLogicHandler implements Handler.Callback {
         if (isTailBatchInput) {
             // The following call schedules onEndBatchInputInternal
             // to be called on the UI thread.
-            mLatinIMEHandler.showTailBatchInputResult(suggestedWordsToShowSuggestions);
+            mLatinIMEHandler.showTailBatchInputResult(suggestedWordsToShowSuggestions, gestureId);
         }
     }
 

@@ -214,10 +214,11 @@ public class LatinIME extends InputMethodService implements
                     break;
                 case MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED:
                     final SuggestedWords suggestedWords = (SuggestedWords) msg.obj;
-                    latinIme.mInputLogic.onUpdateTailBatchInputCompleted(
+                    if (latinIme.mInputLogic.onUpdateTailBatchInputCompleted(
                             latinIme.mSettings.getCurrent(),
-                            suggestedWords, latinIme.mKeyboardSwitcher);
-                    latinIme.onTailBatchInputResultShown(suggestedWords);
+                            suggestedWords, latinIme.mKeyboardSwitcher, msg.arg1)) {
+                        latinIme.onTailBatchInputResultShown(suggestedWords);
+                    }
                     break;
                 case MSG_RESET_CACHES:
                     final SettingsValues settingsValues = latinIme.mSettings.getCurrent();
@@ -349,7 +350,16 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void showTailBatchInputResult(final SuggestedWords suggestedWords) {
-            obtainMessage(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED, suggestedWords).sendToTarget();
+            showTailBatchInputResult(suggestedWords, 0);
+        }
+
+        public void showTailBatchInputResult(final SuggestedWords suggestedWords, final int gestureId) {
+            obtainMessage(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED, gestureId, ARG2_UNUSED, suggestedWords).sendToTarget();
+        }
+
+        public void cancelBatchInputResults() {
+            removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS);
+            removeMessages(MSG_UPDATE_TAIL_BATCH_INPUT_COMPLETED);
         }
 
         public void postSwitchLanguage(final InputMethodSubtype subtype) {
@@ -646,16 +656,18 @@ public class LatinIME extends InputMethodService implements
     private final Runnable mShowSwipePreparing = () -> {
         if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(true);
     };
+    private final Runnable mHideSwipePreparing = () -> {
+        if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(false);
+    };
     private final helium314.keyboard.latin.swipe.SwipeGestureDecoder.PreparingListener mSwipePreparingListener =
             preparing -> {
                 // called on the decoder thread
                 mHandler.removeCallbacks(mShowSwipePreparing);
+                mHandler.removeCallbacks(mHideSwipePreparing);
                 if (preparing) {
                     mHandler.postDelayed(mShowSwipePreparing, SWIPE_PREPARING_DELAY_MS);
                 } else {
-                    mHandler.post(() -> {
-                        if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(false);
-                    });
+                    mHandler.post(mHideSwipePreparing);
                 }
             };
 
@@ -995,6 +1007,9 @@ public class LatinIME extends InputMethodService implements
     private void cleanupInternalStateForFinishInput() {
         // Remove pending messages related to update suggestions
         mHandler.cancelUpdateSuggestionStrip();
+        mHandler.removeCallbacks(mShowSwipePreparing);
+        mHandler.removeCallbacks(mHideSwipePreparing);
+        if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(false);
         // Should do the following in onFinishInputInternal but until JB MR2 it's not called :(
         mInputLogic.finishInput();
         mKeyboardActionListener.resetMetaState();

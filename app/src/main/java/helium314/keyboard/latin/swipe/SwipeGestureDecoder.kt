@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.CRC32
 import java.util.zip.ZipFile
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.math.roundToInt
 
 /**
@@ -159,6 +162,9 @@ object SwipeGestureDecoder {
     private val loading = ConcurrentHashMap<String, CountDownLatch>()
     /** when loading a language last failed; it is tried again after [RETRY_FAILED_MS] instead of never */
     private val failedAt = ConcurrentHashMap<String, Long>()
+    private val _loadStateVersion = MutableStateFlow(0)
+    /** Incremented when a dictionary finishes loading or fails, so settings badges update live. */
+    val loadStateVersion: StateFlow<Int> get() = _loadStateVersion
     private const val RETRY_FAILED_MS = 15_000L
     /** 2-thread loader pool so bilingual .kpd2 caches and the ExecuTorch encoder warm in parallel */
     private val loaderSeq = AtomicInteger(0)
@@ -440,12 +446,15 @@ object SwipeGestureDecoder {
                         // is only true when the cache has been verified and mmapped.
                         if (handle != 0L && v2Cache.isFile) v1File.delete()
                     }
-                    if (handle != 0L) dictionaries[language] = handle
-                    else Log.w(TAG, "could not load swipe dictionary $language")
+                    if (handle != 0L) {
+                        dictionaries[language] = handle
+                        failedAt.remove(language)
+                    } else Log.w(TAG, "could not load swipe dictionary $language")
                 } catch (e: Throwable) {
                     Log.w(TAG, "could not load swipe dictionary $language", e)
                 } finally {
                     if (dictionaries[language] == null) failedAt[language] = System.currentTimeMillis()
+                    _loadStateVersion.update { it + 1 }
                     latch.countDown()
                 }
             }

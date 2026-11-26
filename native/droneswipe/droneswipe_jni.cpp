@@ -88,8 +88,28 @@ extern "C" {
 
 JNIEXPORT jlong JNICALL
 Java_helium314_keyboard_latin_swipe_FutoSwipe_nativeCreate(JNIEnv* env, jclass, jstring encoderPath) try {
+    auto t0 = std::chrono::steady_clock::now();
     auto* s = new Session();
     s->encoder_path = jstr(env, encoderPath);
+    // Pre-initialize ExecuTorch + XNNPACK and run one minimal warmup forward pass on the background
+    // loader thread so the user's very first swipe after cold start does not stall on model init.
+    SwipeEngine::Config cfg;
+    cfg.encoder_path = s->encoder_path;
+    cfg.layout = swipe_decoder::default_en_qwerty();
+    cfg.beam_width = 400;
+    cfg.top_k = 32;
+    cfg.num_threads = 2;
+    if (s->engine.init(cfg)) {
+        s->initialized = true;
+        const float wx[2] = {0.2f, 0.8f};
+        const float wy[2] = {0.5f, 0.5f};
+        const float wt[2] = {0.0f, 100.0f};
+        s->engine.recognize(wx, wy, wt, 2, {}, 1, 1);
+        LOGI("encoder session warmed in %.1f ms",
+             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+    } else {
+        LOGE("encoder pre-warm failed (encoder %s), will retry on first layout", s->encoder_path.c_str());
+    }
     return (jlong)(uintptr_t)s;
 } catch (const std::exception& e) {
     LOGE("nativeCreate: %s", e.what());

@@ -22,3 +22,6 @@ tools/*.txt
 
 # Droneboard: local list of words that must not get into the dictionaries (tools/dicts/blocklist.py)
 /tools/dicts/blocklist.local.txt
+
+__pycache__/
+

@@ -151,11 +151,6 @@ struct Reader {
     }
 };
 
-struct Mix {
-    size_t operator()(uint64_t k) const { k ^= k >> 33; k *= 0xff51afd7ed558ccdULL; k ^= k >> 33; return (size_t)k; }
-};
-using EdgeMap = std::unordered_map<uint64_t, uint32_t, Mix>;
-
 constexpr uint32_t kFlagBfsTrie = 1u << 0;
 constexpr uint32_t kFlagTrieHasNonAz = 1u << 1;
 constexpr uint32_t kFlagHasFooter = 1u << 2;
@@ -740,157 +735,218 @@ bool KpDictionary::load_v1_buffer(const uint8_t* base, size_t size) {
     for (uint32_t i = 0; i < n_lower; ++i) lower_logc_q_vec_[i] = lc.u16();
     if (!cm.ok || !lw.ok || !lc.ok) return false;
 
-    // Decode WREC + FREQ into flat variants and keypath->variant map
-    struct Pending { std::string surface, keypath; uint32_t lower; uint8_t freq; };
-    std::vector<Pending> pending;
-    pending.reserve(n_variants);
-    Reader& wr = sec.at("WREC");
-    Reader& fq = sec.at("FREQ");
-    for (uint32_t i = 0; i < n_lower && wr.ok; ++i) {
-        uint64_t spec = wr.varint();
-        const uint32_t off = lower_off_vec_[i];
-        const uint32_t len = lower_off_vec_[i + 1] - off - 1;
-        std::string low(lower_pool_vec_.data() + off, len);
-        std::string kp = (spec & 4) ? wr.bytes((size_t)wr.varint()) : derive_keypath(low, cmap);
-        if (spec & 1) pending.push_back({low, kp, i, 0});
-        if (spec & 2) pending.push_back({capitalize(low), kp, i, 0});
-        for (uint64_t k = 0, n = spec >> 3; k < n && wr.ok; ++k) {
-            pending.push_back({wr.bytes((size_t)wr.varint()), kp, i, 0});
-        }
-    }
-    if (!wr.ok || pending.size() != n_variants || !fq.need(n_variants)) return false;
-    for (auto& pv : pending) pv.freq = fq.u8();
+    // Stream WREC + FREQ directly into flat variants + compact keypath entries, then build and
+    // BFS-relabel the trie using flat sibling links (no EdgeMap, no per-node std::vector, no
+    // intermediate Pending / kp_map / sorted_kps). Scoping temporary containers here releases them
+    // before loading bigrams, trigrams, and predict tables, slashing first-install peak RSS.
+    {
+        struct KpEntry {
+            uint32_t off;
+            uint16_t len;
+            uint32_t vid;
+        };
+        std::vector<char> raw_kp_pool;
+        raw_kp_pool.reserve((size_t)n_lower * 10);
+        std::vector<KpEntry> kp_entries;
+        kp_entries.reserve((size_t)n_variants + 16);
 
-    // Build flat variants + sorted keypath map + trie
-    variants_vec_.clear();
-    variants_vec_.reserve(n_variants);
-    var_surf_pool_vec_.clear();
-    std::unordered_map<std::string, std::vector<uint32_t>> kp_map;
-    kp_map.reserve(n_lower);
-    for (auto& pv : pending) {
-        if (pv.keypath.empty()) continue;
-        FlatVariant fv{};
-        fv.lower = pv.lower;
-        fv.freq = pv.freq;
-        fv.flags = is_capitalized_surface(pv.surface) ? 1 : 0;
-        const uint32_t loff = lower_off_vec_[pv.lower];
-        const uint32_t llen = lower_off_vec_[pv.lower + 1] - loff - 1;
-        if (pv.surface.size() == llen && std::memcmp(pv.surface.data(), lower_pool_vec_.data() + loff, llen) == 0) {
-            fv.surf_off = UINT32_MAX;
-            fv.surf_len = 0;
-        } else {
-            fv.surf_off = (uint32_t)var_surf_pool_vec_.size();
-            fv.surf_len = (uint16_t)std::min<size_t>(pv.surface.size(), 65535);
-            var_surf_pool_vec_.insert(var_surf_pool_vec_.end(), pv.surface.begin(), pv.surface.end());
-            var_surf_pool_vec_.push_back('\0');
-        }
-        const uint32_t vid = (uint32_t)variants_vec_.size();
-        variants_vec_.push_back(fv);
-        kp_map[pv.keypath].push_back(vid);
-        // Collapsed-double key-path aliases for common English 'll contractions ("I'll" -> "il", "we'll" -> "wel", ...)
-        // because swipe trajectories rarely dwell twice on the same 'l' key.
-        if (pv.keypath.size() >= 3 &&
-            pv.keypath[pv.keypath.size() - 1] == 'l' && pv.keypath[pv.keypath.size() - 2] == 'l') {
-            std::string_view low_sv(lower_pool_vec_.data() + loff, llen);
-            if (low_sv == "i'll" || low_sv == "we'll" || low_sv == "he'll" ||
-                low_sv == "she'll" || low_sv == "you'll" || low_sv == "they'll") {
-                kp_map[pv.keypath.substr(0, pv.keypath.size() - 1)].push_back(vid);
-            }
-        }
-    }
-    if (variants_vec_.empty()) return false;
+        variants_vec_.clear();
+        variants_vec_.reserve(n_variants);
+        var_surf_pool_vec_.clear();
 
-    std::vector<std::string> sorted_kps;
-    sorted_kps.reserve(kp_map.size());
-    for (auto& kv : kp_map) sorted_kps.push_back(kv.first);
-    std::sort(sorted_kps.begin(), sorted_kps.end());
+        Reader& wr = sec.at("WREC");
+        Reader& fq = sec.at("FREQ");
+        if (!fq.need(n_variants)) return false;
 
-    kp_off_vec_.clear();
-    kp_off_vec_.reserve(sorted_kps.size() + 1);
-    kp_pool_vec_.clear();
-    kp_var_start_vec_.clear();
-    kp_var_start_vec_.reserve(sorted_kps.size() + 1);
-    kp_var_ids_vec_.clear();
-    kp_var_ids_vec_.reserve(variants_vec_.size());
-
-    node_char_vec_.assign(1, 0);
-    node_depth_vec_.assign(1, 0);
-    node_term_vec_.assign(1, -1);
-    node_freq_vec_.assign(1, 0);
-    std::vector<std::vector<uint32_t>> children(1);
-    EdgeMap edge;
-    edge.reserve(variants_vec_.size() * 3);
-    trie_has_non_az_ = false;
-
-    for (uint32_t kpid = 0; kpid < (uint32_t)sorted_kps.size(); ++kpid) {
-        const std::string& kp = sorted_kps[kpid];
-        kp_off_vec_.push_back((uint32_t)kp_pool_vec_.size());
-        kp_pool_vec_.insert(kp_pool_vec_.end(), kp.begin(), kp.end());
-        kp_pool_vec_.push_back('\0');
-
-        const auto& vids = kp_map[kp];
-        kp_var_start_vec_.push_back((uint32_t)kp_var_ids_vec_.size());
-        uint8_t max_f = 0;
-        for (uint32_t vid : vids) {
-            kp_var_ids_vec_.push_back(vid);
-            if (variants_vec_[vid].freq > max_f) max_f = variants_vec_[vid].freq;
-        }
-
-        uint32_t n = 0;
-        for (size_t i = 0; i < kp.size(); ++i) {
-            const uint8_t c = (uint8_t)kp[i];
-            if (c < 'a' || c > 'z') trie_has_non_az_ = true;
-            const uint64_t e = ((uint64_t)n << 21) | c;
-            auto ei = edge.find(e);
-            if (ei == edge.end()) {
-                const uint32_t id = (uint32_t)node_char_vec_.size();
-                node_char_vec_.push_back(c);
-                node_depth_vec_.push_back((uint16_t)(i + 1));
-                node_term_vec_.push_back(-1);
-                node_freq_vec_.push_back(0);
-                children.emplace_back();
-                children[n].push_back(id);
-                edge.emplace(e, id);
-                n = id;
+        auto push_variant = [&](const std::string& surface, uint32_t lower_id,
+                                const std::string& low, uint32_t kp_off, uint16_t kp_len,
+                                bool is_ll_alias, uint8_t freq) {
+            if (kp_len == 0) return;
+            FlatVariant fv{};
+            fv.lower = lower_id;
+            fv.freq = freq;
+            fv.flags = is_capitalized_surface(surface) ? 1 : 0;
+            if (surface.size() == low.size() && std::memcmp(surface.data(), low.data(), low.size()) == 0) {
+                fv.surf_off = UINT32_MAX;
+                fv.surf_len = 0;
             } else {
-                n = ei->second;
+                fv.surf_off = (uint32_t)var_surf_pool_vec_.size();
+                fv.surf_len = (uint16_t)std::min<size_t>(surface.size(), 65535);
+                var_surf_pool_vec_.insert(var_surf_pool_vec_.end(), surface.begin(), surface.end());
+                var_surf_pool_vec_.push_back('\0');
+            }
+            const uint32_t vid = (uint32_t)variants_vec_.size();
+            variants_vec_.push_back(fv);
+            kp_entries.push_back({kp_off, kp_len, vid});
+            if (is_ll_alias) {
+                kp_entries.push_back({kp_off, (uint16_t)(kp_len - 1), vid});
+            }
+        };
+
+        uint32_t wrec_count = 0;
+        std::string low_buf, cap_buf, extra_buf, kp_buf;
+        for (uint32_t i = 0; i < n_lower && wr.ok; ++i) {
+            const uint64_t spec = wr.varint();
+            const uint32_t off = lower_off_vec_[i];
+            const uint32_t len = lower_off_vec_[i + 1] - off - 1;
+            low_buf.assign(lower_pool_vec_.data() + off, len);
+            kp_buf = (spec & 4) ? wr.bytes((size_t)wr.varint()) : derive_keypath(low_buf, cmap);
+            const uint32_t kp_off = (uint32_t)raw_kp_pool.size();
+            const uint16_t kp_len = (uint16_t)std::min<size_t>(kp_buf.size(), 65535);
+            if (kp_len > 0) {
+                raw_kp_pool.insert(raw_kp_pool.end(), kp_buf.data(), kp_buf.data() + kp_len);
+            }
+            // Collapsed-double key-path aliases for common English 'll contractions ("I'll" -> "il", "we'll" -> "wel", ...)
+            // because swipe trajectories rarely dwell twice on the same 'l' key.
+            bool is_ll_alias = false;
+            if (kp_len >= 3 && kp_buf[kp_len - 1] == 'l' && kp_buf[kp_len - 2] == 'l') {
+                std::string_view low_sv(low_buf);
+                if (low_sv == "i'll" || low_sv == "we'll" || low_sv == "he'll" ||
+                    low_sv == "she'll" || low_sv == "you'll" || low_sv == "they'll") {
+                    is_ll_alias = true;
+                }
+            }
+            if (spec & 1) {
+                if (wrec_count >= n_variants) return false;
+                push_variant(low_buf, i, low_buf, kp_off, kp_len, is_ll_alias, fq.u8());
+                ++wrec_count;
+            }
+            if (spec & 2) {
+                if (wrec_count >= n_variants) return false;
+                cap_buf = capitalize(low_buf);
+                push_variant(cap_buf, i, low_buf, kp_off, kp_len, is_ll_alias, fq.u8());
+                ++wrec_count;
+            }
+            for (uint64_t k = 0, n = spec >> 3; k < n && wr.ok; ++k) {
+                if (wrec_count >= n_variants) return false;
+                extra_buf = wr.bytes((size_t)wr.varint());
+                push_variant(extra_buf, i, low_buf, kp_off, kp_len, is_ll_alias, fq.u8());
+                ++wrec_count;
             }
         }
-        node_term_vec_[n] = (int32_t)kpid;
-        if (max_f > node_freq_vec_[n]) node_freq_vec_[n] = max_f;
-    }
-    kp_off_vec_.push_back((uint32_t)kp_pool_vec_.size());
-    kp_var_start_vec_.push_back((uint32_t)kp_var_ids_vec_.size());
+        if (!wr.ok || wrec_count != n_variants || variants_vec_.empty()) return false;
+        cmap.clear();
 
-    // BFS-relabel the trie so every node's children occupy a contiguous range [start, end),
-    // eliminating the explicit child-list array for compact, cache-friendly DKPD v2 caches.
-    const uint32_t old_n = (uint32_t)node_char_vec_.size();
-    std::vector<uint8_t> bfs_char(old_n);
-    std::vector<uint16_t> bfs_depth(old_n);
-    std::vector<int32_t> bfs_term(old_n);
-    std::vector<uint8_t> bfs_freq(old_n);
-    all_child_start_vec_.assign((size_t)old_n + 1, 0);
-    all_child_list_vec_.clear();
-    std::vector<uint32_t> order;
-    order.reserve(old_n);
-    order.push_back(0);
-    for (uint32_t qi = 0; qi < old_n; ++qi) {
-        const uint32_t u = order[qi];
-        bfs_char[qi] = node_char_vec_[u];
-        bfs_depth[qi] = node_depth_vec_[u];
-        bfs_term[qi] = node_term_vec_[u];
-        bfs_freq[qi] = node_freq_vec_[u];
-        all_child_start_vec_[qi] = (uint32_t)order.size();
-        auto& ch = children[u];
-        std::sort(ch.begin(), ch.end(), [&](uint32_t a, uint32_t b) { return node_char_vec_[a] < node_char_vec_[b]; });
-        for (uint32_t v : ch) order.push_back(v);
+        std::sort(kp_entries.begin(), kp_entries.end(), [&](const KpEntry& a, const KpEntry& b) {
+            const size_t min_len = std::min(a.len, b.len);
+            const int cmp = std::memcmp(raw_kp_pool.data() + a.off, raw_kp_pool.data() + b.off, min_len);
+            if (cmp != 0) return cmp < 0;
+            if (a.len != b.len) return a.len < b.len;
+            return a.vid < b.vid;
+        });
+
+        kp_off_vec_.clear();
+        kp_off_vec_.reserve(n_lower + 1);
+        kp_pool_vec_.clear();
+        kp_pool_vec_.reserve(raw_kp_pool.size() + n_lower);
+        kp_var_start_vec_.clear();
+        kp_var_start_vec_.reserve(n_lower + 1);
+        kp_var_ids_vec_.clear();
+        kp_var_ids_vec_.reserve(kp_entries.size());
+
+        constexpr uint32_t kNoChild = UINT32_MAX;
+        node_char_vec_.assign(1, 0);
+        node_depth_vec_.assign(1, 0);
+        node_term_vec_.assign(1, -1);
+        node_freq_vec_.assign(1, 0);
+        std::vector<uint32_t> first_child(1, kNoChild);
+        std::vector<uint32_t> last_child(1, kNoChild);
+        std::vector<uint32_t> next_sibling(1, kNoChild);
+        const size_t est_nodes = (size_t)n_lower * 3 + 16;
+        node_char_vec_.reserve(est_nodes);
+        node_depth_vec_.reserve(est_nodes);
+        node_term_vec_.reserve(est_nodes);
+        node_freq_vec_.reserve(est_nodes);
+        first_child.reserve(est_nodes);
+        last_child.reserve(est_nodes);
+        next_sibling.reserve(est_nodes);
+        trie_has_non_az_ = false;
+
+        uint32_t kpid = 0;
+        const size_t ne = kp_entries.size();
+        for (size_t idx = 0; idx < ne; ) {
+            const uint32_t kp_off = kp_entries[idx].off;
+            const uint16_t kp_len = kp_entries[idx].len;
+            const char* kp_ptr = raw_kp_pool.data() + kp_off;
+
+            kp_off_vec_.push_back((uint32_t)kp_pool_vec_.size());
+            kp_pool_vec_.insert(kp_pool_vec_.end(), kp_ptr, kp_ptr + kp_len);
+            kp_pool_vec_.push_back('\0');
+
+            kp_var_start_vec_.push_back((uint32_t)kp_var_ids_vec_.size());
+            uint8_t max_f = 0;
+            while (idx < ne && kp_entries[idx].len == kp_len &&
+                   std::memcmp(raw_kp_pool.data() + kp_entries[idx].off, kp_ptr, kp_len) == 0) {
+                const uint32_t vid = kp_entries[idx].vid;
+                kp_var_ids_vec_.push_back(vid);
+                if (variants_vec_[vid].freq > max_f) max_f = variants_vec_[vid].freq;
+                ++idx;
+            }
+
+            // Keypaths arrive in strictly ascending unsigned-byte order, so any existing child for `c`
+            // is necessarily `last_child[n]` and every node's children are already sorted by byte.
+            uint32_t n = 0;
+            for (uint16_t i = 0; i < kp_len; ++i) {
+                const uint8_t c = (uint8_t)kp_ptr[i];
+                if (c < 'a' || c > 'z') trie_has_non_az_ = true;
+                const uint32_t lc = last_child[n];
+                if (lc != kNoChild && node_char_vec_[lc] == c) {
+                    n = lc;
+                } else {
+                    const uint32_t id = (uint32_t)node_char_vec_.size();
+                    node_char_vec_.push_back(c);
+                    node_depth_vec_.push_back((uint16_t)(i + 1));
+                    node_term_vec_.push_back(-1);
+                    node_freq_vec_.push_back(0);
+                    first_child.push_back(kNoChild);
+                    last_child.push_back(kNoChild);
+                    next_sibling.push_back(kNoChild);
+                    if (lc == kNoChild) first_child[n] = id;
+                    else next_sibling[lc] = id;
+                    last_child[n] = id;
+                    n = id;
+                }
+            }
+            node_term_vec_[n] = (int32_t)kpid;
+            if (max_f > node_freq_vec_[n]) node_freq_vec_[n] = max_f;
+            ++kpid;
+        }
+        kp_off_vec_.push_back((uint32_t)kp_pool_vec_.size());
+        kp_var_start_vec_.push_back((uint32_t)kp_var_ids_vec_.size());
+
+        // Release keypath build scratch before allocating BFS relabeling arrays.
+        std::vector<char>().swap(raw_kp_pool);
+        std::vector<KpEntry>().swap(kp_entries);
+        std::vector<uint32_t>().swap(last_child);
+
+        // BFS-relabel the trie so every node's children occupy a contiguous range [start, end),
+        // eliminating the explicit child-list array for compact, cache-friendly DKPD v2 caches.
+        const uint32_t old_n = (uint32_t)node_char_vec_.size();
+        std::vector<uint8_t> bfs_char(old_n);
+        std::vector<uint16_t> bfs_depth(old_n);
+        std::vector<int32_t> bfs_term(old_n);
+        std::vector<uint8_t> bfs_freq(old_n);
+        all_child_start_vec_.assign((size_t)old_n + 1, 0);
+        all_child_list_vec_.clear();
+        std::vector<uint32_t> order;
+        order.reserve(old_n);
+        order.push_back(0);
+        for (uint32_t qi = 0; qi < old_n; ++qi) {
+            const uint32_t u = order[qi];
+            bfs_char[qi] = node_char_vec_[u];
+            bfs_depth[qi] = node_depth_vec_[u];
+            bfs_term[qi] = node_term_vec_[u];
+            bfs_freq[qi] = node_freq_vec_[u];
+            all_child_start_vec_[qi] = (uint32_t)order.size();
+            for (uint32_t v = first_child[u]; v != kNoChild; v = next_sibling[v]) order.push_back(v);
+        }
+        all_child_start_vec_[old_n] = (uint32_t)order.size();
+        node_char_vec_.swap(bfs_char);
+        node_depth_vec_.swap(bfs_depth);
+        node_term_vec_.swap(bfs_term);
+        node_freq_vec_.swap(bfs_freq);
+        bfs_trie_ = true;
     }
-    all_child_start_vec_[old_n] = (uint32_t)order.size();
-    node_char_vec_.swap(bfs_char);
-    node_depth_vec_.swap(bfs_depth);
-    node_term_vec_.swap(bfs_term);
-    node_freq_vec_.swap(bfs_freq);
-    bfs_trie_ = true;
 
     // Bigrams
     big_start_vec_.assign(n_lower + 1, 0);
@@ -898,11 +954,11 @@ bool KpDictionary::load_v1_buffer(const uint8_t* base, size_t size) {
     big_word_vec_.reserve(n_big);
     big_logc_vec_.clear();
     big_logc_vec_.reserve(n_big);
-    std::vector<std::pair<uint32_t, uint32_t>> ranges;
     auto bi = sec.find("BIGR");
     Reader empty{base, base};
     Reader& bg = bi == sec.end() ? empty : bi->second;
     uint32_t p = 0;
+    uint32_t filled_to = 0;
     for (uint32_t i = 0; bi != sec.end() && i < n_prevs && bg.ok; ++i) {
         p += (uint32_t)bg.varint();
         uint32_t n = (uint32_t)bg.varint();
@@ -913,17 +969,13 @@ bool KpDictionary::load_v1_buffer(const uint8_t* base, size_t size) {
             big_word_vec_.push_back(w);
             big_logc_vec_.push_back(bg.u8());
         }
-        if (p < n_lower) ranges.emplace_back(p, start);
+        if (p < n_lower) {
+            while (filled_to <= p) big_start_vec_[filled_to++] = start;
+        }
     }
     if (!bg.ok) return false;
-
-    uint32_t next = (uint32_t)big_word_vec_.size();
-    size_t ri = ranges.size();
-    for (int64_t id = (int64_t)n_lower; id >= 0; --id) {
-        if (id < (int64_t)n_lower && ri > 0 && ranges[ri - 1].first == (uint32_t)id) next = ranges[--ri].second;
-        big_start_vec_[(size_t)id] = next;
-    }
-    big_start_vec_[n_lower] = (uint32_t)big_word_vec_.size();
+    const uint32_t big_end = (uint32_t)big_word_vec_.size();
+    while (filled_to <= n_lower) big_start_vec_[filled_to++] = big_end;
 
     // Precompute unallocated-mass backoff big_rem_[prev] = max(50.0, max(0.15 * c_prev, c_prev - big_sum))
     const auto& luts = exp_luts();
@@ -1190,12 +1242,14 @@ void KpDictionary::load_user(const std::vector<std::pair<std::string, int>>& wor
     for (auto& kv : kp_map) sorted_kps.push_back(kv.first);
     std::sort(sorted_kps.begin(), sorted_kps.end());
 
+    constexpr uint32_t kNoChild = UINT32_MAX;
     node_char_vec_.assign(1, 0);
     node_depth_vec_.assign(1, 0);
     node_term_vec_.assign(1, -1);
     node_freq_vec_.assign(1, 0);
-    std::vector<std::vector<uint32_t>> children(1);
-    EdgeMap edge;
+    std::vector<uint32_t> first_child(1, kNoChild);
+    std::vector<uint32_t> last_child(1, kNoChild);
+    std::vector<uint32_t> next_sibling(1, kNoChild);
 
     for (uint32_t kpid = 0; kpid < (uint32_t)sorted_kps.size(); ++kpid) {
         const std::string& kp = sorted_kps[kpid];
@@ -1213,20 +1267,22 @@ void KpDictionary::load_user(const std::vector<std::pair<std::string, int>>& wor
         uint32_t n = 0;
         for (size_t i = 0; i < kp.size(); ++i) {
             const uint8_t c = (uint8_t)kp[i];
-            const uint64_t ek = ((uint64_t)n << 21) | c;
-            auto ei = edge.find(ek);
-            if (ei == edge.end()) {
+            const uint32_t lc = last_child[n];
+            if (lc != kNoChild && node_char_vec_[lc] == c) {
+                n = lc;
+            } else {
                 const uint32_t id = (uint32_t)node_char_vec_.size();
                 node_char_vec_.push_back(c);
                 node_depth_vec_.push_back((uint16_t)(i + 1));
                 node_term_vec_.push_back(-1);
                 node_freq_vec_.push_back(0);
-                children.emplace_back();
-                children[n].push_back(id);
-                edge.emplace(ek, id);
+                first_child.push_back(kNoChild);
+                last_child.push_back(kNoChild);
+                next_sibling.push_back(kNoChild);
+                if (lc == kNoChild) first_child[n] = id;
+                else next_sibling[lc] = id;
+                last_child[n] = id;
                 n = id;
-            } else {
-                n = ei->second;
             }
         }
         node_term_vec_[n] = (int32_t)kpid;
@@ -1236,11 +1292,15 @@ void KpDictionary::load_user(const std::vector<std::pair<std::string, int>>& wor
     kp_var_start_vec_.push_back((uint32_t)kp_var_ids_vec_.size());
 
     bfs_trie_ = false;
-    all_child_start_vec_.assign(children.size() + 1, 0);
-    for (size_t i = 0; i < children.size(); ++i) {
-        all_child_start_vec_[i + 1] = all_child_start_vec_[i] + (uint32_t)children[i].size();
+    const size_t n_nodes = node_char_vec_.size();
+    all_child_start_vec_.assign(n_nodes + 1, 0);
+    all_child_list_vec_.clear();
+    all_child_list_vec_.reserve(n_nodes);
+    for (size_t i = 0; i < n_nodes; ++i) {
+        all_child_start_vec_[i] = (uint32_t)all_child_list_vec_.size();
+        for (uint32_t v = first_child[i]; v != kNoChild; v = next_sibling[v]) all_child_list_vec_.push_back(v);
     }
-    for (auto& c : children) all_child_list_vec_.insert(all_child_list_vec_.end(), c.begin(), c.end());
+    all_child_start_vec_[n_nodes] = (uint32_t)all_child_list_vec_.size();
 
     const uint32_t n_lower = (uint32_t)sorted_lows.size();
     big_start_vec_.assign(n_lower + 1, 0);

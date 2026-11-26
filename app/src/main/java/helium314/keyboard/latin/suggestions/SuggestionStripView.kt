@@ -410,9 +410,17 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
      * an external suggestion view, so the next suggestions replace it; [show] false removes it if still shown.
      */
     fun showSwipeDictionaryPreparing(show: Boolean) {
-        swipePreparingView?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        val prev = swipePreparingView
+        val wasAttached = prev?.parent != null
+        prev?.let { (it.parent as? ViewGroup)?.removeView(it) }
         swipePreparingView = null
-        if (!show) return
+        if (!show) {
+            if (wasAttached) {
+                isExternalSuggestionVisible = false
+                updateMoreSuggestionsButtonState()
+            }
+            return
+        }
         val view = TextView(context).apply {
             text = resources.getString(R.string.swipe_dictionary_preparing)
             setTextColor(Settings.getValues().mColors.get(ColorType.KEY_TEXT))

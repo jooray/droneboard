@@ -47,6 +47,8 @@ import kotlin.streams.asSequence
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -697,6 +699,59 @@ class InputLogicTest {
         messages.clear()
         glideTypingInput("you")
         assertEquals("hello there you", text)
+    }
+
+    @Test fun `fast second swipe at sentence start drops auto-caps after first word commits`() {
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+        setText("")
+        val wordComposerField = InputLogic::class.java.getDeclaredField("mWordComposer").apply { isAccessible = true }
+        val wordComposer = wordComposerField.get(latinIME.mInputLogic) as WordComposer
+        val refreshMethod = InputLogic::class.java.getDeclaredMethod("refreshDeferredBatchCapsMode", WordComposer::class.java)
+            .apply { isAccessible = true }
+        val pointers = helium314.keyboard.latin.common.InputPointers(4).apply {
+            addPointer(10, 20, 0, 100)
+            addPointer(30, 40, 0, 120)
+        }
+        latinIME.onStartBatchInput()
+        latinIME.onEndBatchInput(pointers)
+        // second swipe begins before first commits, inheriting start-of-sentence CapsMode.AUTO
+        latinIME.onStartBatchInput()
+        wordComposer.setCapitalizedModeAtStartComposingTime(CapsMode.AUTO)
+        messages.clear()
+        glideTypingInput("Hello")
+        assertEquals(CapsMode.OFF, wordComposer.capitalizedModeAtStartComposingTime)
+
+        // deferred composer with AUTO is also cleared after "Hello", while MANUAL is preserved
+        val deferredAuto = WordComposer().apply { setCapitalizedModeAtStartComposingTime(CapsMode.AUTO) }
+        val deferredManual = WordComposer().apply { setCapitalizedModeAtStartComposingTime(CapsMode.MANUAL) }
+        refreshMethod.invoke(latinIME.mInputLogic, deferredAuto)
+        refreshMethod.invoke(latinIME.mInputLogic, deferredManual)
+        assertEquals(CapsMode.OFF, deferredAuto.capitalizedModeAtStartComposingTime)
+        assertEquals(CapsMode.MANUAL, deferredManual.capitalizedModeAtStartComposingTime)
+
+        // manual shift on an in-progress second swipe is preserved too
+        latinIME.onStartBatchInput()
+        latinIME.onEndBatchInput(pointers)
+        latinIME.onStartBatchInput()
+        wordComposer.setCapitalizedModeAtStartComposingTime(CapsMode.MANUAL)
+        messages.clear()
+        glideTypingInput("world")
+        assertEquals(CapsMode.MANUAL, wordComposer.capitalizedModeAtStartComposingTime)
+    }
+
+    @Test fun `autocorrect typing updates strip asynchronously without blocking UI`() {
+        latinIME.prefs().edit { putBoolean(Settings.PREF_AUTO_CORRECTION, true) }
+        setInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT)
+        chainInput("hullo")
+        // Trigger the delayed strip update (normally fired by MSG_UPDATE_SUGGESTION_STRIP):
+        // it must return immediately via the async path and keep the pending holder for Space.
+        latinIME.mInputLogic.performUpdateSuggestionStripSync(settingsValues, InputStyle.TYPING)
+        val holderField = InputLogic::class.java.getDeclaredField("mPendingAutoCorrectHolder").apply { isAccessible = true }
+        assertNotNull(holderField.get(latinIME.mInputLogic))
+        // Pressing Space completes/commits cleanly without throwing or corrupting the text
+        input(' ')
+        assertEquals("hullo ", text)
+        assertNull(holderField.get(latinIME.mInputLogic))
     }
 
     @Test fun timestamp() {

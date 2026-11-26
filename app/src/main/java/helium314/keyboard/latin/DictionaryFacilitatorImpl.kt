@@ -68,6 +68,7 @@ import kotlin.time.Duration.Companion.seconds
  * a client for interacting with dictionaries.
  */
 class DictionaryFacilitatorImpl : DictionaryFacilitator {
+    @Volatile
     private var dictionaryGroups = listOf(DictionaryGroup())
 
     /** Droneboard: merge [LanguageModels.current] predictions into tap-typing suggestions (the keyboard's

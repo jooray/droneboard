@@ -12,6 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -69,7 +71,8 @@ fun EngineBadges(locale: Locale, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val engines = remember(locale) { PredictionEngines.of(ctx, locale) }
     // the keyboard could not load the swipe dictionary (it retries); otherwise swipe would just seem not to work
-    val swipeFailed = remember(locale) { engines.swipe && SwipeGestureDecoder.loadFailed(locale.engineKey) }
+    val loadVersion by SwipeGestureDecoder.loadStateVersion.collectAsState()
+    val swipeFailed = remember(locale, loadVersion) { engines.swipe && SwipeGestureDecoder.loadFailed(locale.engineKey) }
     FlowRow(
         modifier = modifier.padding(top = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),

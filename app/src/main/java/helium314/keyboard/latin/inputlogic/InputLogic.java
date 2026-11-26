@@ -137,6 +137,10 @@ public final class InputLogic {
 
     // Monotonic sequence number guarding async tap suggestion strip updates so stale replies are dropped.
     private final AtomicInteger mSuggestionStripSeq = new AtomicInteger();
+    // Droneboard: latest in-flight async suggestion lookup when auto-correction is on, so mid-word
+    // keystrokes never block the UI thread and commitCurrentAutoCorrection can await it on separator.
+    private String mPendingAutoCorrectTypedWord;
+    @Nullable private AsyncResultHolder<SuggestedWords> mPendingAutoCorrectHolder;
 
     /**
      * Create a new instance of the input logic.
@@ -167,6 +171,7 @@ public final class InputLogic {
      */
     public void startInput(String combiningSpec, SettingsValues settingsValues) {
         mSuggestionStripSeq.incrementAndGet();
+        mPendingAutoCorrectHolder = null;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         mConnection.onStartInput();
         if (!mWordComposer.getTypedWord().isEmpty()) {
@@ -242,6 +247,7 @@ public final class InputLogic {
 
     public void finishInput() {
         mSuggestionStripSeq.incrementAndGet();
+        mPendingAutoCorrectHolder = null;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
         if (mWordComposer.isComposingWord()) {
             mConnection.finishComposingText();
@@ -559,6 +565,7 @@ public final class InputLogic {
 
     public void onStartBatchInput(SettingsValues settingsValues, KeyboardSwitcher keyboardSwitcher, LatinIME.UIHandler handler) {
         mSuggestionStripSeq.incrementAndGet();
+        mPendingAutoCorrectHolder = null;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.SWIPE, null);
         handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         handler.cancelUpdateSuggestionStrip();
@@ -1734,12 +1741,21 @@ public final class InputLogic {
     }
 
     public void performUpdateSuggestionStripSync(SettingsValues settingsValues, InputStyle inputStyle) {
+        performUpdateSuggestionStrip(settingsValues, inputStyle, false);
+    }
+
+    private void performUpdateSuggestionStripBlocking(SettingsValues settingsValues, InputStyle inputStyle) {
+        performUpdateSuggestionStrip(settingsValues, inputStyle, true);
+    }
+
+    private void performUpdateSuggestionStrip(SettingsValues settingsValues, InputStyle inputStyle, boolean blocking) {
         long startTimeMillis = 0;
         if (DebugFlags.DEBUG_ENABLED) {
             startTimeMillis = SystemClock.elapsedRealtime();
             Log.d(TAG, "performUpdateSuggestionStripSync()");
         }
         final int seq = mSuggestionStripSeq.incrementAndGet();
+        mPendingAutoCorrectHolder = null;
         // Check if we have a suggestion engine attached.
         if (!settingsValues.needsToLookupSuggestions()) {
             if (mWordComposer.isComposingWord()) {
@@ -1773,19 +1789,36 @@ public final class InputLogic {
                 settingsValues.mSpacingAndPunctuations, composerSnapshot.isComposingWord() ? 2 : 1);
         final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
                 NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
-        if (!settingsValues.mAutoCorrectEnabled && !mWordComposer.isBatchMode()) {
-            // Droneboard: when autocorrection is off, run suggestion lookup asynchronously so the
-            // main UI thread never blocks on dictionaries or neural LM. Stale replies are dropped via seq.
+        if (!blocking && !mWordComposer.isBatchMode()) {
+            // Droneboard: run suggestion lookup asynchronously (also with auto-correction on) so
+            // mid-word keystrokes never stall the UI thread. When auto-correction is on, the holder
+            // lets commitCurrentAutoCorrection await this already-running lookup on Space/separator.
+            final AsyncResultHolder<SuggestedWords> holder = settingsValues.mAutoCorrectEnabled
+                    ? new AsyncResultHolder<>("Suggest") : null;
+            if (holder != null) {
+                mPendingAutoCorrectTypedWord = typedWordString;
+                mPendingAutoCorrectHolder = holder;
+            }
             mInputLogicHandler.getSuggestedWords(() -> {
-                if (mSuggestionStripSeq.get() != seq) return;
+                if (mSuggestionStripSeq.get() != seq) {
+                    if (holder != null) holder.set(null);
+                    return;
+                }
                 getSuggestedWords(
                         composerSnapshot, composedDataSnapshot, inputStyle, textAtCursor,
                         true, ngramContext, textBeforeCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
                         suggestedWords -> {
-                            if (mSuggestionStripSeq.get() != seq) return;
+                            if (mSuggestionStripSeq.get() != seq) {
+                                if (holder != null) holder.set(null);
+                                return;
+                            }
                             final SuggestedWords toShow = resolveSuggestionsToShow(typedWordString, suggestedWords);
+                            if (holder != null) holder.set(toShow);
                             mLatinIME.mHandler.post(() -> {
-                                if (mSuggestionStripSeq.get() != seq || mInputLogicHandler.isInBatchInput()) return;
+                                if (mPendingAutoCorrectHolder == holder) mPendingAutoCorrectHolder = null;
+                                if (mSuggestionStripSeq.get() != seq
+                                        || mInputLogicHandler.isInBatchInput()
+                                        || !typedWordString.equals(mWordComposer.getTypedWord())) return;
                                 applySuggestionStripUpdate(settingsValues, toShow);
                             });
                         });
@@ -2339,14 +2372,24 @@ public final class InputLogic {
      */
     public void onUpdateTailBatchInputCompleted(final SettingsValues settingsValues,
             final SuggestedWords suggestedWords, final KeyboardSwitcher keyboardSwitcher) {
+        onUpdateTailBatchInputCompleted(settingsValues, suggestedWords, keyboardSwitcher, 0);
+    }
+
+    public boolean onUpdateTailBatchInputCompleted(final SettingsValues settingsValues,
+            final SuggestedWords suggestedWords, final KeyboardSwitcher keyboardSwitcher,
+            final int gestureId) {
+        if (!mInputLogicHandler.isTailExpected(gestureId)) {
+            return false;
+        }
         // a swipe that began while this one was still being decoded: its start could not commit this word
         final boolean newerGestureStarted = mInputLogicHandler.hasNewerGestureThanTailInFlight();
         try {
             commitTailBatchInput(settingsValues, suggestedWords, keyboardSwitcher, newerGestureStarted);
         } finally {
             // lets the handler send the tail of a swipe that waited for this word (its context needs it)
-            mInputLogicHandler.onTailBatchInputCommitted();
+            mInputLogicHandler.onTailBatchInputCommitted(gestureId);
         }
+        return true;
     }
 
     private void commitTailBatchInput(final SettingsValues settingsValues, final SuggestedWords suggestedWords,
@@ -2373,7 +2416,7 @@ public final class InputLogic {
         if (settingsValues.mAutospaceAfterGestureTyping)
             mSpaceState = SpaceState.PHANTOM;
         if (newerGestureStarted) {
-            finishWordForNewerGesture(settingsValues);
+            finishWordForNewerGesture(settingsValues, keyboardSwitcher);
             return;
         }
         keyboardSwitcher.updateShiftState(getCurrentAutoCapsState(settingsValues), getCurrentRecapitalizeState());
@@ -2386,16 +2429,36 @@ public final class InputLogic {
     /**
      * The word of a swipe arrived after the next swipe had begun. Does what that swipe's start
      * (onStartBatchInput) would have done with it: commits it, so the next word does not replace it, and
-     * sets the space state for the next word. The caps mode chosen at the start of the newer swipe is kept.
+     * sets the space state for the next word. Manual shift chosen at the start of the newer swipe is kept,
+     * while start-of-sentence auto-caps is re-evaluated against the committed word.
      */
-    private void finishWordForNewerGesture(final SettingsValues settingsValues) {
+    private void finishWordForNewerGesture(final SettingsValues settingsValues,
+            final KeyboardSwitcher keyboardSwitcher) {
         final CapsMode capsMode = mWordComposer.getCapitalizedModeAtStartComposingTime();
         commitTyped(settingsValues, LastComposedWord.NOT_A_SEPARATOR);
-        mWordComposer.setCapitalizedModeAtStartComposingTime(capsMode);
         final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
         if (settingsValues.mAutospaceBeforeGestureTyping && (Character.isLetterOrDigit(codePointBeforeCursor)
                 || settingsValues.isUsuallyFollowedBySpace(codePointBeforeCursor)))
             mSpaceState = SpaceState.PHANTOM;
+        if (capsMode == CapsMode.AUTO) {
+            final CapsMode refreshed = getActualCapsMode(settingsValues, CapsMode.AUTO);
+            mWordComposer.setCapitalizedModeAtStartComposingTime(refreshed);
+            keyboardSwitcher.updateShiftState(getCurrentAutoCapsState(settingsValues), getCurrentRecapitalizeState());
+        } else {
+            mWordComposer.setCapitalizedModeAtStartComposingTime(capsMode);
+        }
+    }
+
+    /**
+     * Re-evaluates auto-caps on a deferred swipe tail once the preceding swipe's word has been committed,
+     * so a second swipe that started at an empty sentence does not inherit sentence-start auto-caps.
+     * Manual shift modes are left untouched.
+     */
+    void refreshDeferredBatchCapsMode(@Nullable final WordComposer batchComposer) {
+        if (batchComposer == null || batchComposer.getCapitalizedModeAtStartComposingTime() != CapsMode.AUTO) return;
+        final SettingsValues settingsValues = Settings.getValues();
+        if (settingsValues == null) return;
+        batchComposer.setCapitalizedModeAtStartComposingTime(getActualCapsMode(settingsValues, CapsMode.AUTO));
     }
 
     /**
@@ -2470,9 +2533,10 @@ public final class InputLogic {
      * @param separator the separator that's causing the commit to happen.
      */
     private void commitCurrentAutoCorrection(SettingsValues settingsValues, String separator, LatinIME.UIHandler handler) {
-        // Complete any pending suggestions query first
+        // Complete any pending or in-flight suggestions query first
         if (handler.hasPendingUpdateSuggestions()) {
             handler.cancelUpdateSuggestionStrip();
+            mPendingAutoCorrectHolder = null;
             // To know the input style here, we should retrieve the in-flight "update suggestions"
             // message and read its arg1 member here. However, the Handler class does not let
             // us retrieve this message, so we can't do that. But in fact, we notice that
@@ -2481,7 +2545,22 @@ public final class InputLogic {
             // for application-specified completions. As for recorrections, we never auto-correct,
             // so we don't come here either. Hence, the input style is necessarily
             // INPUT_STYLE_TYPING.
-            performUpdateSuggestionStripSync(settingsValues, InputStyle.TYPING);
+            performUpdateSuggestionStripBlocking(settingsValues, InputStyle.TYPING);
+        } else if (mPendingAutoCorrectHolder != null
+                && mWordComposer.getTypedWord().equals(mPendingAutoCorrectTypedWord)) {
+            final AsyncResultHolder<SuggestedWords> holder = mPendingAutoCorrectHolder;
+            mPendingAutoCorrectHolder = null;
+            final SuggestedWords suggestedWords = holder.get(null, Constants.GET_SUGGESTED_WORDS_TIMEOUT);
+            if (suggestedWords != null) {
+                mSuggestionStripSeq.incrementAndGet();
+                applySuggestionStripUpdate(settingsValues, suggestedWords);
+            } else {
+                // In-flight lookup was cancelled (e.g. seq bumped by this separator event) or timed out:
+                // run synchronously so auto-correction stays deterministic.
+                performUpdateSuggestionStripBlocking(settingsValues, InputStyle.TYPING);
+            }
+        } else {
+            mPendingAutoCorrectHolder = null;
         }
         SuggestedWordInfo autoCorrectionOrNull = mWordComposer.getAutoCorrectionOrNull();
         if (autoCorrectionOrNull == null && commitWithEnglishICapitalization(settingsValues, separator))
