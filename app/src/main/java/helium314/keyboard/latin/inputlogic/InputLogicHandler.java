@@ -9,12 +9,15 @@ package helium314.keyboard.latin.inputlogic;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.os.SystemClock;
 
 import helium314.keyboard.latin.InputStyle;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.WordComposer;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.suggestions.SuggestedWords;
+
+import java.util.ArrayDeque;
 
 /**
  * A helper to manage deferred tasks for the input logic.
@@ -29,6 +32,28 @@ class InputLogicHandler implements Handler.Callback {
     private int mGestureId;
     // the last non-empty preview of the gesture in progress; guarded by mLock
     private SuggestedWords mGesturePreview;
+    // the text before the cursor of the gesture in progress, taken on the UI thread; guarded by mLock
+    private InputLogic.BatchContextSnapshot mBatchContext;
+    // the gesture whose tail is being decoded or waits for its commit on the UI thread, 0 if none; one at a
+    // time, so that the next tail is decoded with the word of this one in its context; guarded by mLock
+    private int mTailInFlightGestureId;
+    private long mTailInFlightSince;
+    // tails of later gestures that wait for mTailInFlightGestureId to be committed; guarded by mLock
+    private final ArrayDeque<DeferredTail> mDeferredTails = new ArrayDeque<>();
+    // a tail that has not been committed after this long is considered lost (it never blocks later swipes)
+    private static final long TAIL_IN_FLIGHT_TIMEOUT_MS = 10_000;
+
+    private static final class DeferredTail {
+        final WordComposer composer;
+        final int sequenceNumber;
+        final int gestureId;
+
+        DeferredTail(final WordComposer composer, final int sequenceNumber, final int gestureId) {
+            this.composer = composer;
+            this.sequenceNumber = sequenceNumber;
+            this.gestureId = gestureId;
+        }
+    }
 
     private static final int MSG_GET_SUGGESTED_WORDS = 1;
     private static final int MSG_UPDATE_BATCH = 2;
@@ -46,6 +71,11 @@ class InputLogicHandler implements Handler.Callback {
 
     public void reset() {
         mNonUIThreadHandler.removeCallbacksAndMessages(null);
+        synchronized (mLock) {
+            // the queued tails were removed above, so no commit will come for them
+            mTailInFlightGestureId = 0;
+            mDeferredTails.clear();
+        }
     }
 
     /**
@@ -65,15 +95,65 @@ class InputLogicHandler implements Handler.Callback {
 
     // Called on the UI thread by InputLogic.
     public void onStartBatchInput() {
+        // the context of the whole gesture, for the previews and the tail (the text does not change meanwhile,
+        // except when the word of an earlier gesture is committed, see onTailBatchInputCommitted)
+        final InputLogic.BatchContextSnapshot context = mInputLogic != null
+                ? mInputLogic.captureContextForBatchInput(null) : null;
         synchronized (mLock) {
             mInBatchInput = true;
             ++mGestureId;
             mGesturePreview = null;
+            mBatchContext = context;
         }
         mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
         if (mInputLogic != null) {
-            mInputLogic.prefetchNeuralForBatchInput();
+            mInputLogic.prefetchNeuralForBatchInput(context);
         }
+    }
+
+    /** Whether a gesture started after the one whose tail is in flight. Called on the UI thread when it commits. */
+    boolean hasNewerGestureThanTailInFlight() {
+        synchronized (mLock) {
+            // and that gesture still goes on, or waits with its tail (not when it was canceled)
+            return mTailInFlightGestureId != 0 && mTailInFlightGestureId != mGestureId
+                    && (mInBatchInput || !mDeferredTails.isEmpty());
+        }
+    }
+
+    /**
+     * The tail in flight has been committed (or turned out empty). Called on the UI thread. The context of the
+     * gesture in progress is taken again so that it contains the committed word, and the next waiting tail is
+     * sent to the decoder with a fresh context.
+     */
+    void onTailBatchInputCommitted() {
+        final boolean refresh;
+        final DeferredTail next;
+        synchronized (mLock) {
+            mTailInFlightGestureId = 0;
+            refresh = mInBatchInput;
+            next = mDeferredTails.poll();
+            if (next != null) markTailInFlightLocked(next.gestureId);
+        }
+        if (mInputLogic == null) return;
+        if (refresh || next != null) {
+            final InputLogic.BatchContextSnapshot context = mInputLogic.captureContextForBatchInput(null);
+            if (refresh) {
+                synchronized (mLock) {
+                    if (mInBatchInput) mBatchContext = context;
+                }
+            }
+            if (next != null) sendTail(next.composer, context, next.sequenceNumber, next.gestureId);
+        }
+    }
+
+    private void markTailInFlightLocked(final int gestureId) {
+        mTailInFlightGestureId = gestureId;
+        mTailInFlightSince = SystemClock.uptimeMillis();
+    }
+
+    private void sendTail(final WordComposer composer, final InputLogic.BatchContextSnapshot context,
+            final int sequenceNumber, final int gestureId) {
+        sendBatchTask(composer, context, sequenceNumber, true, gestureId);
     }
 
     public boolean isInBatchInput() {
@@ -97,6 +177,7 @@ class InputLogicHandler implements Handler.Callback {
         final int gestureId;
         final InputPointers pointersSnapshot;
         final WordComposer batchComposerSnapshot;
+        final InputLogic.BatchContextSnapshot contextSnapshot;
         synchronized (mLock) {
             if (!mInBatchInput) {
                 // Batch input has ended or canceled while the message was being delivered.
@@ -114,13 +195,38 @@ class InputLogicHandler implements Handler.Callback {
             batchComposerSnapshot = mInputLogic != null
                     ? mInputLogic.snapshotWordComposerForBatch(pointersSnapshot)
                     : null;
+            contextSnapshot = mBatchContext;
+            if (isTailBatchInput) {
+                if (mTailInFlightGestureId != 0
+                        && SystemClock.uptimeMillis() - mTailInFlightSince > TAIL_IN_FLIGHT_TIMEOUT_MS) {
+                    // its commit is lost: send what waits for it now instead of blocking swipe typing
+                    mTailInFlightGestureId = 0;
+                    DeferredTail waiting;
+                    while ((waiting = mDeferredTails.poll()) != null)
+                        sendTail(waiting.composer, contextSnapshot, waiting.sequenceNumber, waiting.gestureId);
+                }
+                if (mTailInFlightGestureId != 0) {
+                    // the word of an earlier gesture is not committed yet: decode this tail once it is, so
+                    // that its context contains that word
+                    mDeferredTails.add(new DeferredTail(batchComposerSnapshot, sequenceNumber, gestureId));
+                    return;
+                }
+                markTailInFlightLocked(gestureId);
+            }
         }
+        sendBatchTask(batchComposerSnapshot, contextSnapshot, sequenceNumber, isTailBatchInput, gestureId);
+    }
+
+    private void sendBatchTask(final WordComposer batchComposerSnapshot,
+            final InputLogic.BatchContextSnapshot contextSnapshot, final int sequenceNumber,
+            final boolean isTailBatchInput, final int gestureId) {
         final int what = isTailBatchInput ? MSG_TAIL_BATCH : MSG_UPDATE_BATCH;
         final Runnable task = () -> {
             if (mInputLogic == null) return;
             mInputLogic.getSuggestedWordsForBatchInput(
                     batchComposerSnapshot,
                     isTailBatchInput ? InputStyle.TAIL_BATCH : InputStyle.UPDATE_BATCH,
+                    contextSnapshot,
                     sequenceNumber,
                     suggestedWords -> showGestureSuggestionsWithPreviewVisuals(
                             suggestedWords, isTailBatchInput, gestureId));

@@ -5,4 +5,6 @@
     <string name="engine_neural">Okos javaslatok</string>
     <string name="engine_ngrams">Csak gépelési javaslatok</string>
     <string name="engine_layout_only">Csak kiosztás (csúsztatás nélkül)</string>
+    <string name="engine_swipe_failed">A csúsztatásos szótárat nem sikerült betölteni, újrapróbálom</string>
+    <string name="swipe_dictionary_preparing">Csúsztatásos szótár előkészítése…</string>
 </resources>

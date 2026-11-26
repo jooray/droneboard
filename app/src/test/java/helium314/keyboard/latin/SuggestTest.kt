@@ -70,6 +70,9 @@ class SuggestTest {
         tapTypingSuggestions = suggestionResults(emptyList())
         glideTypingSuggestions = suggestionResults(emptyList())
         nextWordSuggestions = suggestionResults(emptyList())
+        nextWordLookups = 0
+        onNextWordLookup = null
+        suggest.clearNextWordSuggestionsCache()
     }
 
     @AfterTest fun tearDown() {
@@ -629,7 +632,7 @@ class SuggestTest {
         assertEquals(listOf("bur", "but", "bit", "buy", "😢", "Butter"), result.suggestedWordInfoList.map { it.word })
     }
 
-    private fun getSuggestedWords(gesture: Boolean, typedWord: String, capsMode: CapsMode): SuggestedWords {
+    private fun getSuggestedWords(gesture: Boolean, typedWord: String, capsMode: CapsMode, clearCache: Boolean = true): SuggestedWords {
         val wc = WordComposer()
         if (gesture) wc.setBatchInputPointers(InputPointers(1))
         if (typedWord.isNotEmpty()) {
@@ -654,7 +657,7 @@ class SuggestTest {
         params.GRID_WIDTH = 1
         params.mId = KeyboardLayoutSet.getFakeKeyboardId(elementId)
 
-        suggest.clearNextWordSuggestionsCache()
+        if (clearCache) suggest.clearNextWordSuggestionsCache()
         return suggest.getSuggestedWords(
             wc, null, NgramContext.EMPTY_PREV_WORDS_INFO, Keyboard(params), Settings.getValues().mSettingsValuesForSuggestion,
             Settings.getValues().mAutoCorrectEnabled, InputStyle.NONE, 0
@@ -702,12 +705,38 @@ class SuggestTest {
             typedWordFirstOccurrenceWordInfo
         ).toList()
     }
+
+    @Test fun `next word lookup that overlaps a cache clear is not cached`() {
+        nextWordSuggestions = suggestionResults(listOf(suggestion("hello", 200)))
+        // a language switch clears the cache while the lookup is running
+        onNextWordLookup = { suggest.clearNextWordSuggestionsCache() }
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        assertEquals(1, nextWordLookups)
+        onNextWordLookup = null
+        // its result must not be served from the cache: looked up again, and only that one is cached
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        assertEquals(2, nextWordLookups)
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        assertEquals(2, nextWordLookups)
+    }
+
+    @Test fun `next word suggestions are cached until the cache is cleared`() {
+        nextWordSuggestions = suggestionResults(listOf(suggestion("hello", 200)))
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        assertEquals(1, nextWordLookups)
+        suggest.clearNextWordSuggestionsCache()
+        getSuggestedWords(false, "", CapsMode.OFF, clearCache = false)
+        assertEquals(2, nextWordLookups)
+    }
 }
 
 private var currentTypingLocale = Locale.ENGLISH
 private var tapTypingSuggestions = suggestionResults(emptyList())
 private var glideTypingSuggestions = suggestionResults(emptyList())
 private var nextWordSuggestions = suggestionResults(emptyList())
+private var nextWordLookups = 0
+private var onNextWordLookup: (() -> Unit)? = null
 
 fun suggestion(word: String, score: Int, locale: Locale = currentTypingLocale, shortcut: Boolean = false) =
     SuggestedWordInfo(
@@ -743,7 +772,11 @@ class ShadowFacilitator {
                              settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int, inputStyle: InputStyle
     ): SuggestionResults = when {
         composedData.mIsBatchMode -> glideTypingSuggestions
-        composedData.mTypedWord.isEmpty() -> nextWordSuggestions
+        composedData.mTypedWord.isEmpty() -> {
+            nextWordLookups++
+            onNextWordLookup?.invoke()
+            nextWordSuggestions
+        }
         else -> tapTypingSuggestions
     }
 }

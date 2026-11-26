@@ -113,6 +113,7 @@ private:
     void step_v1(int32_t id);
     void step_v2(int32_t id);
     void step(int32_t id);
+    float logits_with_max(const float* z, float* out) const;
     void dequantize_emb(int32_t id, float* out) const;
     void build_prefix_indices();
     void prefix_range(const std::string& prefix_lower, const std::string& prefix_kp, bool fold,

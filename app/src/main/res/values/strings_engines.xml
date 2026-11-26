@@ -5,4 +5,8 @@
     <string name="engine_neural">Smart predictions</string>
     <string name="engine_ngrams">Tap predictions only</string>
     <string name="engine_layout_only">Layout only (no swipe)</string>
+    <!-- language list: loading the swipe dictionary failed, it is tried again later -->
+    <string name="engine_swipe_failed">Swipe dictionary could not be loaded, retrying</string>
+    <!-- suggestion strip while the first swipe waits for its dictionary (after an install or update) -->
+    <string name="swipe_dictionary_preparing">Preparing swipe dictionary…</string>
 </resources>

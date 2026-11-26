@@ -66,8 +66,11 @@
     <string name="setup_step3_languages_title">Talen &amp; typen</string>
     <string name="setup_step3_languages_subtitle">Controleer je typtalen en standaardinstellingen. Je kunt alles later aanpassen in Instellingen.</string>
     <string name="setup_step3_languages_card_title">Typtalen</string>
-    <string name="setup_step3_languages_card_summary">Tik op een taal in Instellingen om tussen QWERTY en QWERTZ te wisselen en veegtalen in te schakelen.</string>
+    <string name="setup_step3_languages_card_summary">Tik op een taal om die aan of uit te zetten. Alle talen hier ondersteunen vegen en slimme voorspellingen.</string>
     <string name="setup_step3_configure_languages">Talen &amp; indelingen kiezen</string>
+    <string name="setup_step3_languages_more">Andere talen, regionale varianten en indelingen (QWERTY, QWERTZ) vind je onder ‘Talen &amp; indelingen kiezen’.</string>
+    <string name="setup_step3_also_enabled">Ook aan: %s</string>
+    <string name="setup_step3_keep_one_language">Laat minstens één taal aan staan.</string>
     <string name="setup_step3_autocorrect_title">Autocorrectie</string>
     <string name="setup_step3_autocorrect_summary">Droneboard laat autocorrectie standaard uit zodat woorden niet ongemerkt worden herschreven. Suggesties blijven boven het toetsenbord staan.</string>
     <string name="setup_step4_try_title">Probeer Droneboard</string>

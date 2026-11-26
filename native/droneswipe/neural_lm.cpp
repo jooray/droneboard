@@ -132,18 +132,25 @@ float quantize(const float* x, int n, int8_t* q) {
 // ---- 4-row blocked INT8 matvec (no indirect fn-ptr per row!) ----
 
 void matvec_i8_scalar(const int8_t* W, const float* scale, const float* bias,
-                      const int8_t* xq, float sx, float* out, int rows, int cols) {
+                      const int8_t* xq, float sx, float* out, int rows, int cols,
+                      float* out_max = nullptr) {
+    float mx = out_max ? *out_max : -1e30f;
     for (int r = 0; r < rows; ++r) {
         const int8_t* row = W + (size_t)r * cols;
         int32_t acc = 0;
         for (int c = 0; c < cols; ++c) acc += (int32_t)row[c] * (int32_t)xq[c];
-        out[r] = (float)acc * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        const float v = (float)acc * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
     }
+    if (out_max) *out_max = mx;
 }
 
 #if defined(__aarch64__)
 void matvec_i8_neon(const int8_t* W, const float* scale, const float* bias,
-                    const int8_t* xq, float sx, float* out, int rows, int cols) {
+                    const int8_t* xq, float sx, float* out, int rows, int cols,
+                    float* out_max = nullptr) {
+    float32x4_t vmx = vdupq_n_f32(out_max ? *out_max : -1e30f);
     int r = 0;
     for (; r + 4 <= rows; r += 4) {
         const int8_t* r0 = W + (size_t)r * cols;
@@ -169,7 +176,9 @@ void matvec_i8_neon(const int8_t* W, const float* scale, const float* bias,
         float32x4_t fv = vmulq_f32(vcvtq_f32_s32(dots), vmulq_n_f32(vld1q_f32(scale + r), sx));
         if (bias) fv = vaddq_f32(fv, vld1q_f32(bias + r));
         vst1q_f32(out + r, fv);
+        if (out_max) vmx = vmaxq_f32(vmx, fv);
     }
+    float mx = out_max ? vmaxvq_f32(vmx) : -1e30f;
     for (; r < rows; ++r) {
         const int8_t* row = W + (size_t)r * cols;
         int32x4_t acc = vdupq_n_s32(0);
@@ -179,32 +188,82 @@ void matvec_i8_neon(const int8_t* W, const float* scale, const float* bias,
             p = vmlal_s8(p, vget_high_s8(wv), vget_high_s8(xv));
             acc = vpadalq_s16(acc, p);
         }
-        out[r] = (float)vaddvq_s32(acc) * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        const float v = (float)vaddvq_s32(acc) * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
     }
+    if (out_max) *out_max = mx;
+}
+
+__attribute__((always_inline, target("dotprod")))
+inline int32x4_t row128_i8_sdot(const int8_t* row,
+                                int8x16_t x0, int8x16_t x1, int8x16_t x2, int8x16_t x3,
+                                int8x16_t x4, int8x16_t x5, int8x16_t x6, int8x16_t x7) {
+    int32x4_t a0 = vdotq_s32(vdupq_n_s32(0), vld1q_s8(row + 0),  x0);
+    int32x4_t a1 = vdotq_s32(vdupq_n_s32(0), vld1q_s8(row + 16), x1);
+    a0 = vdotq_s32(a0, vld1q_s8(row + 32),  x2);
+    a1 = vdotq_s32(a1, vld1q_s8(row + 48),  x3);
+    a0 = vdotq_s32(a0, vld1q_s8(row + 64),  x4);
+    a1 = vdotq_s32(a1, vld1q_s8(row + 80),  x5);
+    a0 = vdotq_s32(a0, vld1q_s8(row + 96),  x6);
+    a1 = vdotq_s32(a1, vld1q_s8(row + 112), x7);
+    return vaddq_s32(a0, a1);
 }
 
 __attribute__((target("dotprod")))
 void matvec_i8_sdot(const int8_t* W, const float* scale, const float* bias,
-                    const int8_t* xq, float sx, float* out, int rows, int cols) {
+                    const int8_t* xq, float sx, float* out, int rows, int cols,
+                    float* out_max = nullptr) {
+    float32x4_t vmx = vdupq_n_f32(out_max ? *out_max : -1e30f);
     int r = 0;
-    for (; r + 4 <= rows; r += 4) {
-        const int8_t* r0 = W + (size_t)r * cols;
-        const int8_t* r1 = r0 + cols;
-        const int8_t* r2 = r1 + cols;
-        const int8_t* r3 = r2 + cols;
-        int32x4_t a0 = vdupq_n_s32(0), a1 = vdupq_n_s32(0), a2 = vdupq_n_s32(0), a3 = vdupq_n_s32(0);
-        for (int c = 0; c < cols; c += 16) {
-            const int8x16_t xv = vld1q_s8(xq + c);
-            a0 = vdotq_s32(a0, vld1q_s8(r0 + c), xv);
-            a1 = vdotq_s32(a1, vld1q_s8(r1 + c), xv);
-            a2 = vdotq_s32(a2, vld1q_s8(r2 + c), xv);
-            a3 = vdotq_s32(a3, vld1q_s8(r3 + c), xv);
+    if (cols == 128) {
+        const int8x16_t x0 = vld1q_s8(xq + 0),  x1 = vld1q_s8(xq + 16);
+        const int8x16_t x2 = vld1q_s8(xq + 32), x3 = vld1q_s8(xq + 48);
+        const int8x16_t x4 = vld1q_s8(xq + 64), x5 = vld1q_s8(xq + 80);
+        const int8x16_t x6 = vld1q_s8(xq + 96), x7 = vld1q_s8(xq + 112);
+        for (; r + 4 <= rows; r += 4) {
+            const int8_t* r0 = W + (size_t)r * 128;
+            int32x4_t a0 = row128_i8_sdot(r0,       x0, x1, x2, x3, x4, x5, x6, x7);
+            int32x4_t a1 = row128_i8_sdot(r0 + 128, x0, x1, x2, x3, x4, x5, x6, x7);
+            int32x4_t a2 = row128_i8_sdot(r0 + 256, x0, x1, x2, x3, x4, x5, x6, x7);
+            int32x4_t a3 = row128_i8_sdot(r0 + 384, x0, x1, x2, x3, x4, x5, x6, x7);
+            int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
+            float32x4_t fv = vmulq_f32(vcvtq_f32_s32(dots), vmulq_n_f32(vld1q_f32(scale + r), sx));
+            if (bias) fv = vaddq_f32(fv, vld1q_f32(bias + r));
+            vst1q_f32(out + r, fv);
+            if (out_max) vmx = vmaxq_f32(vmx, fv);
         }
-        int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
-        float32x4_t fv = vmulq_f32(vcvtq_f32_s32(dots), vmulq_n_f32(vld1q_f32(scale + r), sx));
-        if (bias) fv = vaddq_f32(fv, vld1q_f32(bias + r));
-        vst1q_f32(out + r, fv);
+    } else {
+        for (; r + 4 <= rows; r += 4) {
+            const int8_t* r0 = W + (size_t)r * cols;
+            const int8_t* r1 = r0 + cols;
+            const int8_t* r2 = r1 + cols;
+            const int8_t* r3 = r2 + cols;
+            int32x4_t a0 = vdupq_n_s32(0), a1 = vdupq_n_s32(0), a2 = vdupq_n_s32(0), a3 = vdupq_n_s32(0);
+            int c = 0;
+            for (; c + 32 <= cols; c += 32) {
+                const int8x16_t xv0 = vld1q_s8(xq + c);
+                const int8x16_t xv1 = vld1q_s8(xq + c + 16);
+                a0 = vdotq_s32(vdotq_s32(a0, vld1q_s8(r0 + c), xv0), vld1q_s8(r0 + c + 16), xv1);
+                a1 = vdotq_s32(vdotq_s32(a1, vld1q_s8(r1 + c), xv0), vld1q_s8(r1 + c + 16), xv1);
+                a2 = vdotq_s32(vdotq_s32(a2, vld1q_s8(r2 + c), xv0), vld1q_s8(r2 + c + 16), xv1);
+                a3 = vdotq_s32(vdotq_s32(a3, vld1q_s8(r3 + c), xv0), vld1q_s8(r3 + c + 16), xv1);
+            }
+            for (; c < cols; c += 16) {
+                const int8x16_t xv = vld1q_s8(xq + c);
+                a0 = vdotq_s32(a0, vld1q_s8(r0 + c), xv);
+                a1 = vdotq_s32(a1, vld1q_s8(r1 + c), xv);
+                a2 = vdotq_s32(a2, vld1q_s8(r2 + c), xv);
+                a3 = vdotq_s32(a3, vld1q_s8(r3 + c), xv);
+            }
+            int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
+            float32x4_t fv = vmulq_f32(vcvtq_f32_s32(dots), vmulq_n_f32(vld1q_f32(scale + r), sx));
+            if (bias) fv = vaddq_f32(fv, vld1q_f32(bias + r));
+            vst1q_f32(out + r, fv);
+            if (out_max) vmx = vmaxq_f32(vmx, fv);
+        }
     }
+    float mx = out_max ? vmaxvq_f32(vmx) : -1e30f;
     for (; r < rows; ++r) {
         const int8_t* row = W + (size_t)r * cols;
         int32x4_t acc0 = vdupq_n_s32(0), acc1 = vdupq_n_s32(0);
@@ -214,18 +273,22 @@ void matvec_i8_sdot(const int8_t* W, const float* scale, const float* bias,
             acc1 = vdotq_s32(acc1, vld1q_s8(row + c + 16), vld1q_s8(xq + c + 16));
         }
         for (; c < cols; c += 16) acc0 = vdotq_s32(acc0, vld1q_s8(row + c), vld1q_s8(xq + c));
-        out[r] = (float)vaddvq_s32(vaddq_s32(acc0, acc1)) * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        const float v = (float)vaddvq_s32(vaddq_s32(acc0, acc1)) * scale[r] * sx + (bias ? bias[r] : 0.0f);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
     }
+    if (out_max) *out_max = mx;
 }
 #endif
 
 inline void matvec_i8(const int8_t* W, const float* scale, const float* bias,
-                      const int8_t* xq, float sx, float* out, int rows, int cols) {
+                      const int8_t* xq, float sx, float* out, int rows, int cols,
+                      float* out_max = nullptr) {
 #if defined(__aarch64__)
-    if (kKernel == KernelKind::kSdot) { matvec_i8_sdot(W, scale, bias, xq, sx, out, rows, cols); return; }
-    if (kKernel == KernelKind::kNeon) { matvec_i8_neon(W, scale, bias, xq, sx, out, rows, cols); return; }
+    if (kKernel == KernelKind::kSdot) { matvec_i8_sdot(W, scale, bias, xq, sx, out, rows, cols, out_max); return; }
+    if (kKernel == KernelKind::kNeon) { matvec_i8_neon(W, scale, bias, xq, sx, out, rows, cols, out_max); return; }
 #endif
-    matvec_i8_scalar(W, scale, bias, xq, sx, out, rows, cols);
+    matvec_i8_scalar(W, scale, bias, xq, sx, out, rows, cols, out_max);
 }
 
 // ---- INT4 group-32 dot products (NEON split-half nibble layout: lo = q[0..15]+8, hi = q[16..31]+8) ----
@@ -249,13 +312,18 @@ float dot_row_i4_scalar(const uint8_t* packed, const uint16_t* scales, float bia
 }
 
 void matvec_i4_scalar(const uint8_t* W, const uint16_t* scales, const float* bias,
-                      const int8_t* xq, float sx, float* out, int rows, int cols) {
+                      const int8_t* xq, float sx, float* out, int rows, int cols,
+                      float* out_max = nullptr) {
     const int stride_b = cols >> 1;
     const int G = cols >> 5;
+    float mx = out_max ? *out_max : -1e30f;
     for (int r = 0; r < rows; ++r) {
-        out[r] = dot_row_i4_scalar(W + (size_t)r * stride_b, scales + (size_t)r * G,
-                                   bias ? bias[r] : 0.0f, xq, sx, cols);
+        const float v = dot_row_i4_scalar(W + (size_t)r * stride_b, scales + (size_t)r * G,
+                                          bias ? bias[r] : 0.0f, xq, sx, cols);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
     }
+    if (out_max) *out_max = mx;
 }
 
 #if defined(__aarch64__)
@@ -265,21 +333,6 @@ float dot_row_i4_sdot(const uint8_t* packed, const uint16_t* scales, float bias,
     const uint8x16_t mask0f = vdupq_n_u8(0x0Fu);
     const int8x16_t eight = vdupq_n_s8(8);
     const int G = cols >> 5;
-    if (G == 4) {
-        const uint8x16_t u0 = vld1q_u8(packed + 0),  u1 = vld1q_u8(packed + 16);
-        const uint8x16_t u2 = vld1q_u8(packed + 32), u3 = vld1q_u8(packed + 48);
-        int32x4_t a0 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u0, mask0f)), eight), vld1q_s8(xq + 0)),
-                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u0, 4)), eight), vld1q_s8(xq + 16));
-        int32x4_t a1 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u1, mask0f)), eight), vld1q_s8(xq + 32)),
-                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u1, 4)), eight), vld1q_s8(xq + 48));
-        int32x4_t a2 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u2, mask0f)), eight), vld1q_s8(xq + 64)),
-                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u2, 4)), eight), vld1q_s8(xq + 80));
-        int32x4_t a3 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u3, mask0f)), eight), vld1q_s8(xq + 96)),
-                                 vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u3, 4)), eight), vld1q_s8(xq + 112));
-        int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
-        float32x4_t sc = vcvt_f32_f16(vld1_f16(reinterpret_cast<const __fp16*>(scales)));
-        return vaddvq_f32(vmulq_f32(vcvtq_f32_s32(dots), sc)) * sx + bias;
-    }
     float sum = 0.0f;
     for (int g = 0; g < G; ++g) {
         const uint8x16_t raw = vld1q_u8(packed + g * 16);
@@ -292,11 +345,31 @@ float dot_row_i4_sdot(const uint8_t* packed, const uint16_t* scales, float bias,
     return sum * sx + bias;
 }
 
+__attribute__((always_inline, target("dotprod")))
+inline int32x4_t row128_i4_sdot(const uint8_t* p, uint8x16_t mask0f, int32x4_t xsum8,
+                                int8x16_t x0l, int8x16_t x0h, int8x16_t x1l, int8x16_t x1h,
+                                int8x16_t x2l, int8x16_t x2h, int8x16_t x3l, int8x16_t x3h) {
+    const uint8x16_t u0 = vld1q_u8(p + 0),  u1 = vld1q_u8(p + 16);
+    const uint8x16_t u2 = vld1q_u8(p + 32), u3 = vld1q_u8(p + 48);
+    int32x4_t a0 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(vandq_u8(u0, mask0f)), x0l),
+                             vreinterpretq_s8_u8(vshrq_n_u8(u0, 4)), x0h);
+    int32x4_t a1 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(vandq_u8(u1, mask0f)), x1l),
+                             vreinterpretq_s8_u8(vshrq_n_u8(u1, 4)), x1h);
+    int32x4_t a2 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(vandq_u8(u2, mask0f)), x2l),
+                             vreinterpretq_s8_u8(vshrq_n_u8(u2, 4)), x2h);
+    int32x4_t a3 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vreinterpretq_s8_u8(vandq_u8(u3, mask0f)), x3l),
+                             vreinterpretq_s8_u8(vshrq_n_u8(u3, 4)), x3h);
+    return vsubq_s32(vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3)), xsum8);
+}
+
+// 4-row unrolled INT4-g32 SDOT matvec with algebraic zero-point elimination:
+//   dot(u - 8, x) = dot(u, x) - 8 * sum(x_g)
+// Eliminates all 8 vsubq_s8 per row (320,000 vector ops per 40k-row head pass) and tracks max_logit.
 __attribute__((target("dotprod")))
 void matvec_i4_sdot(const uint8_t* W, const uint16_t* scales, const float* bias,
-                    const int8_t* xq, float sx, float* out, int rows, int cols) {
+                    const int8_t* xq, float sx, float* out, int rows, int cols,
+                    float* out_max = nullptr) {
     const uint8x16_t mask0f = vdupq_n_u8(0x0Fu);
-    const int8x16_t eight = vdupq_n_s8(8);
     const int stride_b = cols >> 1;
     const int G = cols >> 5;
     if (G == 4) {
@@ -304,28 +377,47 @@ void matvec_i4_sdot(const uint8_t* W, const uint16_t* scales, const float* bias,
         const int8x16_t x1l = vld1q_s8(xq + 32), x1h = vld1q_s8(xq + 48);
         const int8x16_t x2l = vld1q_s8(xq + 64), x2h = vld1q_s8(xq + 80);
         const int8x16_t x3l = vld1q_s8(xq + 96), x3h = vld1q_s8(xq + 112);
-        for (int r = 0; r < rows; ++r) {
+
+        const int8x16_t eight = vdupq_n_s8(8);
+        const int32x4_t xs0 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), eight, x0l), eight, x0h);
+        const int32x4_t xs1 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), eight, x1l), eight, x1h);
+        const int32x4_t xs2 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), eight, x2l), eight, x2h);
+        const int32x4_t xs3 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), eight, x3l), eight, x3h);
+        const int32x4_t xsum8 = vpaddq_s32(vpaddq_s32(xs0, xs1), vpaddq_s32(xs2, xs3));
+
+        float32x4_t vmx = vdupq_n_f32(out_max ? *out_max : -1e30f);
+        int r = 0;
+        for (; r + 4 <= rows; r += 4) {
             const uint8_t* p = W + (size_t)r * 64;
-            uint8x16_t u0 = vld1q_u8(p + 0),  u1 = vld1q_u8(p + 16);
-            uint8x16_t u2 = vld1q_u8(p + 32), u3 = vld1q_u8(p + 48);
-            int32x4_t a0 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u0, mask0f)), eight), x0l),
-                                     vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u0, 4)), eight), x0h);
-            int32x4_t a1 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u1, mask0f)), eight), x1l),
-                                     vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u1, 4)), eight), x1h);
-            int32x4_t a2 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u2, mask0f)), eight), x2l),
-                                     vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u2, 4)), eight), x2h);
-            int32x4_t a3 = vdotq_s32(vdotq_s32(vdupq_n_s32(0), vsubq_s8(vreinterpretq_s8_u8(vandq_u8(u3, mask0f)), eight), x3l),
-                                     vsubq_s8(vreinterpretq_s8_u8(vshrq_n_u8(u3, 4)), eight), x3h);
-            int32x4_t dots = vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3));
-            float32x4_t sc = vcvt_f32_f16(vld1_f16(reinterpret_cast<const __fp16*>(scales + (size_t)r * 4)));
-            out[r] = vaddvq_f32(vmulq_f32(vcvtq_f32_s32(dots), sc)) * sx + (bias ? bias[r] : 0.0f);
+            const __fp16* sp = reinterpret_cast<const __fp16*>(scales + (size_t)r * 4);
+            float32x4_t f0 = vmulq_f32(vcvtq_f32_s32(row128_i4_sdot(p + 0,   mask0f, xsum8, x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h)), vcvt_f32_f16(vld1_f16(sp + 0)));
+            float32x4_t f1 = vmulq_f32(vcvtq_f32_s32(row128_i4_sdot(p + 64,  mask0f, xsum8, x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h)), vcvt_f32_f16(vld1_f16(sp + 4)));
+            float32x4_t f2 = vmulq_f32(vcvtq_f32_s32(row128_i4_sdot(p + 128, mask0f, xsum8, x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h)), vcvt_f32_f16(vld1_f16(sp + 8)));
+            float32x4_t f3 = vmulq_f32(vcvtq_f32_s32(row128_i4_sdot(p + 192, mask0f, xsum8, x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h)), vcvt_f32_f16(vld1_f16(sp + 12)));
+            float32x4_t sums = vpaddq_f32(vpaddq_f32(f0, f1), vpaddq_f32(f2, f3));
+            float32x4_t res = bias ? vfmaq_n_f32(vld1q_f32(bias + r), sums, sx) : vmulq_n_f32(sums, sx);
+            vst1q_f32(out + r, res);
+            if (out_max) vmx = vmaxq_f32(vmx, res);
         }
+        float mx = out_max ? vmaxvq_f32(vmx) : -1e30f;
+        for (; r < rows; ++r) {
+            const int32x4_t dots = row128_i4_sdot(W + (size_t)r * 64, mask0f, xsum8, x0l, x0h, x1l, x1h, x2l, x2h, x3l, x3h);
+            const float32x4_t sc = vcvt_f32_f16(vld1_f16(reinterpret_cast<const __fp16*>(scales + (size_t)r * 4)));
+            const float v = vaddvq_f32(vmulq_f32(vcvtq_f32_s32(dots), sc)) * sx + (bias ? bias[r] : 0.0f);
+            out[r] = v;
+            if (out_max && v > mx) mx = v;
+        }
+        if (out_max) *out_max = mx;
         return;
     }
+    float mx = out_max ? *out_max : -1e30f;
     for (int r = 0; r < rows; ++r) {
-        out[r] = dot_row_i4_sdot(W + (size_t)r * stride_b, scales + (size_t)r * G,
-                                 bias ? bias[r] : 0.0f, xq, sx, cols);
+        const float v = dot_row_i4_sdot(W + (size_t)r * stride_b, scales + (size_t)r * G,
+                                        bias ? bias[r] : 0.0f, xq, sx, cols);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
     }
+    if (out_max) *out_max = mx;
 }
 
 float dot_row_i4_neon(const uint8_t* packed, const uint16_t* scales, float bias,
@@ -351,30 +443,111 @@ float dot_row_i4_neon(const uint8_t* packed, const uint16_t* scales, float bias,
 }
 
 void matvec_i4_neon(const uint8_t* W, const uint16_t* scales, const float* bias,
-                    const int8_t* xq, float sx, float* out, int rows, int cols) {
+                    const int8_t* xq, float sx, float* out, int rows, int cols,
+                    float* out_max = nullptr) {
+    const uint8x16_t mask0f = vdupq_n_u8(0x0Fu);
     const int stride_b = cols >> 1;
     const int G = cols >> 5;
-    for (int r = 0; r < rows; ++r) {
-        out[r] = dot_row_i4_neon(W + (size_t)r * stride_b, scales + (size_t)r * G,
-                                 bias ? bias[r] : 0.0f, xq, sx, cols);
+    if (G == 4) {
+        const int8x16_t x0l = vld1q_s8(xq + 0),  x0h = vld1q_s8(xq + 16);
+        const int8x16_t x1l = vld1q_s8(xq + 32), x1h = vld1q_s8(xq + 48);
+        const int8x16_t x2l = vld1q_s8(xq + 64), x2h = vld1q_s8(xq + 80);
+        const int8x16_t x3l = vld1q_s8(xq + 96), x3h = vld1q_s8(xq + 112);
+
+        int32_t xs_arr[4];
+        for (int g = 0; g < 4; ++g) {
+            int32_t s = 0;
+            for (int j = 0; j < 32; ++j) s += (int32_t)xq[g * 32 + j];
+            xs_arr[g] = s * 8;
+        }
+        const int32x4_t xsum8 = vld1q_s32(xs_arr);
+
+        auto grp_dot = [](uint8x16_t u, uint8x16_t mask, int8x16_t xl, int8x16_t xh) -> int32x4_t {
+            const int8x16_t ql = vreinterpretq_s8_u8(vandq_u8(u, mask));
+            const int8x16_t qh = vreinterpretq_s8_u8(vshrq_n_u8(u, 4));
+            int16x8_t p0 = vmull_s8(vget_low_s8(ql), vget_low_s8(xl));
+            p0 = vmlal_s8(p0, vget_high_s8(ql), vget_high_s8(xl));
+            int16x8_t p1 = vmull_s8(vget_low_s8(qh), vget_low_s8(xh));
+            p1 = vmlal_s8(p1, vget_high_s8(qh), vget_high_s8(xh));
+            return vpadalq_s16(vpaddlq_s16(p0), p1);
+        };
+        auto row_dots = [&](const uint8_t* p) -> int32x4_t {
+            int32x4_t a0 = grp_dot(vld1q_u8(p + 0),  mask0f, x0l, x0h);
+            int32x4_t a1 = grp_dot(vld1q_u8(p + 16), mask0f, x1l, x1h);
+            int32x4_t a2 = grp_dot(vld1q_u8(p + 32), mask0f, x2l, x2h);
+            int32x4_t a3 = grp_dot(vld1q_u8(p + 48), mask0f, x3l, x3h);
+            return vsubq_s32(vpaddq_s32(vpaddq_s32(a0, a1), vpaddq_s32(a2, a3)), xsum8);
+        };
+
+        float32x4_t vmx = vdupq_n_f32(out_max ? *out_max : -1e30f);
+        int r = 0;
+        for (; r + 4 <= rows; r += 4) {
+            const uint8_t* p = W + (size_t)r * 64;
+            const __fp16* sp = reinterpret_cast<const __fp16*>(scales + (size_t)r * 4);
+            float32x4_t f0 = vmulq_f32(vcvtq_f32_s32(row_dots(p + 0)),   vcvt_f32_f16(vld1_f16(sp + 0)));
+            float32x4_t f1 = vmulq_f32(vcvtq_f32_s32(row_dots(p + 64)),  vcvt_f32_f16(vld1_f16(sp + 4)));
+            float32x4_t f2 = vmulq_f32(vcvtq_f32_s32(row_dots(p + 128)), vcvt_f32_f16(vld1_f16(sp + 8)));
+            float32x4_t f3 = vmulq_f32(vcvtq_f32_s32(row_dots(p + 192)), vcvt_f32_f16(vld1_f16(sp + 12)));
+            float32x4_t sums = vpaddq_f32(vpaddq_f32(f0, f1), vpaddq_f32(f2, f3));
+            float32x4_t res = bias ? vfmaq_n_f32(vld1q_f32(bias + r), sums, sx) : vmulq_n_f32(sums, sx);
+            vst1q_f32(out + r, res);
+            if (out_max) vmx = vmaxq_f32(vmx, res);
+        }
+        float mx = out_max ? vmaxvq_f32(vmx) : -1e30f;
+        for (; r < rows; ++r) {
+            const int32x4_t dots = row_dots(W + (size_t)r * 64);
+            const float32x4_t sc = vcvt_f32_f16(vld1_f16(reinterpret_cast<const __fp16*>(scales + (size_t)r * 4)));
+            const float v = vaddvq_f32(vmulq_f32(vcvtq_f32_s32(dots), sc)) * sx + (bias ? bias[r] : 0.0f);
+            out[r] = v;
+            if (out_max && v > mx) mx = v;
+        }
+        if (out_max) *out_max = mx;
+        return;
     }
+    float mx = out_max ? *out_max : -1e30f;
+    for (int r = 0; r < rows; ++r) {
+        const float v = dot_row_i4_neon(W + (size_t)r * stride_b, scales + (size_t)r * G,
+                                        bias ? bias[r] : 0.0f, xq, sx, cols);
+        out[r] = v;
+        if (out_max && v > mx) mx = v;
+    }
+    if (out_max) *out_max = mx;
 }
 #endif
 
 inline void matvec_i4(const uint8_t* W, const uint16_t* scales, const float* bias,
-                      const int8_t* xq, float sx, float* out, int rows, int cols) {
+                      const int8_t* xq, float sx, float* out, int rows, int cols,
+                      float* out_max = nullptr) {
 #if defined(__aarch64__)
-    if (kKernel == KernelKind::kSdot) { matvec_i4_sdot(W, scales, bias, xq, sx, out, rows, cols); return; }
-    if (kKernel == KernelKind::kNeon) { matvec_i4_neon(W, scales, bias, xq, sx, out, rows, cols); return; }
+    if (kKernel == KernelKind::kSdot) { matvec_i4_sdot(W, scales, bias, xq, sx, out, rows, cols, out_max); return; }
+    if (kKernel == KernelKind::kNeon) { matvec_i4_neon(W, scales, bias, xq, sx, out, rows, cols, out_max); return; }
 #endif
-    matvec_i4_scalar(W, scales, bias, xq, sx, out, rows, cols);
+    matvec_i4_scalar(W, scales, bias, xq, sx, out, rows, cols, out_max);
 }
 
-// ---- 4-wide NEON fast-exp logsumexp (LSE error < 4e-6) ----
+// ---- Fast polynomial exp & logsumexp (LSE error < 4e-6) ----
+
+inline float fast_exp_scalar(float x) {
+    if (!(x == x)) return x;  // NaN: (int32_t)kf below would be undefined behaviour
+    if (x < -87.33654475f) x = -87.33654475f;
+    if (x > 88.0f) x = 88.0f;
+    const float kf = std::nearbyintf(x * 1.4426950408889634f);
+    const float r = (x - kf * 0.693145751953125f) - kf * 1.428606765330187e-6f;
+    float p = 0.008333333767950535f * r + 0.0416666679084301f;
+    p = p * r + 0.1666666716337204f;
+    p = p * r + 0.5f;
+    p = p * r + 1.0f;
+    p = p * r + 1.0f;
+    const uint32_t bits = (uint32_t)((int32_t)kf + 127) << 23;
+    float pow2k;
+    std::memcpy(&pow2k, &bits, sizeof(pow2k));
+    return p * pow2k;
+}
 
 #if defined(__aarch64__)
 inline float32x4_t fast_exp_f32x4(float32x4_t x) {
     const float32x4_t v_min = vdupq_n_f32(-87.33654475f);
+    const float32x4_t v_max = vdupq_n_f32(88.0f);
     const float32x4_t v_inv_ln2 = vdupq_n_f32(1.4426950408889634f);
     const float32x4_t v_ln2_hi = vdupq_n_f32(0.693145751953125f);
     const float32x4_t v_ln2_lo = vdupq_n_f32(1.428606765330187e-6f);
@@ -384,7 +557,7 @@ inline float32x4_t fast_exp_f32x4(float32x4_t x) {
     const float32x4_t c5 = vdupq_n_f32(0.008333333767950535f);
     const float32x4_t one = vdupq_n_f32(1.0f);
 
-    x = vmaxq_f32(x, v_min);
+    x = vminq_f32(vmaxq_f32(x, v_min), v_max);
     const float32x4_t kf = vrndnq_f32(vmulq_f32(x, v_inv_ln2));
     float32x4_t r = vfmsq_f32(x, kf, v_ln2_hi);
     r = vfmsq_f32(r, kf, v_ln2_lo);
@@ -401,6 +574,32 @@ inline float32x4_t fast_exp_f32x4(float32x4_t x) {
 }
 #endif
 
+float fast_logsumexp_with_max(const float* x, int n, float mx) {
+    if (n <= 0) return 0.0f;
+#if defined(__aarch64__)
+    const float32x4_t vmx = vdupq_n_f32(mx);
+    float32x4_t s0 = vdupq_n_f32(0.0f), s1 = vdupq_n_f32(0.0f);
+    float32x4_t s2 = vdupq_n_f32(0.0f), s3 = vdupq_n_f32(0.0f);
+    int i = 0;
+    for (; i + 16 <= n; i += 16) {
+        s0 = vaddq_f32(s0, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i), vmx)));
+        s1 = vaddq_f32(s1, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i + 4), vmx)));
+        s2 = vaddq_f32(s2, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i + 8), vmx)));
+        s3 = vaddq_f32(s3, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i + 12), vmx)));
+    }
+    for (; i + 4 <= n; i += 4) {
+        s0 = vaddq_f32(s0, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i), vmx)));
+    }
+    float sum = vaddvq_f32(vaddq_f32(vaddq_f32(s0, s1), vaddq_f32(s2, s3)));
+    for (; i < n; ++i) sum += fast_exp_scalar(x[i] - mx);
+    return mx + std::log(sum);
+#else
+    float sum = 0.0f;
+    for (int i = 0; i < n; ++i) sum += fast_exp_scalar(x[i] - mx);
+    return mx + std::log(sum);
+#endif
+}
+
 float fast_logsumexp(const float* x, int n) {
     if (n <= 0) return 0.0f;
 #if defined(__aarch64__)
@@ -412,23 +611,43 @@ float fast_logsumexp(const float* x, int n) {
     }
     float mx = vmaxvq_f32(vmaxq_f32(vmx0, vmx1));
     for (; i < n; ++i) mx = std::max(mx, x[i]);
-
-    const float32x4_t vmx = vdupq_n_f32(mx);
-    float32x4_t s0 = vdupq_n_f32(0.0f), s1 = vdupq_n_f32(0.0f);
-    i = 0;
-    for (; i + 8 <= n; i += 8) {
-        s0 = vaddq_f32(s0, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i), vmx)));
-        s1 = vaddq_f32(s1, fast_exp_f32x4(vsubq_f32(vld1q_f32(x + i + 4), vmx)));
-    }
-    float sum = vaddvq_f32(vaddq_f32(s0, s1));
-    for (; i < n; ++i) sum += std::exp(x[i] - mx);
-    return mx + std::log(sum);
+    return fast_logsumexp_with_max(x, n, mx);
 #else
     float mx = x[0];
     for (int i = 1; i < n; ++i) mx = std::max(mx, x[i]);
-    float sum = 0.0f;
-    for (int i = 0; i < n; ++i) sum += std::exp(x[i] - mx);
-    return mx + std::log(sum);
+    return fast_logsumexp_with_max(x, n, mx);
+#endif
+}
+
+inline void silu_mul_f32(const float* gate, const float* up, float* out, int n) {
+#if defined(__aarch64__)
+    const float32x4_t one = vdupq_n_f32(1.0f);
+    int i = 0;
+    for (; i + 8 <= n; i += 8) {
+        const float32x4_t g0 = vld1q_f32(gate + i);
+        const float32x4_t g1 = vld1q_f32(gate + i + 4);
+        const float32x4_t u0 = vld1q_f32(up + i);
+        const float32x4_t u1 = vld1q_f32(up + i + 4);
+        const float32x4_t d0 = vaddq_f32(one, fast_exp_f32x4(vnegq_f32(g0)));
+        const float32x4_t d1 = vaddq_f32(one, fast_exp_f32x4(vnegq_f32(g1)));
+        vst1q_f32(out + i,     vmulq_f32(vdivq_f32(g0, d0), u0));
+        vst1q_f32(out + i + 4, vmulq_f32(vdivq_f32(g1, d1), u1));
+    }
+    for (; i + 4 <= n; i += 4) {
+        const float32x4_t g0 = vld1q_f32(gate + i);
+        const float32x4_t u0 = vld1q_f32(up + i);
+        const float32x4_t d0 = vaddq_f32(one, fast_exp_f32x4(vnegq_f32(g0)));
+        vst1q_f32(out + i, vmulq_f32(vdivq_f32(g0, d0), u0));
+    }
+    for (; i < n; ++i) {
+        const float g = gate[i];
+        out[i] = (g / (1.0f + fast_exp_scalar(-g))) * up[i];
+    }
+#else
+    for (int i = 0; i < n; ++i) {
+        const float g = gate[i];
+        out[i] = (g / (1.0f + fast_exp_scalar(-g))) * up[i];
+    }
 #endif
 }
 
@@ -484,6 +703,24 @@ inline void rmsnorm(const float* x, const float* w, float* y, int n) {
 }
 
 inline void apply_rope_split_half(float* x, const float* cos_buf, const float* sin_buf, int half) {
+#if defined(__aarch64__)
+    int i = 0;
+    for (; i + 4 <= half; i += 4) {
+        const float32x4_t x1 = vld1q_f32(x + i);
+        const float32x4_t x2 = vld1q_f32(x + i + half);
+        const float32x4_t c = vld1q_f32(cos_buf + i);
+        const float32x4_t s = vld1q_f32(sin_buf + i);
+        vst1q_f32(x + i,        vfmsq_f32(vmulq_f32(x1, c), x2, s));
+        vst1q_f32(x + i + half, vfmaq_f32(vmulq_f32(x2, c), x1, s));
+    }
+    for (; i < half; ++i) {
+        const float x1 = x[i];
+        const float x2 = x[i + half];
+        const float c = cos_buf[i], s = sin_buf[i];
+        x[i]        = x1 * c - x2 * s;
+        x[i + half] = x2 * c + x1 * s;
+    }
+#else
     for (int i = 0; i < half; ++i) {
         const float x1 = x[i];
         const float x2 = x[i + half];
@@ -491,6 +728,7 @@ inline void apply_rope_split_half(float* x, const float* cos_buf, const float* s
         x[i]        = x1 * c - x2 * s;
         x[i + half] = x2 * c + x1 * s;
     }
+#endif
 }
 
 struct Linear {
@@ -1118,7 +1356,22 @@ void NeuralLm::step_v2(int32_t id) {
                     if (sc > mx) mx = sc;
                 }
                 float sum = 0.0f;
-                for (int s = 0; s < cur_len; ++s) sum += (b.att[s] = std::exp(b.att[s] - mx));
+#if defined(__aarch64__)
+                {
+                    const float32x4_t vmx = vdupq_n_f32(mx);
+                    float32x4_t vs = vdupq_n_f32(0.0f);
+                    int s = 0;
+                    for (; s + 4 <= cur_len; s += 4) {
+                        const float32x4_t e = fast_exp_f32x4(vsubq_f32(vld1q_f32(b.att.data() + s), vmx));
+                        vst1q_f32(b.att.data() + s, e);
+                        vs = vaddq_f32(vs, e);
+                    }
+                    sum = vaddvq_f32(vs);
+                    for (; s < cur_len; ++s) sum += (b.att[s] = fast_exp_scalar(b.att[s] - mx));
+                }
+#else
+                for (int s = 0; s < cur_len; ++s) sum += (b.att[s] = fast_exp_scalar(b.att[s] - mx));
+#endif
                 const float inv_sum = 1.0f / sum;
                 float* yh = b.y.data() + hh * hd;
                 std::fill(yh, yh + hd, 0.0f);
@@ -1158,10 +1411,7 @@ void NeuralLm::step_v2(int32_t id) {
                 for (int i = 0; i < d; ++i) acc[i] += uj[i] * dwj[i];
 #endif
             }
-            for (int i = 0; i < d; ++i) {
-                const float vi = v[i];
-                acc[i] *= vi / (1.0f + std::exp(-vi));
-            }
+            silu_mul_f32(v, acc, acc, d);
             bl.out_proj.apply(acc, b.a.data(), b.xq.data());
             for (int i = 0; i < d; ++i) b.h[i] += b.a[i];
         }
@@ -1171,10 +1421,7 @@ void NeuralLm::step_v2(int32_t id) {
         bl.ff_gu.apply(b.a.data(), b.gu.data(), b.xq.data());
         const float* gate = b.gu.data();
         const float* up = b.gu.data() + ff;
-        for (int i = 0; i < ff; ++i) {
-            const float g = gate[i];
-            b.f[i] = (g / (1.0f + std::exp(-g))) * up[i];
-        }
+        silu_mul_f32(gate, up, b.f.data(), ff);
         bl.ff_down.apply(b.f.data(), b.a.data(), b.xq.data());
         for (int i = 0; i < d; ++i) b.h[i] += b.a[i];
     }
@@ -1257,6 +1504,22 @@ const float* NeuralLm::hidden(const std::vector<int32_t>& ids_in) {
     return z_.data();
 }
 
+float NeuralLm::logits_with_max(const float* z, float* out) const {
+    int8_t stack_zq[512];
+    std::vector<int8_t> heap_zq;
+    int8_t* zq = E_ <= 512 ? stack_zq : (heap_zq.resize(E_), heap_zq.data());
+    const float sz = quantize(z, E_, zq);
+    float mx = -1e30f;
+    if (n_int8_ > 0) {
+        matvec_i8(table_i8_, scale_i8_, out_bias_, zq, sz, out, n_int8_, E_, &mx);
+    }
+    if (n_int4_ > 0) {
+        matvec_i4(table_i4_, scale_i4_, out_bias_ ? (out_bias_ + n_int8_) : nullptr,
+                  zq, sz, out + n_int8_, n_int4_, E_, &mx);
+    }
+    return mx;
+}
+
 void NeuralLm::logits(const float* z, float* out) const {
     int8_t stack_zq[512];
     std::vector<int8_t> heap_zq;
@@ -1277,8 +1540,8 @@ const float* NeuralLm::distribution(const std::vector<int32_t>& ids, float* lse)
         const float* z = hidden(ids);
         if (!z) return nullptr;
         cached_logits_.resize(V_);
-        logits(z, cached_logits_.data());
-        cached_lse_ = fast_logsumexp(cached_logits_.data(), V_);
+        const float mx = logits_with_max(z, cached_logits_.data());
+        cached_lse_ = fast_logsumexp_with_max(cached_logits_.data(), V_, mx);
         cached_ids_ = ids;
     }
     *lse = cached_lse_;

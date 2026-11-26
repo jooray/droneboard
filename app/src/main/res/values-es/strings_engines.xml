@@ -5,4 +5,6 @@
     <string name="engine_neural">Predicciones inteligentes</string>
     <string name="engine_ngrams">Solo al pulsar</string>
     <string name="engine_layout_only">Solo distribución (sin deslizar)</string>
+    <string name="engine_swipe_failed">No se pudo cargar el diccionario para deslizar, se volverá a intentar</string>
+    <string name="swipe_dictionary_preparing">Preparando el diccionario para deslizar…</string>
 </resources>

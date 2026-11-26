@@ -5,4 +5,6 @@
     <string name="engine_neural">Slimme voorspellingen</string>
     <string name="engine_ngrams">Alleen bij tikken</string>
     <string name="engine_layout_only">Alleen indeling (geen vegen)</string>
+    <string name="engine_swipe_failed">Veegwoordenboek kon niet worden geladen, nieuwe poging volgt</string>
+    <string name="swipe_dictionary_preparing">Veegwoordenboek wordt voorbereid…</string>
 </resources>

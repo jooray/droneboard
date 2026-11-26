@@ -5,4 +5,6 @@
     <string name="engine_neural">Chytré návrhy</string>
     <string name="engine_ngrams">Návrhy při klepání</string>
     <string name="engine_layout_only">Jen rozložení (bez tahu)</string>
+    <string name="engine_swipe_failed">Slovník pro psaní tahem se nepodařilo načíst, zkouším znovu</string>
+    <string name="swipe_dictionary_preparing">Připravuji slovník pro psaní tahem…</string>
 </resources>

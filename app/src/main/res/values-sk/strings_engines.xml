@@ -5,4 +5,6 @@
     <string name="engine_neural">Inteligentné návrhy</string>
     <string name="engine_ngrams">Návrhy pri ťukaní</string>
     <string name="engine_layout_only">Len rozloženie (bez ťahu)</string>
+    <string name="engine_swipe_failed">Slovník na písanie ťahom sa nepodarilo načítať, skúšam znova</string>
+    <string name="swipe_dictionary_preparing">Pripravujem slovník na písanie ťahom…</string>
 </resources>

@@ -66,8 +66,11 @@
     <string name="setup_step3_languages_title">Idiomas y escritura</string>
     <string name="setup_step3_languages_subtitle">Revisa tus idiomas y valores predeterminados. Puedes cambiar todo más adelante en Ajustes.</string>
     <string name="setup_step3_languages_card_title">Idiomas de escritura</string>
-    <string name="setup_step3_languages_card_summary">Toca cualquier idioma en Ajustes para cambiar entre QWERTY y QWERTZ y activar idiomas de deslizamiento.</string>
+    <string name="setup_step3_languages_card_summary">Toca un idioma para activarlo o desactivarlo. Todos los idiomas de aquí admiten deslizar y predicciones inteligentes.</string>
     <string name="setup_step3_configure_languages">Elegir idiomas y diseños</string>
+    <string name="setup_step3_languages_more">Otros idiomas, variantes regionales y diseños (QWERTY, QWERTZ) están en «Elegir idiomas y diseños».</string>
+    <string name="setup_step3_also_enabled">También activados: %s</string>
+    <string name="setup_step3_keep_one_language">Deja al menos un idioma activado.</string>
     <string name="setup_step3_autocorrect_title">Autocorrección</string>
     <string name="setup_step3_autocorrect_summary">Droneboard deja la autocorrección desactivada por defecto para no sustituir palabras sin aviso. Las sugerencias siguen apareciendo encima del teclado.</string>
     <string name="setup_step4_try_title">Prueba Droneboard</string>

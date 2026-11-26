@@ -508,6 +508,8 @@ public class LatinIME extends InputMethodService implements
         // swipe ranks words the user has written (typing history, personal dictionary) higher
         helium314.keyboard.latin.swipe.SwipeGestureDecoder.setUserWordsProvider(
                 max -> mDictionaryFacilitator.getUserWordsForSwipe(max));
+        // the first swipe after an install or update may wait seconds for its dictionary: say so in the strip
+        helium314.keyboard.latin.swipe.SwipeGestureDecoder.setPreparingListener(mSwipePreparingListener);
         mClipboardHistoryManager.onCreate();
         // Droneboard: no recording of a dictation outlives the process that made it
         mDictation.onCreate();
@@ -627,6 +629,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        if (helium314.keyboard.latin.swipe.SwipeGestureDecoder.getPreparingListener() == mSwipePreparingListener)
+            helium314.keyboard.latin.swipe.SwipeGestureDecoder.setPreparingListener(null);
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
@@ -636,6 +640,24 @@ public class LatinIME extends InputMethodService implements
         mHandler.removeCallbacksAndMessages(null);
         deallocateMemory();
     }
+
+    // shown only if the swipe still waits after a moment, so that a short wait does not flash the message
+    private static final long SWIPE_PREPARING_DELAY_MS = 300;
+    private final Runnable mShowSwipePreparing = () -> {
+        if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(true);
+    };
+    private final helium314.keyboard.latin.swipe.SwipeGestureDecoder.PreparingListener mSwipePreparingListener =
+            preparing -> {
+                // called on the decoder thread
+                mHandler.removeCallbacks(mShowSwipePreparing);
+                if (preparing) {
+                    mHandler.postDelayed(mShowSwipePreparing, SWIPE_PREPARING_DELAY_MS);
+                } else {
+                    mHandler.post(() -> {
+                        if (hasSuggestionStripView()) mSuggestionStripView.showSwipeDictionaryPreparing(false);
+                    });
+                }
+            };
 
     private boolean isImeSuppressedByHardwareKeyboard() {
         return !onEvaluateInputViewShown()

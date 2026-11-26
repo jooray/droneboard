@@ -196,12 +196,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 Dictionary.TYPE_CONTACTS else null
         )
 
-        val (newDictionaryGroups, existingDictsToCleanup) =
-            getNewDictGroupsAndDictsToCleanup(locales, subDictTypesToUse, forceReloadMainDictionary, dictNamePrefix, context)
-
-        // Replace Dictionaries.
+        // Replace Dictionaries. The new groups are computed under the same monitor as the swap: otherwise the main
+        // dictionary loader (asyncReloadUninitializedMainDictionaries) could give an old group a main dictionary
+        // after the cleanup list was made, and that dictionary would never be closed. Nothing done under the
+        // monitor waits for the loader or takes a lock the loader holds while it waits for the monitor.
         val oldDictionaryGroups: List<DictionaryGroup>
+        val existingDictsToCleanup: Map<Locale, List<String>>
         synchronized(this) {
+            val (newDictionaryGroups, dictsToCleanup) =
+                getNewDictGroupsAndDictsToCleanup(locales, subDictTypesToUse, forceReloadMainDictionary, dictNamePrefix, context)
+            existingDictsToCleanup = dictsToCleanup
             oldDictionaryGroups = dictionaryGroups
             dictionaryGroups = newDictionaryGroups
             if (hasAtLeastOneUninitializedMainDictionary()) {
@@ -293,11 +297,17 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     if (dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true) null
                     else dictionaryGroup to DictionaryFactory.createMainDictionaryCollection(context, it, useEmojiDict)
                 }
-                synchronized(this) {
+                val staleMainDicts = ArrayList<Dictionary>()
+                synchronized(this@DictionaryFacilitatorImpl) {
                     dictGroupsWithNewMainDict.forEach { (dictGroup, mainDict) ->
-                        dictGroup.setMainDict(mainDict)
+                        if (dictionaryGroups.any { it === dictGroup }) {
+                            dictGroup.setMainDict(mainDict)
+                        } else {
+                            staleMainDicts.add(mainDict)
+                        }
                     }
                 }
+                staleMainDicts.forEach { it.close() }
 
                 listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
             } catch (e: Throwable) {
@@ -1010,10 +1020,14 @@ private class DictionaryGroup(
         else null
     }
 
-    private val blacklist = hashSetOf<String>().apply {
+    // guards the blacklist file; the set itself is concurrent, it is read on the UI and suggestion threads
+    // (a plain `synchronized(this)` inside scope.launch would lock on each coroutine, which protects nothing)
+    private val blacklistLock = Any()
+
+    private val blacklist: MutableSet<String> = ConcurrentHashMap.newKeySet<String>().apply {
         if (blacklistFile?.isFile != true) return@apply
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     addAll(blacklistFile.readLines())
                 } catch (e: IOException) {
@@ -1028,7 +1042,7 @@ private class DictionaryGroup(
     fun addToBlacklist(word: String) {
         if (!blacklist.add(word) || blacklistFile == null) return
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     if (blacklistFile.isDirectory) blacklistFile.delete()
                     blacklistFile.appendText("$word\n")
@@ -1042,7 +1056,7 @@ private class DictionaryGroup(
     fun removeFromBlacklist(word: String) {
         if (!blacklist.remove(word) || blacklistFile == null) return
         scope.launch {
-            synchronized(this) {
+            synchronized(blacklistLock) {
                 try {
                     val newLines = blacklistFile.readLines().filterNot { it == word }
                     blacklistFile.writeText(newLines.joinToString("\n"))

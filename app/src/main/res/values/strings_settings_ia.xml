@@ -66,8 +66,11 @@
     <string name="setup_step3_languages_title">Languages &amp; typing</string>
     <string name="setup_step3_languages_subtitle">Check your typing languages and defaults. You can change everything later in Settings.</string>
     <string name="setup_step3_languages_card_title">Typing languages</string>
-    <string name="setup_step3_languages_card_summary">Tap any language in Settings to switch between QWERTY and QWERTZ layouts and enable swipe languages.</string>
+    <string name="setup_step3_languages_card_summary">Tap a language to turn it on or off. All languages here have swipe typing and smart predictions.</string>
     <string name="setup_step3_configure_languages">Choose languages &amp; layouts</string>
+    <string name="setup_step3_languages_more">For other languages, regional variants and layouts (QWERTY, QWERTZ), tap “Choose languages &amp; layouts”.</string>
+    <string name="setup_step3_also_enabled">Also on: %s</string>
+    <string name="setup_step3_keep_one_language">Keep at least one language on.</string>
     <string name="setup_step3_autocorrect_title">Auto-correction</string>
     <string name="setup_step3_autocorrect_summary">Droneboard leaves auto-correction off by default so words aren\'t silently rewritten. Suggestions still appear above the keyboard.</string>
     <string name="setup_step4_try_title">Try Droneboard</string>

@@ -67,8 +67,11 @@
     <string name="setup_step3_languages_title">Jazyky a písanie</string>
     <string name="setup_step3_languages_subtitle">Skontrolujte jazyky a predvolené nastavenia. Všetko môžete neskôr zmeniť v Nastaveniach.</string>
     <string name="setup_step3_languages_card_title">Jazyky písania</string>
-    <string name="setup_step3_languages_card_summary">Klepnutím na jazyk v Nastaveniach prepnete QWERTY / QWERTZ a nastavíte jazyky písania ťahom.</string>
+    <string name="setup_step3_languages_card_summary">Ťuknutím na jazyk ho zapnete alebo vypnete. Všetky jazyky tu podporujú písanie ťahom aj inteligentné návrhy.</string>
     <string name="setup_step3_configure_languages">Vybrať jazyky a rozloženia</string>
+    <string name="setup_step3_languages_more">Ďalšie jazyky, regionálne varianty a rozloženia (QWERTY, QWERTZ) nastavíte cez „Vybrať jazyky a rozloženia“.</string>
+    <string name="setup_step3_also_enabled">Zapnuté sú aj: %s</string>
+    <string name="setup_step3_keep_one_language">Aspoň jeden jazyk musí zostať zapnutý.</string>
     <string name="setup_step3_autocorrect_title">Automatické opravy</string>
     <string name="setup_step3_autocorrect_summary">Droneboard necháva automatické opravy predvolene vypnuté, aby sa slová potichu neprepisovali. Návrhy sa stále zobrazujú nad klávesnicou.</string>
     <string name="setup_step4_try_title">Vyskúšajte Droneboard</string>

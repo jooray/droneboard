@@ -60,7 +60,7 @@ data class PredictionEngines(val neural: Boolean, val ngrams: Boolean, val swipe
     }
 }
 
-private enum class BadgeStyle { Highlight, Subtle, Muted }
+private enum class BadgeStyle { Highlight, Subtle, Muted, Warning }
 
 /** Plain-language capability pills describing what swipe and prediction support [locale] has. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -68,6 +68,8 @@ private enum class BadgeStyle { Highlight, Subtle, Muted }
 fun EngineBadges(locale: Locale, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val engines = remember(locale) { PredictionEngines.of(ctx, locale) }
+    // the keyboard could not load the swipe dictionary (it retries); otherwise swipe would just seem not to work
+    val swipeFailed = remember(locale) { engines.swipe && SwipeGestureDecoder.loadFailed(locale.engineKey) }
     FlowRow(
         modifier = modifier.padding(top = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -93,6 +95,8 @@ fun EngineBadges(locale: Locale, modifier: Modifier = Modifier) {
                 Badge(stringResource(R.string.engine_layout_only), BadgeStyle.Muted)
             }
         }
+        if (swipeFailed)
+            Badge(stringResource(R.string.engine_swipe_failed), BadgeStyle.Warning)
     }
 }
 
@@ -104,16 +108,19 @@ private fun Badge(text: String, style: BadgeStyle) {
         BadgeStyle.Highlight -> colors.secondaryContainer
         BadgeStyle.Subtle -> colors.surface
         BadgeStyle.Muted -> colors.surfaceContainerLow
+        BadgeStyle.Warning -> colors.errorContainer
     }
     val contentColor = when (style) {
         BadgeStyle.Highlight -> colors.onSecondaryContainer
         BadgeStyle.Subtle -> colors.onSurfaceVariant
         BadgeStyle.Muted -> colors.onSurfaceVariant
+        BadgeStyle.Warning -> colors.onErrorContainer
     }
     val borderModifier = when (style) {
         BadgeStyle.Highlight -> Modifier
         BadgeStyle.Subtle -> Modifier.border(1.dp, colors.outlineVariant, shape)
         BadgeStyle.Muted -> Modifier.border(1.dp, colors.outlineVariant, shape)
+        BadgeStyle.Warning -> Modifier
     }
     Surface(
         shape = shape,

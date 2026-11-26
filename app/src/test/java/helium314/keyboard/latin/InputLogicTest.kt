@@ -682,6 +682,23 @@ class InputLogicTest {
         //  need to avoid getting into the mWordComposer.isBatchMode() part of handleBackspaceEvent
     }
 
+    @Test fun `word of a swipe that arrives after the next swipe began is kept`() {
+        setText("hello ")
+        val pointers = helium314.keyboard.latin.common.InputPointers(4).apply {
+            addPointer(10, 20, 0, 100)
+            addPointer(30, 40, 0, 120)
+        }
+        latinIME.onStartBatchInput()
+        latinIME.onEndBatchInput(pointers) // the first swipe is still being decoded...
+        latinIME.onStartBatchInput() // ...when the second one begins and ends
+        latinIME.onEndBatchInput(pointers)
+        messages.clear() // the decoder does not run here; the results are handed over below
+        glideTypingInput("there")
+        messages.clear()
+        glideTypingInput("you")
+        assertEquals("hello there you", text)
+    }
+
     @Test fun timestamp() {
         chainInput("hello")
         functionalKeyPress(KeyCode.TIMESTAMP)

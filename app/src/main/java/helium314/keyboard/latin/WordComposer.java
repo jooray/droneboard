@@ -389,6 +389,10 @@ public final class WordComposer {
         mCapitalizedMode = mode;
     }
 
+    public CapsMode getCapitalizedModeAtStartComposingTime() {
+        return mCapitalizedMode;
+    }
+
     /**
      * Before fetching suggestions, we don't necessarily know about the capitalized mode yet.
      * <p>

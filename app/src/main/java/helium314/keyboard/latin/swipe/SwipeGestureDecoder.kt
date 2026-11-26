@@ -19,12 +19,17 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
 import helium314.keyboard.latin.utils.locale
+import helium314.keyboard.latin.utils.prefs
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.CRC32
+import java.util.zip.ZipFile
 import kotlin.math.roundToInt
 
 /**
@@ -113,6 +118,16 @@ object SwipeGestureDecoder {
     private const val USER_WORDS_CHANGED_MS = 2 * 60 * 1000L
     private const val USER_WORDS_CHANGED_REFRESH_MS = 10 * 1000L
 
+    /** Told on the decoder thread when a final decode starts and stops waiting for a dictionary being prepared. */
+    fun interface PreparingListener {
+        fun onPreparing(preparing: Boolean)
+    }
+
+    /** Set by the IME, which shows a message in the suggestion strip while a swipe waits for its dictionary. */
+    @JvmStatic
+    @Volatile
+    var preparingListener: PreparingListener? = null
+
     /** Supplies the user's words with weights 0-255 (typing history, personal dictionary); set by the IME. */
     @JvmStatic
     @Volatile
@@ -134,19 +149,44 @@ object SwipeGestureDecoder {
         userWordsLoadedAt = 0L
     }
 
+    @Volatile
     private var session = 0L
-    /** loaded dictionaries; filled by the loader thread, read by the decoder */
+    private val sessionLock = Any()
+    private val sessionPreloadRequested = AtomicBoolean(false)
+    /** loaded dictionaries; filled by the loader pool, read by the decoder */
     private val dictionaries = ConcurrentHashMap<String, Long>()
     /** one latch per language that has been requested; counted down when loading ends (also on failure) */
     private val loading = ConcurrentHashMap<String, CountDownLatch>()
     /** when loading a language last failed; it is tried again after [RETRY_FAILED_MS] instead of never */
     private val failedAt = ConcurrentHashMap<String, Long>()
     private const val RETRY_FAILED_MS = 15_000L
-    /** loads dictionaries one after another, never on the input thread, never under the decoder lock */
-    private val loader = Executors.newSingleThreadExecutor { r -> Thread(r, "swipe-load").apply { isDaemon = true } }
+    /** 2-thread loader pool so bilingual .kpd2 caches and the ExecuTorch encoder warm in parallel */
+    private val loaderSeq = AtomicInteger(0)
+    private val loader = Executors.newFixedThreadPool(2) { r ->
+        Thread(r, "swipe-load-${loaderSeq.incrementAndGet()}").apply { isDaemon = true }
+    }
+    /**
+     * Compiling a v1 .kpd into the .kpd2 cache needs up to ~200 MB of native memory for a big dictionary, so
+     * only one is compiled at a time (after an install or an update); loading compiled caches stays parallel.
+     */
+    private val compileLock = Any()
     private val extractLock = Any()
     private val extractLocks = ConcurrentHashMap<String, Any>()
     private var assetDir: File? = null
+
+    /**
+     * The compiled .kpd2 caches live outside the per-installation [swipeAssetDir] and are named after the content
+     * of their .kpd (size and CRC-32), so an update that does not change a dictionary reuses its cache. Bump
+     * [DICT_CACHE_VERSION] when the native compile writes different data without changing the .kpd2 format
+     * version (the native loader rejects other format versions and corrupt files by itself).
+     */
+    private const val DICT_CACHE_DIR = "kpd2-cache" // not "swipe-...": those are removed at every update
+    private const val DICT_CACHE_VERSION = 1
+    private val dictCacheNames = ConcurrentHashMap<String, String>()
+    private val dictCacheCleaned = AtomicBoolean(false)
+    /** size and CRC-32 of every swipe/<lang>.kpd from the APK's zip directory; null if it cannot be read */
+    @Volatile
+    private var apkDictEntries: Map<String, Pair<Long, Long>>? = null
 
     /** Soft tie-breaker for the first word in an app (zero context only; never applied mid-sentence). */
     private const val APP_FIRST_WORD_PRIOR = 0.3f
@@ -203,6 +243,7 @@ object SwipeGestureDecoder {
         if (appContext == null) appContext = context.applicationContext ?: context
         if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return emptyList()
         val available = languagesWithDictionary(context)
+        preloadSessionIfUseful(context, locales, available)
         return locales.map { it.engineKey }.distinct().filter { it in available }.filter { lang ->
             if (dictionaries[lang] != null || loading[lang]?.let { it.count > 0 } == true) return@filter false
             val wasFailed = failedAt.containsKey(lang)
@@ -242,6 +283,54 @@ object SwipeGestureDecoder {
         }
     }
 
+    /**
+     * The .kpd2 cache of [language], named after the content of the .kpd in the APK. Caches of other contents of
+     * the same language and of languages that are no longer in the APK are deleted. Runs on a loader thread.
+     */
+    private fun dictCacheFile(context: Context, language: String): File {
+        if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked")
+        val dir = File(context.noBackupFilesDir, DICT_CACHE_DIR).apply { mkdirs() }
+        val entries = apkDictEntries ?: readApkDictEntries(context).also { apkDictEntries = it }
+        val name = dictCacheNames.getOrPut(language) {
+            val (size, crc) = entries[language] ?: assetSizeAndCrc(context, "$ASSET_DIR/$language.kpd")
+            "$language-$size-${crc.toString(16)}-v$DICT_CACHE_VERSION.kpd2"
+        }
+        // files of this language with another key (also their .tmp); "sk-" does not match "sk_nd-..."
+        dir.listFiles()?.forEach { f ->
+            if (f.name.startsWith("$language-") && !f.name.startsWith(name)) f.delete()
+        }
+        if (entries.isNotEmpty() && dictCacheCleaned.compareAndSet(false, true)) {
+            dir.listFiles()?.forEach { f -> if (f.name.substringBefore('-') !in entries) f.delete() }
+        }
+        return File(dir, name)
+    }
+
+    /** Size and CRC-32 of each swipe/<lang>.kpd from the zip directory of the APK (nothing is decompressed). */
+    private fun readApkDictEntries(context: Context): Map<String, Pair<Long, Long>> = runCatching {
+        ZipFile(context.applicationInfo.sourceDir).use { zip ->
+            zip.entries().asSequence()
+                .filter { it.name.startsWith("assets/$ASSET_DIR/") && it.name.endsWith(".kpd") && it.crc >= 0 && it.size >= 0 }
+                .associate { it.name.substringAfterLast('/').removeSuffix(".kpd") to (it.size to it.crc) }
+        }
+    }.onFailure { Log.w(TAG, "could not read the swipe dictionaries from the APK directory", it) }
+        .getOrDefault(emptyMap())
+
+    /** Fallback when the APK directory cannot be read: reads the asset once. */
+    private fun assetSizeAndCrc(context: Context, path: String): Pair<Long, Long> {
+        val crc = CRC32()
+        var size = 0L
+        context.assets.open(path).use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                crc.update(buffer, 0, n)
+                size += n
+            }
+        }
+        return size to crc.value
+    }
+
     internal fun extract(context: Context, name: String): File {
         // fail closed before touching storage: no_backup is credential-encrypted
         if (!DirectBoot.isUnlocked(context)) throw IllegalStateException("user is locked, not extracting $name")
@@ -262,8 +351,33 @@ object SwipeGestureDecoder {
         if (session != 0L) return true
         extract(context, ENCODER_METADATA)
         val encoder = extract(context, ENCODER)
-        session = FutoSwipe.nativeCreate(encoder.absolutePath)
-        return session != 0L
+        synchronized(sessionLock) {
+            if (session != 0L) return true
+            session = FutoSwipe.nativeCreate(encoder.absolutePath)
+            return session != 0L
+        }
+    }
+
+    /** Warms the encoder session only when gesture typing is on and one of [locales] has a swipe dictionary. */
+    private fun preloadSessionIfUseful(context: Context, locales: List<Locale>, available: Set<String>) {
+        if (session != 0L || locales.none { it.engineKey in available }) return
+        val gestureInput = runCatching { context.prefs().getBoolean(Settings.PREF_GESTURE_INPUT, Defaults.PREF_GESTURE_INPUT) }
+            .getOrDefault(Defaults.PREF_GESTURE_INPUT)
+        if (gestureInput) preloadSession(context)
+    }
+
+    /** Warms the ExecuTorch encoder session in the background so the first swipe does not stall. */
+    private fun preloadSession(context: Context) {
+        if (session != 0L || !sessionPreloadRequested.compareAndSet(false, true)) return
+        val app = context.applicationContext ?: context
+        loader.execute {
+            try {
+                if (!ensureSession(app)) sessionPreloadRequested.set(false)
+            } catch (e: Throwable) {
+                Log.w(TAG, "could not preload swipe encoder session", e)
+                sessionPreloadRequested.set(false)
+            }
+        }
     }
 
     /** Reloads the user's words on the loader thread every few minutes; the next layout update picks them up. */
@@ -307,9 +421,7 @@ object SwipeGestureDecoder {
             val latch = CountDownLatch(1)
             loader.execute {
                 try {
-                    val dir = swipeAssetDir(context)
-                    dir.mkdirs()
-                    val v2Cache = File(dir, "$language.kpd2")
+                    val v2Cache = dictCacheFile(context, language)
                     val params = params(language) + 0f
                     var handle = if (v2Cache.isFile) {
                         FutoSwipe.nativeLoadDictionary(v2Cache.absolutePath, params).also { h ->
@@ -321,7 +433,9 @@ object SwipeGestureDecoder {
                     } else 0L
                     if (handle == 0L) {
                         val v1File = extract(context, "$language.kpd")
-                        handle = FutoSwipe.nativeLoadDictionaryCached(v1File.absolutePath, v2Cache.absolutePath, params)
+                        handle = synchronized(compileLock) {
+                            FutoSwipe.nativeLoadDictionaryCached(v1File.absolutePath, v2Cache.absolutePath, params)
+                        }
                         // Native removes v2Cache if reloading the compiled cache fails, so v2Cache.isFile
                         // is only true when the cache has been verified and mmapped.
                         if (handle != 0L && v2Cache.isFile) v1File.delete()
@@ -398,6 +512,7 @@ object SwipeGestureDecoder {
         if (!DirectBoot.isUnlocked(context) || !FutoSwipe.isAvailable) return
         try {
             val available = languagesWithDictionary(context)
+            preloadSessionIfUseful(context, locales, available)
             locales.map { it.engineKey }.distinct().filter { it in available }.forEach { requestLoad(context, it) }
         } catch (e: Exception) {
             Log.w(TAG, "preload failed", e)
@@ -415,7 +530,15 @@ object SwipeGestureDecoder {
         wanted.forEach { requestLoad(context, it.engineKey) }
         maybeRefreshUserWords()
         val deadline = System.currentTimeMillis() + waitMs
-        val locales = wanted.filter { dictionary(context, it.engineKey, (deadline - System.currentTimeMillis()).coerceAtLeast(0)) != 0L }
+        // the final decode waits for a dictionary that is still being prepared (after an install or update this
+        // can take seconds): the IME says so in the suggestion strip meanwhile
+        val waiting = waitMs > 0 && wanted.any { dictionaries[it.engineKey] == null && (loading[it.engineKey]?.count ?: 0L) > 0 }
+        if (waiting) runCatching { preparingListener?.onPreparing(true) }
+        val locales = try {
+            wanted.filter { dictionary(context, it.engineKey, (deadline - System.currentTimeMillis()).coerceAtLeast(0)) != 0L }
+        } finally {
+            if (waiting) runCatching { preparingListener?.onPreparing(false) }
+        }
         if (locales.isEmpty()) return false
         val languages = locales.map { it.engineKey }
         val letterKeys = keyboard.sortedKeys
@@ -626,6 +749,9 @@ object SwipeGestureDecoder {
         if (langs.isEmpty()) return
         NeuralLanguageModel.prefetchForSwipe(context, langs, contextWords(ngramContext), textBeforeCursor)
     }
+
+    /** Whether loading the swipe dictionary of [language] failed recently (it is tried again later), for the settings. */
+    fun loadFailed(language: String): Boolean = failedAt.containsKey(language) && dictionaries[language] == null
 
     fun filesMissingFromListing(context: Context): List<String> = EngineAssets.missingFromListing(context)
 

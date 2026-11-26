@@ -66,8 +66,11 @@
     <string name="setup_step3_languages_title">Nyelvek és gépelés</string>
     <string name="setup_step3_languages_subtitle">Ellenőrizd a gépelési nyelveket és alapbeállításokat. Később bármit módosíthatsz a Beállításokban.</string>
     <string name="setup_step3_languages_card_title">Gépelési nyelvek</string>
-    <string name="setup_step3_languages_card_summary">Koppints bármely nyelvre a Beállításokban a QWERTY / QWERTZ váltáshoz és a csúsztatási nyelvek engedélyezéséhez.</string>
+    <string name="setup_step3_languages_card_summary">Koppints egy nyelvre a be- vagy kikapcsolásához. Az itt látható nyelvek mindegyike támogatja a csúsztatást és az okos javaslatokat.</string>
     <string name="setup_step3_configure_languages">Nyelvek és kiosztások kiválasztása</string>
+    <string name="setup_step3_languages_more">További nyelveket, regionális változatokat és kiosztásokat (QWERTY, QWERTZ) a „Nyelvek és kiosztások kiválasztása” gombbal állíthatsz be.</string>
+    <string name="setup_step3_also_enabled">Szintén bekapcsolva: %s</string>
+    <string name="setup_step3_keep_one_language">Legalább egy nyelvnek bekapcsolva kell maradnia.</string>
     <string name="setup_step3_autocorrect_title">Automatikus javítás</string>
     <string name="setup_step3_autocorrect_summary">A Droneboard alapértelmezetten kikapcsolva hagyja az automatikus javítást, így nem írja át észrevétlenül a szavaidat. A javaslatok továbbra is megjelennek a billentyűzet felett.</string>
     <string name="setup_step4_try_title">Próbáld ki a Droneboardot</string>

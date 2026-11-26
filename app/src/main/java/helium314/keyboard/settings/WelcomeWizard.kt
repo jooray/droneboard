@@ -8,6 +8,7 @@ import android.os.UserManager
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -31,9 +32,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +62,10 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,6 +73,8 @@ import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.LocaleUtils
+import helium314.keyboard.latin.common.LocaleUtils.engineKey
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings as KeyboardSettings
 import helium314.keyboard.latin.utils.JniUtils
@@ -129,6 +138,11 @@ fun WelcomeWizard(
         step = determineStep()
     }
 
+    // Droneboard: every step starts at the top; without this a step opened after scrolling a long
+    // one (step 3) would keep that scroll offset and hide its first lines (step 4's test field).
+    val scrollState = rememberScrollState()
+    LaunchedEffect(step) { scrollState.scrollTo(0) }
+
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = MaterialTheme.colorScheme.background,
@@ -138,9 +152,11 @@ fun WelcomeWizard(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp, vertical = 20.dp),
-            contentAlignment = if (step <= 2) Alignment.Center else Alignment.TopCenter
+            // Droneboard: steps 1 to 4 are all top-aligned, so the progress bar and the title stay
+            // in the same place from step to step; only the welcome screen (no progress bar) is centred
+            contentAlignment = if (step == 0) Alignment.Center else Alignment.TopCenter
         ) {
             Column(
                 modifier = Modifier
@@ -155,7 +171,7 @@ fun WelcomeWizard(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = if (step == 0) Alignment.CenterVertically else Alignment.Top
                     ) {
                         Box(Modifier.weight(0.42f)) {
                             WizardTitleBlock(step = step, appName = appName)
@@ -245,7 +261,7 @@ private fun WizardTitleBlock(step: Int, appName: String) {
             style = MaterialTheme.typography.headlineLarge,
             textAlign = if (step == 0) TextAlign.Center else TextAlign.Start,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().semantics { heading() }
         )
         if (step == 0) {
             Text(
@@ -364,7 +380,8 @@ private fun WizardActionStep(
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() }
         )
         Text(
             text = instruction,
@@ -448,18 +465,37 @@ private fun Step3LanguagesAndTyping(
     }
 
     var subtypesVersion by remember { mutableStateOf(0) }
-    val enabledSubtypes = remember(subtypesVersion) {
+    val prefVersion = b?.value ?: 0
+    val enabledSubtypes = remember(subtypesVersion, prefVersion) {
         runCatching { SubtypeSettings.getEnabledSubtypes(true) }.getOrDefault(emptyList())
     }
-    val fullSupportSubtypes: List<InputMethodSubtype> = remember {
+    // Droneboard: one chip per fully supported language (swipe + smart predictions), not one per
+    // regional variant or custom layout: English (US), English (UK)... all use the same models.
+    // Variants, layouts and the other languages stay in "Choose languages & layouts".
+    val fullSupportGroups: Map<String, List<InputMethodSubtype>> = remember {
         runCatching {
-            val seenKeys = HashSet<String>()
             SubtypeSettings.getAllAvailableSubtypes()
                 .filter { PredictionEngines.of(ctx, it.locale()).isFullSupport }
-                .filter { seenKeys.add(it.locale().toLanguageTag()) }
-                .sortedBy { it.displayName() }
-        }.getOrDefault(emptyList())
+                .groupBy { it.locale().engineKey }
+        }.getOrDefault(emptyMap())
     }
+    val languageChips: List<WizardLanguageChip> = remember(fullSupportGroups, enabledSubtypes) {
+        val systemLocales = runCatching { SubtypeSettings.getSystemLocales() }.getOrDefault(emptyList())
+        fullSupportGroups.map { (key, variants) ->
+            val enabledVariants = enabledSubtypes.filter { it.locale().engineKey == key }
+            val builtIn = variants.filterNot { SubtypeSettings.isAdditionalSubtype(it) }.ifEmpty { variants }
+            val shown = enabledVariants.firstOrNull()
+                ?: systemLocales.firstNotNullOfOrNull { sys -> LocaleUtils.getBestMatch(sys, builtIn) { it.locale() } }
+                ?: builtIn.firstOrNull { it.locale().country.isEmpty() }
+                ?: builtIn.minBy { it.displayName() }
+            WizardLanguageChip(key, shown, enabledVariants)
+        }.sortedBy { it.shown.displayName() }
+    }
+    val otherEnabledNames = enabledSubtypes
+        .filter { it.locale().engineKey !in fullSupportGroups.keys }
+        .map { it.displayName() }
+        .distinct()
+    val keepOneLanguage = stringResource(R.string.setup_step3_keep_one_language)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -468,7 +504,8 @@ private fun Step3LanguagesAndTyping(
         Text(
             text = stringResource(R.string.setup_step3_languages_title),
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() }
         )
         Text(
             text = stringResource(R.string.setup_step3_languages_subtitle),
@@ -476,7 +513,7 @@ private fun Step3LanguagesAndTyping(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Languages & layouts card (QWERTY / QWERTZ + swipe support)
+        // Languages card: chips turn a language on or off, layouts are changed in the languages screen
         Surface(
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainer,
@@ -489,44 +526,57 @@ private fun Step3LanguagesAndTyping(
             ) {
                 Text(
                     text = stringResource(R.string.setup_step3_languages_card_title),
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.semantics { heading() }
                 )
                 Text(
                     text = stringResource(R.string.setup_step3_languages_card_summary),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (fullSupportSubtypes.isNotEmpty()) {
+                if (languageChips.isNotEmpty()) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        fullSupportSubtypes.forEach { subtype ->
-                            val isEnabled = enabledSubtypes.any { it.locale() == subtype.locale() }
-                            FilterChip(
-                                selected = isEnabled,
+                        languageChips.forEach { chip ->
+                            WizardLanguageFilterChip(
+                                label = chip.shown.displayName(),
+                                selected = chip.enabled.isNotEmpty(),
                                 onClick = {
                                     // Materialize implicit fallback subtypes before the first toggle so adding
                                     // another language doesn't wipe out the phone's default language.
                                     if (SubtypeSettings.getEnabledSubtypes(false).isEmpty()) {
                                         enabledSubtypes.forEach { SubtypeSettings.addEnabledSubtype(prefs, it) }
                                     }
-                                    if (isEnabled) {
-                                        if (enabledSubtypes.size > 1) {
-                                            enabledSubtypes.filter { it.locale() == subtype.locale() }.forEach {
-                                                SubtypeSettings.removeEnabledSubtype(ctx, it)
-                                            }
+                                    if (chip.enabled.isNotEmpty()) {
+                                        // never turn off the last language: the keyboard needs one
+                                        if (enabledSubtypes.any { it.locale().engineKey != chip.key }) {
+                                            chip.enabled.forEach { SubtypeSettings.removeEnabledSubtype(ctx, it) }
+                                        } else {
+                                            Toast.makeText(ctx, keepOneLanguage, Toast.LENGTH_SHORT).show()
                                         }
                                     } else {
-                                        SubtypeSettings.addEnabledSubtype(prefs, subtype)
+                                        SubtypeSettings.addEnabledSubtype(prefs, chip.shown)
                                     }
                                     subtypesVersion++
                                 },
-                                label = { Text(subtype.displayName()) }
                             )
                         }
                     }
                 }
+                if (otherEnabledNames.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.setup_step3_also_enabled, otherEnabledNames.joinToString(", ")),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.setup_step3_languages_more),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedButton(
                     onClick = onOpenLanguages,
                     modifier = Modifier.heightIn(min = 48.dp)
@@ -549,9 +599,18 @@ private fun Step3LanguagesAndTyping(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
+            // the whole row is one switch for TalkBack and touch, so the title is read with its state
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .toggleable(
+                        value = autocorrect,
+                        role = Role.Switch,
+                        onValueChange = {
+                            autocorrect = it
+                            prefs.edit { putBoolean(KeyboardSettings.PREF_AUTO_CORRECTION, it) }
+                        }
+                    )
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -572,10 +631,7 @@ private fun Step3LanguagesAndTyping(
                 }
                 Switch(
                     checked = autocorrect,
-                    onCheckedChange = {
-                        autocorrect = it
-                        prefs.edit { putBoolean(KeyboardSettings.PREF_AUTO_CORRECTION, it) }
-                    }
+                    onCheckedChange = null
                 )
             }
         }
@@ -604,6 +660,58 @@ private fun Step3LanguagesAndTyping(
     }
 }
 
+/** A fully supported language in step 3: [shown] is enabled by the chip, [enabled] are its enabled variants. */
+private data class WizardLanguageChip(
+    val key: String,
+    val shown: InputMethodSubtype,
+    val enabled: List<InputMethodSubtype>,
+)
+
+/**
+ * Language chip whose state does not depend on colour alone (grayscale e-ink, low vision): when on it
+ * gets a checkmark, a filled primary background, a thick border and bold text; when off it is an
+ * outlined chip with normal text. FilterChip already exposes the state to TalkBack (checkbox role,
+ * selected / not selected) and keeps a 48 dp touch target.
+ */
+@Composable
+private fun WizardLanguageFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Text(
+                text = label,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            )
+        },
+        leadingIcon = if (selected) {
+            {
+                Icon(
+                    painter = painterResource(R.drawable.ic_setup_check),
+                    contentDescription = null,
+                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                )
+            }
+        } else null,
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = colors.surface,
+            labelColor = colors.onSurface,
+            selectedContainerColor = colors.primary,
+            selectedLabelColor = colors.onPrimary,
+            selectedLeadingIconColor = colors.onPrimary,
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = colors.outline,
+            selectedBorderColor = colors.onSurface,
+            borderWidth = 1.dp,
+            selectedBorderWidth = 2.dp,
+        ),
+    )
+}
+
 @Composable
 private fun Step4TryDroneboard(
     onBack: () -> Unit,
@@ -611,14 +719,20 @@ private fun Step4TryDroneboard(
     onFinish: () -> Unit,
 ) {
     var sampleText by rememberSaveable { mutableStateOf("") }
+    // Droneboard: the test field comes right after the title and one line of text, at the top of the screen. A docked
+    // keyboard pushes the page up (imePadding on the wizard), but a floating keyboard reports no
+    // insets and by default floats at the bottom, so the top of the screen is the only place
+    // that stays visible for both. The field is short (at most 3 lines, it scrolls inside) so it
+    // does not grow down under the keyboard while typing.
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = stringResource(R.string.setup_step4_try_title),
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() }
         )
         Text(
             text = stringResource(R.string.setup_step4_try_subtitle),
@@ -630,9 +744,10 @@ private fun Step4TryDroneboard(
             onValueChange = { sampleText = it },
             placeholder = { Text(stringResource(R.string.setup_step4_try_placeholder)) },
             minLines = 2,
-            maxLines = 4,
+            maxLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(Modifier.height(4.dp))
 
         Surface(
             shape = MaterialTheme.shapes.medium,
@@ -646,7 +761,8 @@ private fun Step4TryDroneboard(
             ) {
                 Text(
                     text = stringResource(R.string.setup_step4_tips_title),
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.semantics { heading() }
                 )
                 ShortcutTipRow(
                     title = stringResource(R.string.setup_tip_trackpad_title),

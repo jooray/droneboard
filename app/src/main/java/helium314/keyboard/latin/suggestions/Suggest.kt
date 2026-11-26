@@ -32,6 +32,7 @@ import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.TextAtCursor
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -42,10 +43,19 @@ import kotlin.math.min
 class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private var mAutoCorrectionThreshold = 0f
     private val mPlausibilityThreshold = 0f
-    private val nextWordSuggestionsCache = HashMap<Pair<NgramContext, String>, SuggestionResults>()
+    private val nextWordSuggestionsCache = ConcurrentHashMap<Pair<NgramContext, String>, SuggestionResults>()
+
+    // incremented by every clear, so that a lookup that started before a clear (e.g. a language switch) does not
+    // put its result into the cleared cache; written under nextWordCacheLock
+    @Volatile
+    private var nextWordCacheGeneration = 0
+    private val nextWordCacheLock = Any()
 
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
-    fun clearNextWordSuggestionsCache() = nextWordSuggestionsCache.clear()
+    fun clearNextWordSuggestionsCache() = synchronized(nextWordCacheLock) {
+        nextWordCacheGeneration++
+        nextWordSuggestionsCache.clear()
+    }
 
     /**
      * Set the normalized-score threshold for a suggestion to be considered strong enough that we
@@ -399,9 +409,11 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val key = ngramContext to NeuralLanguageModel.contextKey(LanguageModelSuggestions.contextWords(ngramContext))
         val cachedResults = nextWordSuggestionsCache[key]
         if (cachedResults != null) return cachedResults
+        val generation = nextWordCacheGeneration
         val newResults = mDictionaryFacilitator.getSuggestionResults(ComposedData(InputPointers(1),
             false, ""), ngramContext, keyboard, settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyle)
-        if (newResults.cacheable) {
+        if (newResults.cacheable) synchronized(nextWordCacheLock) {
+            if (generation != nextWordCacheGeneration) return@synchronized // cleared meanwhile: may be stale
             if (nextWordSuggestionsCache.size > NEXT_WORD_CACHE_SIZE) nextWordSuggestionsCache.clear()
             nextWordSuggestionsCache[key] = newResults
         }

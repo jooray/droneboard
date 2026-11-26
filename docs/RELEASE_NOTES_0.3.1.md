@@ -1,0 +1,8 @@
+- Fast swiping is more reliable: when you start the next swipe before the previous word appears, that word is no longer lost, and the next word is predicted with it in mind.
+- The first swipe after the keyboard opens no longer waits for the swipe model to start; it is prepared in the background (only when swipe typing is on).
+- The next-word model computes faster on ARM phones.
+- New models for English, Dutch and Hungarian, a little more accurate. Czech without diacritics has a fuller dictionary of word triples and predicts better (the download is 2.5 MB larger because of it).
+- After an update, swipe dictionaries are prepared one at a time, which needs less memory, and only when they have changed. If you swipe before a dictionary is ready, the suggestion strip says so.
+- The language settings show when a swipe dictionary could not be loaded.
+- Setup wizard: one chip per language, with a checkmark when it is on and a clear hint that a tap turns it on or off; the last language can no longer be turned off; all steps start at the top; the test field stays visible with the floating keyboard; better TalkBack labels.
+- Fixed several rare race conditions in loading dictionaries, the list of removed words and the cache of next-word suggestions (one of them could show suggestions from the previous language).

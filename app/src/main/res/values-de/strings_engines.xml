@@ -5,4 +5,6 @@
     <string name="engine_neural">Smarte Vorschläge</string>
     <string name="engine_ngrams">Nur Tipp-Vorschläge</string>
     <string name="engine_layout_only">Nur Layout (ohne Wischen)</string>
+    <string name="engine_swipe_failed">Wisch-Wörterbuch konnte nicht geladen werden, neuer Versuch folgt</string>
+    <string name="swipe_dictionary_preparing">Wisch-Wörterbuch wird vorbereitet…</string>
 </resources>

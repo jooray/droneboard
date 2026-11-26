@@ -403,6 +403,29 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         updateMoreSuggestionsButtonState()
     }
 
+    private var swipePreparingView: View? = null
+
+    /**
+     * Droneboard: a short message while a swipe waits for its dictionary (after an install or update). Shown like
+     * an external suggestion view, so the next suggestions replace it; [show] false removes it if still shown.
+     */
+    fun showSwipeDictionaryPreparing(show: Boolean) {
+        swipePreparingView?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        swipePreparingView = null
+        if (!show) return
+        val view = TextView(context).apply {
+            text = resources.getString(R.string.swipe_dictionary_preparing)
+            setTextColor(Settings.getValues().mColors.get(ColorType.KEY_TEXT))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.CENTER
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+        }
+        setExternalSuggestionView(view, false)
+        swipePreparingView = view
+    }
+
     fun setMoreSuggestionsHeight(remainingHeight: Int) {
         layoutHelper.setMoreSuggestionsHeight(remainingHeight)
     }

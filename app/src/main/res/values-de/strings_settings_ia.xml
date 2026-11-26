@@ -66,8 +66,11 @@
     <string name="setup_step3_languages_title">Sprachen &amp; Eingabe</string>
     <string name="setup_step3_languages_subtitle">Prüfe deine Eingabesprachen und Standardwerte. Alles lässt sich später in den Einstellungen ändern.</string>
     <string name="setup_step3_languages_card_title">Eingabesprachen</string>
-    <string name="setup_step3_languages_card_summary">Tippe in den Einstellungen auf eine Sprache, um zwischen QWERTY und QWERTZ zu wechseln und Wischsprachen einzurichten.</string>
+    <string name="setup_step3_languages_card_summary">Tippe auf eine Sprache, um sie ein- oder auszuschalten. Alle Sprachen hier unterstützen Wischen und smarte Vorschläge.</string>
     <string name="setup_step3_configure_languages">Sprachen &amp; Layouts wählen</string>
+    <string name="setup_step3_languages_more">Weitere Sprachen, regionale Varianten und Layouts (QWERTY, QWERTZ) findest du unter „Sprachen &amp; Layouts wählen“.</string>
+    <string name="setup_step3_also_enabled">Außerdem aktiv: %s</string>
+    <string name="setup_step3_keep_one_language">Mindestens eine Sprache muss aktiv bleiben.</string>
     <string name="setup_step3_autocorrect_title">Autokorrektur</string>
     <string name="setup_step3_autocorrect_summary">Droneboard lässt die Autokorrektur standardmäßig aus, damit Wörter nicht unbemerkt ersetzt werden. Vorschläge erscheinen weiterhin über der Tastatur.</string>
     <string name="setup_step4_try_title">Droneboard ausprobieren</string>

@@ -1758,22 +1758,24 @@ public final class InputLogic {
 
         final TextAtCursor textAtCursor = mConnection.getTextAtCursor(); // get it now, because in callback we time out (thread issue with InputConnection?)
         final String typedWordString = mWordComposer.getTypedWord(); // get it now, because in edge cases it might have changed by the time we execute the callback
+        // Droneboard: everything the lookup reads from the editor and the word composer is taken here on the UI
+        // thread, so the worker never touches RichInputConnection or mWordComposer (also in the synchronous path)
+        mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
+                getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
+        final WordComposer composerSnapshot = mWordComposer.copy();
+        final InputPointers srcPointers = mWordComposer.getInputPointers();
+        final InputPointers pointersSnapshot = new InputPointers(
+                Math.max(DecoderSpecificConstants.DICTIONARY_MAX_WORD_LENGTH, srcPointers.getPointerSize()));
+        pointersSnapshot.copy(srcPointers);
+        final ComposedData composedDataSnapshot = new ComposedData(
+                pointersSnapshot, composerSnapshot.isBatchMode(), composerSnapshot.getTypedWord());
+        final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, composerSnapshot.isComposingWord() ? 2 : 1);
+        final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
+                NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
         if (!settingsValues.mAutoCorrectEnabled && !mWordComposer.isBatchMode()) {
             // Droneboard: when autocorrection is off, run suggestion lookup asynchronously so the
             // main UI thread never blocks on dictionaries or neural LM. Stale replies are dropped via seq.
-            mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
-                    getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardCapsMode()));
-            final WordComposer composerSnapshot = mWordComposer.copy();
-            final InputPointers srcPointers = mWordComposer.getInputPointers();
-            final InputPointers pointersSnapshot = new InputPointers(
-                    Math.max(DecoderSpecificConstants.DICTIONARY_MAX_WORD_LENGTH, srcPointers.getPointerSize()));
-            pointersSnapshot.copy(srcPointers);
-            final ComposedData composedDataSnapshot = new ComposedData(
-                    pointersSnapshot, false, composerSnapshot.getTypedWord());
-            final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
-                    settingsValues.mSpacingAndPunctuations, composerSnapshot.isComposingWord() ? 2 : 1);
-            final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
-                    NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
             mInputLogicHandler.getSuggestedWords(() -> {
                 if (mSuggestionStripSeq.get() != seq) return;
                 getSuggestedWords(
@@ -1793,7 +1795,8 @@ public final class InputLogic {
 
         AsyncResultHolder<SuggestedWords> holder = new AsyncResultHolder<>("Suggest");
         mInputLogicHandler.getSuggestedWords(() -> getSuggestedWords(
-            inputStyle, textAtCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
+            composerSnapshot, composedDataSnapshot, inputStyle, textAtCursor,
+            true, ngramContext, textBeforeCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
             suggestedWords -> holder.set(resolveSuggestionsToShow(typedWordString, suggestedWords))
         ));
         // This line may cause the current thread to wait.
@@ -2336,6 +2339,18 @@ public final class InputLogic {
      */
     public void onUpdateTailBatchInputCompleted(final SettingsValues settingsValues,
             final SuggestedWords suggestedWords, final KeyboardSwitcher keyboardSwitcher) {
+        // a swipe that began while this one was still being decoded: its start could not commit this word
+        final boolean newerGestureStarted = mInputLogicHandler.hasNewerGestureThanTailInFlight();
+        try {
+            commitTailBatchInput(settingsValues, suggestedWords, keyboardSwitcher, newerGestureStarted);
+        } finally {
+            // lets the handler send the tail of a swipe that waited for this word (its context needs it)
+            mInputLogicHandler.onTailBatchInputCommitted();
+        }
+    }
+
+    private void commitTailBatchInput(final SettingsValues settingsValues, final SuggestedWords suggestedWords,
+            final KeyboardSwitcher keyboardSwitcher, final boolean newerGestureStarted) {
         mSuggestionStripSeq.incrementAndGet();
         final String batchInputText = suggestedWords.isEmpty() ? null : suggestedWords.getWord(0);
         if (TextUtils.isEmpty(batchInputText)) {
@@ -2357,11 +2372,30 @@ public final class InputLogic {
         // Space state must be updated before calling updateShiftState
         if (settingsValues.mAutospaceAfterGestureTyping)
             mSpaceState = SpaceState.PHANTOM;
+        if (newerGestureStarted) {
+            finishWordForNewerGesture(settingsValues);
+            return;
+        }
         keyboardSwitcher.updateShiftState(getCurrentAutoCapsState(settingsValues), getCurrentRecapitalizeState());
 
         if (isInlineEmojiSearchAction()) {
             searchForEmojiInline(SuggestedWords.NOT_A_SEQUENCE_NUMBER, mLatinIME::setSuggestions);
         }
+    }
+
+    /**
+     * The word of a swipe arrived after the next swipe had begun. Does what that swipe's start
+     * (onStartBatchInput) would have done with it: commits it, so the next word does not replace it, and
+     * sets the space state for the next word. The caps mode chosen at the start of the newer swipe is kept.
+     */
+    private void finishWordForNewerGesture(final SettingsValues settingsValues) {
+        final CapsMode capsMode = mWordComposer.getCapitalizedModeAtStartComposingTime();
+        commitTyped(settingsValues, LastComposedWord.NOT_A_SEPARATOR);
+        mWordComposer.setCapitalizedModeAtStartComposingTime(capsMode);
+        final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
+        if (settingsValues.mAutospaceBeforeGestureTyping && (Character.isLetterOrDigit(codePointBeforeCursor)
+                || settingsValues.isUsuallyFollowedBySpace(codePointBeforeCursor)))
+            mSpaceState = SpaceState.PHANTOM;
     }
 
     /**
@@ -2601,19 +2635,15 @@ public final class InputLogic {
      * Triggers a non-blocking neural LM prefetch on swipe finger-down so the KV cache is warm
      * by the time finger-up fusion runs.
      */
-    void prefetchNeuralForBatchInput() {
-        if (mConnection == null) return;
+    void prefetchNeuralForBatchInput(@Nullable final BatchContextSnapshot contextSnapshot) {
+        if (mConnection == null || contextSnapshot == null) return;
         final SettingsValues settingsValues = Settings.getValues();
         if (settingsValues == null || !settingsValues.mNeuralPredictions
                 || settingsValues.mInputAttributes.mIsPasswordField
                 || !settingsValues.mInputAttributes.mIsGeneralTextInput) {
             return;
         }
-        final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
-                settingsValues.mSpacingAndPunctuations, mWordComposer.isComposingWord() ? 2 : 1);
-        final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
-                NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
-        SwipeGestureDecoder.prefetchNeuralForCurrentContext(ngramContext, textBeforeCursor);
+        SwipeGestureDecoder.prefetchNeuralForCurrentContext(contextSnapshot.ngramContext, contextSnapshot.textBeforeCursor);
     }
 
     /**
@@ -2638,9 +2668,49 @@ public final class InputLogic {
         return wc;
     }
 
+    /**
+     * Captures the surrounding text and n-gram context on the UI thread for the asynchronous
+     * UPDATE_BATCH / TAIL_BATCH decodes so the worker thread never touches RichInputConnection directly.
+     */
+    static final class BatchContextSnapshot {
+        final NgramContext ngramContext;
+        final CharSequence textBeforeCursor;
+
+        BatchContextSnapshot(final NgramContext ngramContext, final CharSequence textBeforeCursor) {
+            this.ngramContext = ngramContext;
+            this.textBeforeCursor = textBeforeCursor;
+        }
+    }
+
+    @Nullable
+    BatchContextSnapshot captureContextForBatchInput(@Nullable final WordComposer batchComposer) {
+        if (mConnection == null) return null;
+        final SettingsValues settingsValues = Settings.getValues();
+        if (settingsValues == null) return null;
+        final boolean composing = batchComposer != null
+                ? batchComposer.isComposingWord()
+                : (mWordComposer != null && mWordComposer.isComposingWord());
+        final NgramContext ngramContext = getNgramContextFromNthPreviousWordForSuggestion(
+                settingsValues.mSpacingAndPunctuations, composing ? 2 : 1);
+        final CharSequence textBeforeCursor = mConnection.getTextBeforeCursor(
+                NeuralLanguageModel.TEXT_BEFORE_CURSOR_CHARS, 0);
+        return new BatchContextSnapshot(ngramContext, textBeforeCursor);
+    }
+
+    void getSuggestedWordsForBatchInput(final WordComposer batchComposer, final InputStyle inputStyle,
+            @Nullable final BatchContextSnapshot contextSnapshot,
+            final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
+        getSuggestedWords(
+                batchComposer, null, inputStyle, null,
+                contextSnapshot != null,
+                contextSnapshot != null ? contextSnapshot.ngramContext : null,
+                contextSnapshot != null ? contextSnapshot.textBeforeCursor : null,
+                sequenceNumber, callback);
+    }
+
     void getSuggestedWordsForBatchInput(final WordComposer batchComposer, final InputStyle inputStyle,
             final int sequenceNumber, final OnGetSuggestedWordsCallback callback) {
-        getSuggestedWords(batchComposer, null, inputStyle, null, false, null, null, sequenceNumber, callback);
+        getSuggestedWordsForBatchInput(batchComposer, inputStyle, null, sequenceNumber, callback);
     }
 
     void getSuggestedWords(InputStyle inputStyle, int sequenceNumber, OnGetSuggestedWordsCallback callback) {

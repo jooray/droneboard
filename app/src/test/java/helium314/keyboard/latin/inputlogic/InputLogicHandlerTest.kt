@@ -3,14 +3,23 @@ package helium314.keyboard.latin.inputlogic
 
 import helium314.keyboard.latin.InputStyle
 import helium314.keyboard.latin.LatinIME
+import helium314.keyboard.latin.NgramContext
+import helium314.keyboard.latin.WordComposer
+import helium314.keyboard.latin.common.InputPointers
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.suggestions.SuggestedWordInfo
 import helium314.keyboard.latin.suggestions.SuggestedWords
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.ArgumentMatchers.isNull
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
+import org.mockito.Mockito.`when`
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -111,5 +120,92 @@ class InputLogicHandlerTest {
         verify(uiHandler).showGesturePreviewAndSetSuggestions(lateTail, true)
         verify(uiHandler).showGesturePreviewAndSetSuggestions(emptyTail, true)
         verifyNoMoreInteractions(uiHandler)
+    }
+
+    private fun pointers() = InputPointers(4).apply {
+        addPointer(10, 20, 0, 100)
+        addPointer(30, 40, 0, 120)
+    }
+
+    /** Runs [block] on the worker thread after everything queued before it, and waits for it. */
+    private fun onWorkerAfterQueuedTasks(block: () -> Unit) {
+        val done = java.util.concurrent.CountDownLatch(1)
+        var error: Throwable? = null
+        handler.getSuggestedWords {
+            try { block() } catch (t: Throwable) { error = t } finally { done.countDown() }
+        }
+        assertTrue(done.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        error?.let { throw it }
+    }
+
+    @Test
+    fun contextIsCapturedOnceAtGestureStartAndUsedForPreviewsAndTail() {
+        val composer = WordComposer()
+        val snapshot = InputLogic.BatchContextSnapshot(NgramContext.BEGINNING_OF_SENTENCE, "hello ")
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer)
+        `when`(inputLogic.captureContextForBatchInput(isNull())).thenReturn(snapshot)
+
+        handler.onStartBatchInput()
+        // taken on the calling (UI) thread, once for the whole gesture
+        verify(inputLogic).captureContextForBatchInput(isNull())
+        verify(inputLogic).prefetchNeuralForBatchInput(snapshot)
+
+        handler.onUpdateBatchInput(pointers(), 1)
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer), eq(InputStyle.UPDATE_BATCH), eq(snapshot), eq(1), any()
+        )
+        handler.updateTailBatchInput(pointers(), 2)
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer), eq(InputStyle.TAIL_BATCH), eq(snapshot), eq(2), any()
+        )
+        verify(inputLogic).captureContextForBatchInput(any())
+    }
+
+    @Test
+    fun tailOfNextSwipeWaitsForTheWordOfTheSwipeBefore() {
+        val composer1 = WordComposer()
+        val composer2 = WordComposer()
+        val before = InputLogic.BatchContextSnapshot(NgramContext.BEGINNING_OF_SENTENCE, "hello ")
+        val after = InputLogic.BatchContextSnapshot(NgramContext.BEGINNING_OF_SENTENCE, "hello there")
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer1, composer2)
+        `when`(inputLogic.captureContextForBatchInput(isNull())).thenReturn(before)
+
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 1)
+        // the second swipe begins and ends before the first word ("there") is committed
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 2)
+        onWorkerAfterQueuedTasks {
+            verify(inputLogic).getSuggestedWordsForBatchInput(
+                eq(composer1), eq(InputStyle.TAIL_BATCH), eq(before), eq(1), any()
+            )
+            verify(inputLogic, never()).getSuggestedWordsForBatchInput(
+                eq(composer2), any(), any(), anyInt(), any()
+            )
+        }
+        assertTrue(handler.hasNewerGestureThanTailInFlight())
+
+        // the first word is committed on the UI thread: now the second tail is decoded, with it in its context
+        `when`(inputLogic.captureContextForBatchInput(isNull())).thenReturn(after)
+        handler.onTailBatchInputCommitted()
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer2), eq(InputStyle.TAIL_BATCH), eq(after), eq(2), any()
+        )
+        assertFalse(handler.hasNewerGestureThanTailInFlight())
+    }
+
+    @Test
+    fun resetForgetsTailsInFlight() {
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(WordComposer())
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 1)
+        handler.reset() // a new input field: the queued tail and its commit are gone
+        val composer = WordComposer()
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer)
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 2)
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer), eq(InputStyle.TAIL_BATCH), isNull(), eq(2), any()
+        )
     }
 }
