@@ -203,6 +203,8 @@ class InputLogicHandlerTest {
         handler.reset() // a new input field: the queued tail and its commit are gone
         assertFalse(handler.isInBatchInput)
         verify(uiHandler).cancelBatchInputResults()
+        // a decode of gesture 1 may still be calling the mock on the worker: stubbing meanwhile is a Mockito race
+        onWorkerAfterQueuedTasks { }
         val composer = WordComposer()
         `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer)
         handler.onStartBatchInput()
@@ -210,6 +212,32 @@ class InputLogicHandlerTest {
         verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
             eq(composer), eq(InputStyle.TAIL_BATCH), isNull(), eq(2), any()
         )
+    }
+
+    @Test
+    fun sameFieldRestartKeepsTheTailsInFlight() {
+        val composer1 = WordComposer()
+        val composer2 = WordComposer()
+        `when`(inputLogic.snapshotWordComposerForBatch(any())).thenReturn(composer1, composer2)
+
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 1)
+        handler.onStartBatchInput()
+        handler.updateTailBatchInput(pointers(), 2) // waits for the word of gesture 1
+        // the app restarts input in the same field (e.g. right after the first word was committed)
+        handler.reset(false)
+        verify(uiHandler, never()).cancelBatchInputResults()
+
+        // the result of gesture 1 is still committed, and gesture 2 still follows
+        val tail1 = words(InputStyle.TAIL_BATCH, "ahoj")
+        handler.showGestureSuggestionsWithPreviewVisuals(tail1, true, 1)
+        verify(uiHandler).showTailBatchInputResult(tail1, 1)
+        assertTrue(handler.isTailExpected(1))
+        handler.onTailBatchInputCommitted(1)
+        verify(inputLogic, timeout(2000)).getSuggestedWordsForBatchInput(
+            eq(composer2), eq(InputStyle.TAIL_BATCH), any(), eq(2), any()
+        )
+        assertTrue(handler.isTailExpected(2))
     }
 
     @Test

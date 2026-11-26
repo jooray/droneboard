@@ -901,7 +901,8 @@ public class LatinIME extends InputMethodService implements
             // span, so we should reset our state unconditionally, even if restarting is true.
             // We also tell the input logic about the combining rules for the current subtype, so
             // it can adjust its combiners if needed.
-            mInputLogic.startInput(mRichImm.getCombiningRulesExtraValueOfCurrentSubtype(), currentSettingsValues);
+            mInputLogic.startInput(mRichImm.getCombiningRulesExtraValueOfCurrentSubtype(), currentSettingsValues,
+                    isDifferentTextField);
 
             resetDictionaryFacilitatorIfNecessary();
 

@@ -72,6 +72,21 @@ class InputLogicHandler implements Handler.Callback {
     }
 
     public void reset() {
+        reset(true);
+    }
+
+    /**
+     * @param hard true for a new field (or the end of input): everything queued or running is dropped. false for an
+     *     input restart in the same field (many apps restart after each change of the text, e.g. right after a
+     *     swiped word was committed): only stale typing suggestions and previews go, the tails of gestures still
+     *     decode and commit in order, as in 0.3.0 where a restart never dropped a gesture in flight.
+     */
+    public void reset(final boolean hard) {
+        if (!hard) {
+            mNonUIThreadHandler.removeMessages(MSG_GET_SUGGESTED_WORDS);
+            mNonUIThreadHandler.removeMessages(MSG_UPDATE_BATCH);
+            return;
+        }
         mNonUIThreadHandler.removeCallbacksAndMessages(null);
         if (mLatinIMEHandler != null) {
             mLatinIMEHandler.cancelBatchInputResults();

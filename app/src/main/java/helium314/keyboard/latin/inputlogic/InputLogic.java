@@ -170,6 +170,11 @@ public final class InputLogic {
      * @param settingsValues the current settings values
      */
     public void startInput(String combiningSpec, SettingsValues settingsValues) {
+        startInput(combiningSpec, settingsValues, true);
+    }
+
+    /** @param isDifferentTextField false for an input restart in the same field, see InputLogicHandler#reset(boolean) */
+    public void startInput(String combiningSpec, SettingsValues settingsValues, boolean isDifferentTextField) {
         mSuggestionStripSeq.incrementAndGet();
         mPendingAutoCorrectHolder = null;
         if (TypingSwipeRecorder.hasPending) TypingSwipeRecorder.settle(TypingSwipePolicy.Event.FINISH, null);
@@ -191,7 +196,7 @@ public final class InputLogic {
         // editorInfo.initialSelStart is not the actual cursor position, so we try using some heuristics to find the correct position.
         mConnection.tryFixIncorrectCursorPosition();
         cancelDoubleSpacePeriodCountdown();
-        mInputLogicHandler.reset();
+        mInputLogicHandler.reset(isDifferentTextField);
         mConnection.requestCursorUpdates(true, true);
         setInlineEmojiSearchAction(false);
     }
@@ -1809,7 +1814,10 @@ public final class InputLogic {
                         true, ngramContext, textBeforeCursor, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
                         suggestedWords -> {
                             if (mSuggestionStripSeq.get() != seq) {
-                                if (holder != null) holder.set(null);
+                                // the separator that bumped seq may be waiting on this lookup for the same typed
+                                // word (commitCurrentAutoCorrection checks it): hand it the result instead of null,
+                                // so it does not run a second, blocking lookup
+                                if (holder != null) holder.set(resolveSuggestionsToShow(typedWordString, suggestedWords));
                                 return;
                             }
                             final SuggestedWords toShow = resolveSuggestionsToShow(typedWordString, suggestedWords);
