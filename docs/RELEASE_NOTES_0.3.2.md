@@ -1,0 +1,4 @@
+- Stronger next-word predictions and swipe ranking across all nine languages (English, Slovak, Czech, German, Spanish, Dutch, Hungarian, plus Slovak and Czech without diacritics).
+- Every language now uses a deeper 6-layer prediction model with full 8-bit vocabulary precision, improving next-word suggestions, mid-word completions and swipe accuracy while keeping on-device prediction fast.
+- Fixed a phrasing typo in the Spanish setup wizard.
+- The download is about 34 MB larger because of the deeper models and higher vocabulary precision.
