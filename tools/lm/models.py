@@ -128,6 +128,33 @@ def build_morph_table(tokens, n_buckets=16384, max_ngrams=8):
     return table
 
 
+def ste_int8_rows(w):
+    """Straight-through symmetric per-row INT8 fake quantization matching neural_lm.cpp."""
+    s = mx.maximum(mx.abs(w).max(axis=-1, keepdims=True), 1e-8) / 127.0
+    q = mx.clip(mx.round(w / s), -127.0, 127.0) * s
+    return w + mx.stop_gradient(q - w)
+
+
+def ste_int4_g32(w):
+    """Straight-through symmetric group-32 INT4 [-7,+7] fake quantization matching neural_lm.cpp."""
+    V, E = w.shape
+    g = w.reshape(V, E // 32, 32)
+    s = mx.maximum(mx.abs(g).max(axis=-1, keepdims=True), 1e-8) / 7.0
+    q = mx.clip(mx.round(g / s), -7.0, 7.0) * s
+    return w + mx.stop_gradient(q.reshape(V, E) - w)
+
+
+def lin_apply(layer, x, qat=False):
+    if not qat:
+        return layer(x)
+    xq = ste_int8_rows(x)
+    wq = ste_int8_rows(layer.weight)
+    out = xq @ wq.T
+    if "bias" in layer:
+        out = out + layer.bias
+    return out
+
+
 class SwiGLU(nn.Module):
     def __init__(self, d, ff):
         super().__init__()
@@ -135,8 +162,8 @@ class SwiGLU(nn.Module):
         self.w_up = nn.Linear(d, ff, bias=False)
         self.w_down = nn.Linear(ff, d, bias=False)
 
-    def __call__(self, x):
-        return self.w_down(nn.silu(self.w_gate(x)) * self.w_up(x))
+    def __call__(self, x, qat=False):
+        return lin_apply(self.w_down, nn.silu(lin_apply(self.w_gate, x, qat)) * lin_apply(self.w_up, x, qat), qat)
 
 
 class RoPEGQA(nn.Module):
@@ -156,11 +183,11 @@ class RoPEGQA(nn.Module):
             self.q_norm = nn.RMSNorm(self.head_dim)
             self.k_norm = nn.RMSNorm(self.head_dim)
 
-    def __call__(self, x, mask):
+    def __call__(self, x, mask, qat=False):
         B, T, _ = x.shape
-        q = self.wq(x).reshape(B, T, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
-        k = self.wk(x).reshape(B, T, self.n_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
-        v = self.wv(x).reshape(B, T, self.n_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
+        q = lin_apply(self.wq, x, qat).reshape(B, T, self.n_heads, self.head_dim).transpose(0, 2, 1, 3)
+        k = lin_apply(self.wk, x, qat).reshape(B, T, self.n_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
+        v = lin_apply(self.wv, x, qat).reshape(B, T, self.n_kv_heads, self.head_dim).transpose(0, 2, 1, 3)
         if self.qk_norm:
             q = self.q_norm(q)
             k = self.k_norm(k)
@@ -168,7 +195,7 @@ class RoPEGQA(nn.Module):
         k = self.rope(k)
         out = mx.fast.scaled_dot_product_attention(q, k, v, scale=self.scale, mask=mask)
         out = out.transpose(0, 2, 1, 3).reshape(B, T, -1)
-        return self.wo(out)
+        return lin_apply(self.wo, out, qat)
 
 
 class ModernAttnBlock(nn.Module):
@@ -179,9 +206,9 @@ class ModernAttnBlock(nn.Module):
         self.n2 = nn.RMSNorm(d)
         self.ff = SwiGLU(d, ff)
 
-    def __call__(self, x, mask):
-        x = x + self.attn(self.n1(x), mask)
-        return x + self.ff(self.n2(x))
+    def __call__(self, x, mask, qat=False):
+        x = x + self.attn(self.n1(x), mask, qat=qat)
+        return x + self.ff(self.n2(x), qat=qat)
 
 
 class CausalGatedConvMixer(nn.Module):
@@ -195,16 +222,16 @@ class CausalGatedConvMixer(nn.Module):
         self.dw_bias = mx.zeros((d,))
         self.out_proj = nn.Linear(d, d, bias=False)
 
-    def __call__(self, x, mask=None):
+    def __call__(self, x, mask=None, qat=False):
         _, T, _ = x.shape
-        uv = self.in_proj(x)
+        uv = lin_apply(self.in_proj, x, qat)
         u, v = mx.split(uv, 2, axis=-1)
         padded = mx.pad(u, [(0, 0), (self.k - 1, 0), (0, 0)])
         acc = padded[:, self.k - 1 : self.k - 1 + T, :] * self.dw_weight[:, 0]
         for j in range(1, self.k):
             acc = acc + padded[:, self.k - 1 - j : self.k - 1 - j + T, :] * self.dw_weight[:, j]
         acc = acc + self.dw_bias
-        return self.out_proj(acc * nn.silu(v))
+        return lin_apply(self.out_proj, acc * nn.silu(v), qat)
 
 
 class ConvMixerBlock(nn.Module):
@@ -215,13 +242,13 @@ class ConvMixerBlock(nn.Module):
         self.n2 = nn.RMSNorm(d)
         self.ff = SwiGLU(d, ff)
 
-    def __call__(self, x, mask=None):
-        x = x + self.mixer(self.n1(x))
-        return x + self.ff(self.n2(x))
+    def __call__(self, x, mask=None, qat=False):
+        x = x + self.mixer(self.n1(x), qat=qat)
+        return x + self.ff(self.n2(x), qat=qat)
 
 
 class StripedLM(nn.Module):
-    """v2 keyboard LM: 2x Gated Causal Conv1D + 2x RoPE-GQA + SwiGLU + RMSNorm + VocabBias + foldable morph emb."""
+    """v2 keyboard LM: Gated Causal Conv1D + RoPE-GQA + SwiGLU + RMSNorm + VocabBias + foldable morph emb."""
 
     def __init__(
         self,
@@ -251,6 +278,8 @@ class StripedLM(nn.Module):
         self.conv_k = conv_k
         self.qk_norm = qk_norm
         self.rope_theta = rope_theta
+        self.qat = False
+        self.qat_int8_rows = vocab
 
         self.emb = nn.Embedding(vocab, emb_dim)
         self.use_morph = tokens is not None
@@ -279,24 +308,37 @@ class StripedLM(nn.Module):
 
     def effective_emb_weight(self):
         if not self.use_morph:
-            return self.emb.weight
-        m = self.morph_emb(self._morph_ids) * self._morph_mask[:, :, None]
-        m_mean = m.sum(axis=1) / self._morph_denom
-        return self.emb.weight + self.morph_scale * m_mean
+            W = self.emb.weight
+        else:
+            m = self.morph_emb(self._morph_ids) * self._morph_mask[:, :, None]
+            m_mean = m.sum(axis=1) / self._morph_denom
+            W = self.emb.weight + self.morph_scale * m_mean
+        if self.qat:
+            n8 = min(max(0, self.qat_int8_rows), self.vocab)
+            if n8 >= self.vocab:
+                W = ste_int8_rows(W)
+            elif n8 == 0:
+                W = ste_int4_g32(W)
+            else:
+                W = mx.concatenate([ste_int8_rows(W[:n8]), ste_int4_g32(W[n8:])], axis=0)
+        return W
 
     def hidden(self, x, W=None):
         T = x.shape[1]
         if W is None:
             W = self.effective_emb_weight()
-        h = self.up(W[x])
+        qat = self.qat
+        h = lin_apply(self.up, W[x], qat)
         mask = nn.MultiHeadAttention.create_additive_causal_mask(T).astype(h.dtype)
         for b in self.blocks:
-            h = b(h, mask)
-        return self.down(self.ln(h))
+            h = b(h, mask, qat=qat)
+        return lin_apply(self.down, self.ln(h), qat)
 
     def __call__(self, x):
         W = self.effective_emb_weight()
         z = self.hidden(x, W)
+        if self.qat:
+            z = ste_int8_rows(z)
         return (z @ W.T) + self.out_bias
 
 
@@ -318,10 +360,30 @@ def build(name, vocab, tokens=None, ctx=None):
             vocab, emb_dim=128, d=256, block_types=("conv", "attn", "conv", "attn"),
             n_heads=4, n_kv_heads=2, ff=688, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
         )
+    if name == "striped256x6":
+        return StripedLM(
+            vocab, emb_dim=128, d=256, block_types=("conv", "attn", "conv", "attn", "conv", "attn"),
+            n_heads=4, n_kv_heads=2, ff=688, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
+        )
+    if name == "striped384":
+        return StripedLM(
+            vocab, emb_dim=128, d=384, block_types=("conv", "attn", "conv", "attn"),
+            n_heads=6, n_kv_heads=2, ff=1024, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
+        )
+    if name == "striped384x6":
+        return StripedLM(
+            vocab, emb_dim=128, d=384, block_types=("conv", "attn", "conv", "attn", "conv", "attn"),
+            n_heads=6, n_kv_heads=2, ff=1024, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
+        )
     if name == "modern256":
         return StripedLM(
             vocab, emb_dim=128, d=256, block_types=("attn", "attn", "attn", "attn"),
             n_heads=4, n_kv_heads=2, ff=688, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
+        )
+    if name == "modern384":
+        return StripedLM(
+            vocab, emb_dim=128, d=384, block_types=("attn", "attn", "attn", "attn"),
+            n_heads=6, n_kv_heads=2, ff=1024, ctx=ctx or 64, conv_k=4, qk_norm=True, tokens=tokens,
         )
     raise ValueError(name)
 

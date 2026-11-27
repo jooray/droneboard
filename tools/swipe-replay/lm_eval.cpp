@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
     int context_n = 3;
     bool use_tokens = false;
     std::string dump_path;  // --dump: the app's model candidates for every prefix, for the end-to-end eval
+    std::string out_path;   // --out: per-item hit/KSS summary for paired statistical tests (paired_eval.py)
     int max_typed = 3;
     bool fold_prefix = false;  // --fold: the letters are typed without accents (their key path)
     std::string typed_path;  // --typed: one {"typed": "..."} line per item; the candidates for that typed word only
@@ -93,6 +94,7 @@ int main(int argc, char** argv) {
         else if (a == "--lambda") lambda = std::stof(next());
         else if (a == "--tokens") use_tokens = true;
         else if (a == "--dump") dump_path = next();
+        else if (a == "--out") out_path = next();
         else if (a == "--max-typed") max_typed = std::stoi(next());
         else if (a == "--fold") fold_prefix = true;
         else if (a == "--typed") typed_path = next();
@@ -134,6 +136,8 @@ int main(int argc, char** argv) {
     std::vector<double> next_ms, completion_ms;  // per call: no letters typed (new context) / letters typed
     std::ofstream dump;
     if (!dump_path.empty()) dump.open(dump_path);
+    std::ofstream out;
+    if (!out_path.empty()) out.open(out_path);
     const int n_out = dump_path.empty() ? 3 : 8;  // the app asks the model for 8 words (DictionaryFacilitatorImpl)
     const int n_typed = dump_path.empty() ? 4 : max_typed + 1;
     std::vector<std::string> typed_list;  // the noisy-typing eval: what was typed (with typos) for each item
@@ -165,6 +169,7 @@ int main(int argc, char** argv) {
             const int target_len = (int)swipe_decoder::utf8_to_codepoints(target).size();
             for (Stats* s : {&all, &by_lang[lang]}) { s->n++; s->chars += target_len + 1; }
             int saved = -1;
+            int item_hit[4][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
             json dump_item = json::array();
             for (int typed = 0; typed < n_typed; ++typed) {
                 if (!typed_list.empty() && typed != 1) continue;  // only the word as typed
@@ -172,7 +177,11 @@ int main(int argc, char** argv) {
                 if (fold_prefix) prefix = droneswipe::key_path_of(prefix);  // typed without accents
                 if (!typed_list.empty()) prefix = this_item < typed_list.size() ? typed_list[this_item] : std::string();
                 else if (typed > 0 && prefix == target) {  // the word is typed, not predicted
-                    if (typed < 4) for (Stats* s : {&all, &by_lang[lang]}) { s->hit[typed][0]++; s->hit[typed][1]++; }
+                    if (typed < 4) {
+                        item_hit[typed][0] = 1;
+                        item_hit[typed][1] = 1;
+                        for (Stats* s : {&all, &by_lang[lang]}) { s->hit[typed][0]++; s->hit[typed][1]++; }
+                    }
                     if (!dump_path.empty()) break;
                     continue;
                 }
@@ -217,14 +226,29 @@ int main(int argc, char** argv) {
                 int rank = -1;
                 for (int r = 0; r < (int)pred.size(); ++r)
                     if (droneswipe::to_lower_utf8(pred[r].word) == target) { rank = r; break; }
-                if (typed < 4) for (Stats* s : {&all, &by_lang[lang]}) {
-                    if (rank == 0) s->hit[typed][0]++;
-                    if (rank >= 0) s->hit[typed][1]++;
+                if (typed < 4) {
+                    if (rank == 0) item_hit[typed][0] = 1;
+                    if (rank >= 0) item_hit[typed][1] = 1;
+                    for (Stats* s : {&all, &by_lang[lang]}) {
+                        if (rank == 0) s->hit[typed][0]++;
+                        if (rank >= 0) s->hit[typed][1]++;
+                    }
                 }
                 if (rank >= 0 && saved < 0) saved = target_len - typed;
             }
-            for (Stats* s : {&all, &by_lang[lang]}) s->saved += std::max(saved, 0);
+            const int item_saved = std::max(saved, 0);
+            for (Stats* s : {&all, &by_lang[lang]}) s->saved += item_saved;
             if (dump.is_open()) dump << dump_item.dump() << "\n";
+            if (out.is_open()) {
+                json o = {
+                    {"target", target}, {"lang", lang},
+                    {"top1", item_hit[0][0]}, {"top3", item_hit[0][1]},
+                    {"p1_top1", item_hit[1][0]}, {"p1_top3", item_hit[1][1]},
+                    {"p2_top1", item_hit[2][0]}, {"p2_top3", item_hit[2][1]},
+                    {"saved", item_saved}, {"chars", target_len + 1}
+                };
+                out << o.dump() << "\n";
+            }
         }
     }
     for (auto& [l, s] : by_lang) if (l != "all") s.print(l.c_str());

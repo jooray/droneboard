@@ -60,7 +60,11 @@ from models import build_morph_table
 GPT_V1 = {"gpt256": (128, 256, 4, 4), "gpt384": (128, 384, 4, 6), "gpt512": (128, 512, 4, 4)}
 V2_MODELS = {
     "striped256": (128, 256, ("conv", "attn", "conv", "attn"), 4, 2, 688, 4),
+    "striped256x6": (128, 256, ("conv", "attn", "conv", "attn", "conv", "attn"), 4, 2, 688, 4),
+    "striped384": (128, 384, ("conv", "attn", "conv", "attn"), 6, 2, 1024, 4),
+    "striped384x6": (128, 384, ("conv", "attn", "conv", "attn", "conv", "attn"), 6, 2, 1024, 4),
     "modern256": (128, 256, ("attn", "attn", "attn", "attn"), 4, 2, 688, 4),
+    "modern384": (128, 384, ("attn", "attn", "attn", "attn"), 6, 2, 1024, 4),
 }
 
 
@@ -75,14 +79,27 @@ def load_safetensors_np(path):
         return {k: np.asarray(v, dtype=np.float32) for k, v in raw.items()}
 
 
-def quantize_rows(w):
+def quantize_rows(w, clip_mse=False):
     w = np.asarray(w, dtype=np.float32)
-    scale = np.maximum(np.abs(w).max(1), 1e-8) / 127.0
-    q = np.clip(np.round(w / scale[:, None]), -127, 127).astype(np.int8)
-    return q, scale.astype(np.float32)
+    amax = np.maximum(np.abs(w).max(1), 1e-8)
+    if not clip_mse:
+        scale = amax / 127.0
+        q = np.clip(np.round(w / scale[:, None]), -127, 127).astype(np.int8)
+        return q, scale.astype(np.float32)
+    best_s = amax / 127.0
+    best_err = np.full(len(w), np.inf, dtype=np.float64)
+    for alpha in np.linspace(0.84, 1.0, 9):
+        s = (amax * alpha) / 127.0
+        q = np.clip(np.round(w / s[:, None]), -127, 127)
+        err = np.square(w - q * s[:, None]).sum(axis=1)
+        better = err < best_err
+        best_err = np.where(better, err, best_err)
+        best_s = np.where(better, s, best_s)
+    q = np.clip(np.round(w / best_s[:, None]), -127, 127).astype(np.int8)
+    return q, best_s.astype(np.float32)
 
 
-def quantize_int4_g32_neon(w, group_size=32):
+def quantize_int4_g32_neon(w, group_size=32, clip_mse=False):
     """Symmetric INT4 group-32 quantization with NEON split-half nibble layout:
     per 32-element group, 16 bytes pack low_nibble = q[0..15]+8, high_nibble = q[16..31]+8.
     """
@@ -91,8 +108,22 @@ def quantize_int4_g32_neon(w, group_size=32):
     assert E % group_size == 0 and group_size == 32
     G = E // group_size
     grp = w.reshape(V, G, group_size)
-    scale = (np.maximum(np.abs(grp).max(axis=2), 1e-8) / 7.0).astype(np.float16)
-    s_f32 = scale.astype(np.float32)[:, :, None]
+    amax = np.maximum(np.abs(grp).max(axis=2), 1e-8)
+    if not clip_mse:
+        scale = (amax / 7.0).astype(np.float16)
+    else:
+        best_s = (amax / 7.0).astype(np.float16)
+        best_err = np.full((V, G), np.inf, dtype=np.float64)
+        for alpha in np.linspace(0.70, 1.0, 16):
+            s = (amax * alpha / 7.0).astype(np.float16)
+            sf = np.maximum(s.astype(np.float32), 1e-8)[:, :, None]
+            q_try = np.clip(np.round(grp / sf), -7, 7)
+            err = np.square(grp - q_try * sf).sum(axis=2)
+            better = err < best_err
+            best_err = np.where(better, err, best_err)
+            best_s = np.where(better, s, best_s)
+        scale = best_s
+    s_f32 = np.maximum(scale.astype(np.float32), 1e-8)[:, :, None]
     q = np.clip(np.round(grp / s_f32), -7, 7).astype(np.int32)
     u = (q + 8).astype(np.uint8)  # [V, G, 32], values in 1..15
     packed = (u[:, :, :16] | (u[:, :, 16:] << 4)).astype(np.uint8)  # [V, G, 16]
@@ -120,12 +151,12 @@ def fold_morph_embeddings(w, tokens):
     return emb
 
 
-def load(ckdir, vocab=0):
+def load(ckdir, vocab=0, weights_file="best.safetensors"):
     cfg = json.loads((ckdir / "config.json").read_text())
     model_name = cfg["model"]
     if model_name not in GPT_V1 and model_name not in V2_MODELS:
         raise SystemExit(f"unsupported model for export: {model_name}")
-    w = load_safetensors_np(ckdir / "best.safetensors")
+    w = load_safetensors_np(ckdir / weights_file)
     tokens = (ckdir / "tokens.txt").read_text(encoding="utf-8").split("\n")[:-1]
     assert len(tokens) == w["emb.weight"].shape[0]
     if model_name in V2_MODELS:
@@ -178,7 +209,7 @@ def write_lmb_v1(path, w, cfg):
         lin("down.weight")
 
 
-def write_lmv_v2(path, tokens, emb, out_bias, ctx, int8_rows=10000, self_norm=False, logz_mean=0.0, shortlist_k=0):
+def write_lmv_v2(path, tokens, emb, out_bias, ctx, int8_rows=10000, self_norm=False, logz_mean=0.0, shortlist_k=0, clip_mse=False):
     V, E = emb.shape
     n_int8 = min(max(0, int8_rows), V)
     n_int4 = V - n_int8
@@ -198,18 +229,18 @@ def write_lmv_v2(path, tokens, emb, out_bias, ctx, int8_rows=10000, self_norm=Fa
         if out_bias is not None:
             f.write(np.ascontiguousarray(out_bias, dtype="<f4").tobytes())
         if n_int8 > 0:
-            q8, s8 = quantize_rows(emb[:n_int8])
+            q8, s8 = quantize_rows(emb[:n_int8], clip_mse=clip_mse)
             f.write(s8.astype("<f4").tobytes())
             f.write(q8.tobytes())
         if n_int4 > 0:
-            q4, s4 = quantize_int4_g32_neon(emb[n_int8:], group_size=group_size)
+            q4, s4 = quantize_int4_g32_neon(emb[n_int8:], group_size=group_size, clip_mse=clip_mse)
             s4_bytes = s4.astype("<f2").tobytes()
             s4_pad = (-len(s4_bytes)) % 4
             f.write(s4_bytes + b"\0" * s4_pad)
             f.write(q4.tobytes())
 
 
-def write_lmb_v2(path, w, cfg):
+def write_lmb_v2(path, w, cfg, clip_mse=False):
     E, d, block_types, n_heads, n_kv_heads, ff, conv_k = V2_MODELS[cfg["model"]]
     L = len(block_types)
     ctx = cfg["ctx"]
@@ -225,7 +256,7 @@ def write_lmb_v2(path, w, cfg):
         f.write(bt_bytes + b"\0" * bt_pad)
 
         def lin_arr(arr):
-            q, s = quantize_rows(arr)
+            q, s = quantize_rows(arr, clip_mse=clip_mse)
             f.write(s.astype("<f4").tobytes())
             f.write(q.tobytes())
 
@@ -270,8 +301,10 @@ def main():
     ap.add_argument("--int8_rows", type=int, default=10000, help="v2: leading vocab rows kept INT8; rest INT4-g32")
     ap.add_argument("--logz_mean", type=float, default=None, help="override calibrated logZ mean for self-norm v2")
     ap.add_argument("--shortlist", type=int, default=0, help="override next-word shortlist size for self-norm v2")
+    ap.add_argument("--weights", default="best.safetensors", help="weights filename inside ckpt dir")
+    ap.add_argument("--clip_mse", action="store_true", help="MSE-optimal scale clipping for INT8/INT4 quantization")
     a = ap.parse_args()
-    w, tokens, cfg = load(Path(a.ckpt), a.vocab)
+    w, tokens, cfg = load(Path(a.ckpt), a.vocab, weights_file=a.weights)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     if cfg["model"] in GPT_V1:
@@ -283,8 +316,9 @@ def main():
         write_lmv_v2(
             out / f"{a.lang}.lmv", tokens, w["emb.weight"], w.get("out_bias"), cfg["ctx"],
             int8_rows=a.int8_rows, self_norm=self_norm, logz_mean=logz_mean, shortlist_k=a.shortlist,
+            clip_mse=a.clip_mse,
         )
-        write_lmb_v2(out / f"{a.lang}.lmb", w, cfg)
+        write_lmb_v2(out / f"{a.lang}.lmb", w, cfg, clip_mse=a.clip_mse)
     print(json.dumps({
         "lang": a.lang, "model": cfg["model"], "vocab": len(tokens),
         "version": 1 if cfg["model"] in GPT_V1 else 2,

@@ -298,3 +298,16 @@ It gets all of `nativefirst`'s gain for about a third of its price, and structur
 not a clear win: +0.7 to +1.4 pp of typo words (about 30 % of words at sigma 0.25, so 0.2 to 0.4 pp of all
 words) for -0.2 to -0.6 KSS on correctly typed words, lost at two typed letters, where a non-word prefix is
 usually the start of a longer word. Left off (0). The knob stays for later measurements.
+
+## Paired statistical comparison (`paired_eval.py`)
+
+Both `swipe-replay --out pred.jsonl` and `lm-eval --out pred.jsonl` write one JSON object per item in input
+order. Compare a baseline against a candidate on the exact same set with:
+
+```sh
+python3 tools/swipe-replay/paired_eval.py baseline.jsonl candidate.jsonl
+```
+
+It prints per-language and overall wins/losses, exact two-sided McNemar binomial p-values, and 5,000-resample
+paired bootstrap 95 % confidence intervals for Δtop-1, Δtop-3, and (for `lm-eval`) ΔKSS. Works with either
+NumPy or Python's standard library.

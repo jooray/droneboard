@@ -66,7 +66,7 @@
     <string name="setup_step3_languages_title">Idiomas y escritura</string>
     <string name="setup_step3_languages_subtitle">Revisa tus idiomas y valores predeterminados. Puedes cambiar todo más adelante en Ajustes.</string>
     <string name="setup_step3_languages_card_title">Idiomas de escritura</string>
-    <string name="setup_step3_languages_card_summary">Toca un idioma para activarlo o desactivarlo. Todos los idiomas de aquí admiten deslizar y predicciones inteligentes.</string>
+    <string name="setup_step3_languages_card_summary">Toca un idioma para activarlo o desactivarlo. Todos los idiomas de aquí admiten escritura deslizando y predicciones inteligentes.</string>
     <string name="setup_step3_configure_languages">Elegir idiomas y diseños</string>
     <string name="setup_step3_languages_more">Otros idiomas, variantes regionales y diseños (QWERTY, QWERTZ) están en «Elegir idiomas y diseños».</string>
     <string name="setup_step3_also_enabled">También activados: %s</string>

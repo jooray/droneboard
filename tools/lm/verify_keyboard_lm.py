@@ -55,7 +55,7 @@ def compare(a):
     tokens = (ck / "tokens.txt").read_text(encoding="utf-8").split("\n")[:-1]
     V = len(tokens)
     m = build(cfg["model"], V, tokens=tokens, ctx=cfg["ctx"])
-    m.load_weights(str(ck / "best.safetensors"))
+    m.load_weights(str(ck / a.weights))
     W = m.effective_emb_weight() if hasattr(m, "effective_emb_weight") else None
     if W is not None:
         mx.eval(W)
@@ -101,6 +101,7 @@ def main():
     v.add_argument("--contexts", required=True)
     v.add_argument("--cpp", required=True)
     v.add_argument("--vocab", type=int, default=0)
+    v.add_argument("--weights", default="best.safetensors")
     a = ap.parse_args()
     contexts(a) if a.cmd == "contexts" else compare(a)
 
